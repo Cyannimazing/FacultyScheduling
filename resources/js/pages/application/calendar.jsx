@@ -235,26 +235,26 @@ export default function Calendar() {
     const sortedData = filteredData.sort((a, b) => {
         const statusA = getDateRangeStatus(a.start_date, a.end_date);
         const statusB = getDateRangeStatus(b.start_date, b.end_date);
-        
+
         // Define priority order: active (1), upcoming (2), completed (3)
         const statusPriority = {
             active: 1,
             upcoming: 2,
-            completed: 3
+            completed: 3,
         };
-        
+
         const priorityA = statusPriority[statusA.status];
         const priorityB = statusPriority[statusB.status];
-        
+
         // If priorities are different, sort by priority
         if (priorityA !== priorityB) {
             return priorityA - priorityB;
         }
-        
+
         // If same priority, sort by start date (newest first for active/upcoming, oldest first for completed)
         const dateA = new Date(a.start_date);
         const dateB = new Date(b.start_date);
-        
+
         if (statusA.status === 'completed') {
             // For completed items, show most recently completed first
             return dateB - dateA;
@@ -364,7 +364,6 @@ export default function Calendar() {
             minute: '2-digit',
         });
     };
-
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>

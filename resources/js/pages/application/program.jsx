@@ -371,7 +371,7 @@ export default function Program() {
                                     <TableHeader>
                                         <TableRow>
                                             <TableHead className="w-[100px]">Code</TableHead>
-                                            <TableHead>Program Details</TableHead>
+                                            <TableHead>Program</TableHead>
                                             <TableHead className="text-center">Last Updated</TableHead>
                                             <TableHead className="text-right">Actions</TableHead>
                                         </TableRow>
