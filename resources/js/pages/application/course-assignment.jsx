@@ -174,24 +174,24 @@ function SubjectItem({ subject, onDragStart }) {
         <div
             draggable
             onDragStart={(e) => onDragStart(e, subject)}
-            className="flex cursor-move items-center justify-between rounded-lg border border-gray-200 bg-white p-3 shadow-sm transition-all hover:border-gray-300 hover:shadow-md"
+            className="flex cursor-move items-center justify-between rounded-lg border border-border bg-card p-3 shadow-sm transition-all hover:border-border/80 hover:shadow-md"
         >
             <div className="flex items-center gap-3">
-                <GripVertical className="h-4 w-4 text-gray-400" />
+                <GripVertical className="h-4 w-4 text-muted-foreground" />
                 <div className="flex items-center gap-2">
-                    <Code className="h-4 w-4 text-gray-500" />
+                    <Code className="h-4 w-4 text-muted-foreground" />
                     <span className="font-mono text-sm font-medium">{subject.code}</span>
                 </div>
                 <div>
                     <div className="text-sm font-medium">{subject.name}</div>
-                    <div className="text-xs text-gray-500">
+                    <div className="text-xs text-muted-foreground">
                         {subject.unit} unit{subject.unit !== 1 ? 's' : ''}
                     </div>
                 </div>
             </div>
             <Badge
                 variant={subject.isGeneralEducation ? 'default' : 'secondary'}
-                className={subject.isGeneralEducation ? 'bg-green-100 text-green-800' : ''}
+                className={subject.isGeneralEducation ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' : ''}
             >
                 {subject.isGeneralEducation ? 'GE' : 'Major'}
             </Badge>
@@ -232,12 +232,12 @@ function ProgramDropZone({ program, assignments, onDrop, onRemoveAssignment }) {
     }, {});
 
     return (
-        <Card className={`transition-all ${dragOver ? 'border-blue-400 bg-blue-50' : ''}`}>
+        <Card className={`transition-all ${dragOver ? 'border-blue-400 bg-blue-50 dark:bg-blue-950/30' : ''}`}>
             <CardHeader>
                 <div className="flex items-center justify-between">
                     <div>
                         <CardTitle className="text-lg">{program.name}</CardTitle>
-                        <p className="text-sm text-gray-600">{program.unique_code}</p>
+                        <p className="text-sm text-muted-foreground">{program.unique_code}</p>
                     </div>
                     <Badge variant="outline">{programAssignments.length} subjects</Badge>
                 </div>
@@ -246,7 +246,7 @@ function ProgramDropZone({ program, assignments, onDrop, onRemoveAssignment }) {
                 onDragOver={handleDragOver}
                 onDragLeave={handleDragLeave}
                 onDrop={handleDrop}
-                className={`min-h-[200px] space-y-4 ${dragOver ? 'bg-blue-25' : ''}`}
+                className={`min-h-[200px] space-y-4 ${dragOver ? 'bg-blue-50/50 dark:bg-blue-950/20' : ''}`}
             >
                 {Object.keys(groupedAssignments).length > 0 ? (
                     Object.entries(groupedAssignments)
@@ -261,7 +261,7 @@ function ProgramDropZone({ program, assignments, onDrop, onRemoveAssignment }) {
                             const firstAssignment = yearTermAssignments[0];
                             return (
                                 <div key={key} className="space-y-2">
-                                    <h4 className="text-sm font-medium text-gray-700">
+                                    <h4 className="text-sm font-medium text-foreground">
                                         {firstAssignment.year_level}, {firstAssignment.term}
                                     </h4>
                                     <div className="space-y-1">
@@ -270,10 +270,10 @@ function ProgramDropZone({ program, assignments, onDrop, onRemoveAssignment }) {
                                             return subject ? (
                                                 <div
                                                     key={assignment.id}
-                                                    className="flex items-center justify-between rounded-md border border-gray-200 bg-gray-50 p-2"
+                                                    className="flex items-center justify-between rounded-md border border-border bg-muted p-2"
                                                 >
                                                     <div className="flex items-center gap-2">
-                                                        <Code className="h-3 w-3 text-gray-500" />
+                                                        <Code className="h-3 w-3 text-muted-foreground" />
                                                         <span className="font-mono text-xs">{subject.code}</span>
                                                         <span className="text-xs">{subject.name}</span>
                                                     </div>
@@ -293,7 +293,7 @@ function ProgramDropZone({ program, assignments, onDrop, onRemoveAssignment }) {
                             );
                         })
                 ) : (
-                    <div className="flex h-32 items-center justify-center rounded-lg border-2 border-dashed border-gray-300 text-sm text-gray-500">
+                    <div className="flex h-32 items-center justify-center rounded-lg border-2 border-dashed border-border text-sm text-muted-foreground">
                         Drop subjects here to assign to {program.name}
                     </div>
                 )}
@@ -705,7 +705,7 @@ export default function CourseAssignment() {
                                 </CardTitle>
                                 <div className="space-y-2">
                                     <div className="relative">
-                                        <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                                        <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                                         <Input
                                             placeholder="Search subjects..."
                                             value={searchTerm}
@@ -722,7 +722,7 @@ export default function CourseAssignment() {
                                             <SubjectItem key={subject.id} subject={subject} onDragStart={handleDragStart} />
                                         ))
                                     ) : (
-                                        <div className="py-8 text-center text-gray-500">No subjects found</div>
+                                        <div className="py-8 text-center text-muted-foreground">No subjects found</div>
                                     )}
                                 </div>
                             </CardContent>
@@ -792,13 +792,13 @@ export default function CourseAssignment() {
                                                 <TableCell>
                                                     <div>
                                                         <div className="font-medium">{program?.name || assignment.program_code}</div>
-                                                        <div className="text-sm text-gray-500">{assignment.program_code}</div>
+                                                        <div className="text-sm text-muted-foreground">{assignment.program_code}</div>
                                                     </div>
                                                 </TableCell>
                                                 <TableCell>
                                                     <div>
                                                         <div className="font-medium">{subject?.name || assignment.subject_code}</div>
-                                                        <div className="text-sm text-gray-500">{assignment.subject_code}</div>
+                                                        <div className="text-sm text-muted-foreground">{assignment.subject_code}</div>
                                                     </div>
                                                 </TableCell>
                                                 <TableCell className="text-center">
@@ -808,7 +808,7 @@ export default function CourseAssignment() {
                                                     <Badge variant="outline">{assignment.term}</Badge>
                                                 </TableCell>
                                                 <TableCell className="text-center">
-                                                    <div className="text-sm text-gray-500">
+                                                    <div className="text-sm text-muted-foreground">
                                                         {new Date(assignment.created_at).toLocaleDateString()}
                                                     </div>
                                                 </TableCell>
@@ -855,7 +855,7 @@ export default function CourseAssignment() {
                             <DialogDescription>
                                 Are you sure you want to delete this assignment? This action cannot be undone.
                                 {assignmentToDelete && (
-                                    <div className="mt-2 rounded border bg-gray-50 p-2">
+                                    <div className="mt-2 rounded border bg-muted p-2">
                                         <strong>Assignment Details:</strong>
                                         <br />
                                         <strong>Program:</strong>{' '}
