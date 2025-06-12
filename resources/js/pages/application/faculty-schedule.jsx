@@ -3,17 +3,17 @@ import { Head } from '@inertiajs/react';
 
 const breadcrumbs = [
     {
-        title: 'Program',
-        href: '/dashboard',
+        title: 'Faculty Schedule',
+        href: '/faculty-schedule',
     },
 ];
 
-export default function Program() {
+export default function FacultySchedule() {
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
-            <Head title="Program" />
+            <Head title="Faculty Schedule" />
             <div className="flex h-full items-center justify-center rounded-xl p-4">
-                <h1>My Program</h1>
+                <h1>My Faculty Schedule</h1>
             </div>
         </AppLayout>
     );

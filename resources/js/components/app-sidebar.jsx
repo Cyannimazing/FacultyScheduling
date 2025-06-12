@@ -1,19 +1,62 @@
 import { NavMain } from '@/components/nav-main';
 import { NavUser } from '@/components/nav-user';
 import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar';
-import { LayoutGrid, NotebookIcon } from 'lucide-react';
+import { Calendar1, CalendarPlus, Clipboard, DoorOpen, LayoutGrid, LibraryBig, NotebookIcon, Shapes, Users } from 'lucide-react';
 import AppLogo from './app-logo';
 
 const mainNavItems = [
     {
-        title: 'Dashboard',
-        url: '/dashboard',
+        title: 'Faculty Schedule',
+        url: '/faculty-schedule',
         icon: LayoutGrid,
+    },
+    {
+        title: 'Subject Allocation',
+        url: '/subject-allocation',
+        icon: CalendarPlus,
+    },
+    {
+        title: 'Course Assignment',
+        url: '/course-assignment',
+        icon: Shapes,
+    },
+];
+
+const InputNavItems = [
+    {
+        title: 'Term',
+        url: '/term',
+        icon: Calendar1,
+    },
+    {
+        title: 'Calendar',
+        url: '/calendar',
+        icon: DoorOpen,
     },
     {
         title: 'Program',
         url: '/program',
         icon: NotebookIcon,
+    },
+    {
+        title: 'Lecturer',
+        url: '/lecturer',
+        icon: Users,
+    },
+    {
+        title: 'Class',
+        url: '/class',
+        icon: Clipboard,
+    },
+    {
+        title: 'Subject',
+        url: '/subject',
+        icon: LibraryBig,
+    },
+    {
+        title: 'Room',
+        url: '/room',
+        icon: DoorOpen,
     },
 ];
 
@@ -31,7 +74,8 @@ export function AppSidebar() {
             </SidebarHeader>
 
             <SidebarContent>
-                <NavMain items={mainNavItems} />
+                <NavMain items={mainNavItems} title={'Main Menu'} />
+                <NavMain items={InputNavItems} title={'Entry Control'} />
             </SidebarContent>
 
             <SidebarFooter>
