@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import AppLayout from '@/layouts/app-layout';
@@ -24,6 +25,7 @@ const sampleData = [
         unique_code: 'PROG001',
         name: 'Computer Science',
         description: 'Bachelor of Science in Computer Science',
+        year_length: 4,
         created_at: '2025-06-10 09:00',
         updated_at: '2025-06-11 14:30',
     },
@@ -32,6 +34,7 @@ const sampleData = [
         unique_code: 'PROG002',
         name: 'Information Technology',
         description: 'Bachelor of Science in Information Technology',
+        year_length: 4,
         created_at: '2025-06-09 11:00',
         updated_at: '2025-06-12 10:15',
     },
@@ -40,6 +43,7 @@ const sampleData = [
         unique_code: 'PROG003',
         name: 'Data Science',
         description: 'Master of Science in Data Science',
+        year_length: 2,
         created_at: '2025-06-08 13:00',
         updated_at: '2025-06-11 16:45',
     },
@@ -48,6 +52,7 @@ const sampleData = [
         unique_code: 'PROG004',
         name: 'Cybersecurity',
         description: 'Bachelor of Science in Cybersecurity',
+        year_length: 4,
         created_at: '2025-06-07 15:30',
         updated_at: '2025-06-10 09:20',
     },
@@ -56,6 +61,7 @@ const sampleData = [
         unique_code: 'PROG005',
         name: 'Software Engineering',
         description: 'Bachelor of Engineering in Software Engineering',
+        year_length: 4,
         created_at: '2025-06-06 10:45',
         updated_at: '2025-06-09 16:15',
     },
@@ -83,6 +89,7 @@ function ProgramDialog({ isOpen, onClose, program = null, onSave }) {
         unique_code: '',
         name: '',
         description: '',
+        year_length: '',
     });
 
     // Update form data when program prop changes (for edit mode)
@@ -92,15 +99,16 @@ function ProgramDialog({ isOpen, onClose, program = null, onSave }) {
                 unique_code: program.unique_code || '',
                 name: program.name || '',
                 description: program.description || '',
+                year_length: program.year_length || '',
             });
         } else {
             // Reset form for add mode
-            setFormData({ unique_code: '', name: '', description: '' });
+            setFormData({ unique_code: '', name: '', description: '', year_length: '' });
         }
     }, [program]);
 
     const handleSave = () => {
-        if (formData.unique_code && formData.name && formData.description) {
+        if (formData.unique_code && formData.name && formData.description && formData.year_length) {
             onSave(formData);
             onClose();
             // Don't reset form here - let useEffect handle it when program prop changes
@@ -151,12 +159,28 @@ function ProgramDialog({ isOpen, onClose, program = null, onSave }) {
                             placeholder="Program Description"
                         />
                     </div>
+                    <div className="grid grid-cols-4 items-center gap-4">
+                        <label htmlFor="year_length" className="text-right text-sm font-medium">
+                            Program Length
+                        </label>
+                        <Select value={formData.year_length.toString()} onValueChange={(value) => setFormData({ ...formData, year_length: parseInt(value) })}>
+                            <SelectTrigger className="col-span-3">
+                                <SelectValue placeholder="Select program length" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="2">2 Years</SelectItem>
+                                <SelectItem value="3">3 Years</SelectItem>
+                                <SelectItem value="4">4 Years</SelectItem>
+                                <SelectItem value="5">5 Years</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
                 </div>
                 <DialogFooter>
                     <Button variant="outline" onClick={onClose}>
                         Cancel
                     </Button>
-                    <Button onClick={handleSave} disabled={!formData.unique_code || !formData.name || !formData.description}>
+                    <Button onClick={handleSave} disabled={!formData.unique_code || !formData.name || !formData.description || !formData.year_length}>
                         {program ? 'Update' : 'Create'} Program
                     </Button>
                 </DialogFooter>
@@ -372,6 +396,7 @@ export default function Program() {
                                         <TableRow>
                                             <TableHead className="w-[100px]">Code</TableHead>
                                             <TableHead>Program</TableHead>
+                                            <TableHead className="text-center">Length</TableHead>
                                             <TableHead className="text-center">Last Updated</TableHead>
                                             <TableHead className="text-right">Actions</TableHead>
                                         </TableRow>
@@ -391,7 +416,11 @@ export default function Program() {
                                                         <div className="text-muted-foreground text-sm">{program.description}</div>
                                                     </div>
                                                 </TableCell>
-
+                                                <TableCell className="text-center">
+                                                    <Badge variant="outline" className="bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
+                                                        {program.year_length} {program.year_length === 1 ? 'Year' : 'Years'}
+                                                    </Badge>
+                                                </TableCell>
                                                 <TableCell className="text-center">
                                                     <div className="text-muted-foreground flex items-center justify-center gap-1 text-sm">
                                                         <Calendar className="h-4 w-4" />

@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import AppLayout from '@/layouts/app-layout';
 import { Head } from '@inertiajs/react';
-import { BookOpen, Code, GripVertical, Plus, Search, Trash2, Users } from 'lucide-react';
+import { BookOpen, Code, GripVertical, Plus, Search, Trash2, Users, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useState } from 'react';
 
 const breadcrumbs = [
@@ -25,24 +25,28 @@ const samplePrograms = [
         unique_code: 'PROG001',
         name: 'Computer Science',
         description: 'Bachelor of Science in Computer Science',
+        year_length: 4,
     },
     {
         id: 2,
         unique_code: 'PROG002',
         name: 'Information Technology',
         description: 'Bachelor of Science in Information Technology',
+        year_length: 4,
     },
     {
         id: 3,
         unique_code: 'PROG003',
         name: 'Data Science',
         description: 'Master of Science in Data Science',
+        year_length: 2,
     },
     {
         id: 4,
         unique_code: 'PROG004',
         name: 'Cybersecurity',
         description: 'Bachelor of Science in Cybersecurity',
+        year_length: 4,
     },
 ];
 
@@ -145,6 +149,12 @@ const sampleYearLevels = [
         name: '5th Year',
     },
 ];
+
+// Function to get available year levels based on program's year_length
+const getAvailableYearLevels = (yearLength) => {
+    if (!yearLength) return [];
+    return sampleYearLevels.slice(0, yearLength);
+};
 
 // Sample data for course assignments
 const sampleCourseAssignments = [
@@ -345,7 +355,7 @@ function DropAssignmentDialog({ isOpen, onClose, onSave, subject, program }) {
                                 <SelectValue placeholder="Select year level" />
                             </SelectTrigger>
                             <SelectContent>
-                                {sampleYearLevels.map((year) => (
+                                {getAvailableYearLevels(program?.year_length).map((year) => (
                                     <SelectItem key={year.id} value={year.name}>
                                         {year.name}
                                     </SelectItem>
@@ -393,6 +403,15 @@ function AssignmentDialog({ isOpen, onClose, onSave }) {
         term: '',
     });
 
+    // Get selected program to determine available year levels
+    const selectedProgram = samplePrograms.find(p => p.unique_code === formData.program_code);
+    const availableYearLevels = getAvailableYearLevels(selectedProgram?.year_length);
+
+    // Reset year level when program changes
+    const handleProgramChange = (value) => {
+        setFormData({ ...formData, program_code: value, year_level: '' });
+    };
+
     const handleSave = () => {
         if (formData.program_code && formData.subject_code && formData.year_level && formData.term) {
             onSave(formData);
@@ -413,7 +432,7 @@ function AssignmentDialog({ isOpen, onClose, onSave }) {
                         <Label htmlFor="program" className="text-right text-sm font-medium">
                             Program
                         </Label>
-                        <Select value={formData.program_code} onValueChange={(value) => setFormData({ ...formData, program_code: value })}>
+                        <Select value={formData.program_code} onValueChange={handleProgramChange}>
                             <SelectTrigger className="col-span-3">
                                 <SelectValue placeholder="Select program" />
                             </SelectTrigger>
@@ -452,7 +471,7 @@ function AssignmentDialog({ isOpen, onClose, onSave }) {
                                 <SelectValue placeholder="Select year level" />
                             </SelectTrigger>
                             <SelectContent>
-                                {sampleYearLevels.map((year) => (
+                                {availableYearLevels.map((year) => (
                                     <SelectItem key={year.id} value={year.name}>
                                         {year.name}
                                     </SelectItem>
@@ -516,6 +535,24 @@ export default function CourseAssignment() {
     const [dropTarget, setDropTarget] = useState(null);
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [assignmentToDelete, setAssignmentToDelete] = useState(null);
+    const [currentPage, setCurrentPage] = useState(1);
+
+    // Pagination settings
+    const itemsPerPage = 5;
+    const totalPages = Math.ceil(assignments.length / itemsPerPage);
+    const paginatedAssignments = assignments.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
+    // Reset pagination when dialog opens
+    const handleViewAllClick = () => {
+        setCurrentPage(1);
+        setIsDialogOpen(true);
+    };
+
+    const handlePageChange = (page) => {
+        if (page > 0 && page <= totalPages) {
+            setCurrentPage(page);
+        }
+    };
 
     // Filter subjects based on search
     const filteredSubjects = sampleSubjects.filter(
@@ -652,7 +689,7 @@ export default function CourseAssignment() {
                             <Plus className="mr-2 h-4 w-4" />
                             Manual Assignment
                         </Button>
-                        <Button onClick={() => setIsDialogOpen(true)}>
+                        <Button onClick={handleViewAllClick}>
                             <Users className="mr-2 h-4 w-4" />
                             View All Assignments
                         </Button>
@@ -784,50 +821,90 @@ export default function CourseAssignment() {
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {assignments.map((assignment) => {
-                                        const program = samplePrograms.find((p) => p.unique_code === assignment.program_code);
-                                        const subject = sampleSubjects.find((s) => s.code === assignment.subject_code);
-                                        return (
-                                            <TableRow key={assignment.id}>
-                                                <TableCell>
-                                                    <div>
-                                                        <div className="font-medium">{program?.name || assignment.program_code}</div>
-                                                        <div className="text-sm text-muted-foreground">{assignment.program_code}</div>
-                                                    </div>
-                                                </TableCell>
-                                                <TableCell>
-                                                    <div>
-                                                        <div className="font-medium">{subject?.name || assignment.subject_code}</div>
-                                                        <div className="text-sm text-muted-foreground">{assignment.subject_code}</div>
-                                                    </div>
-                                                </TableCell>
-                                                <TableCell className="text-center">
-                                                    <Badge variant="outline">{assignment.year_level}</Badge>
-                                                </TableCell>
-                                                <TableCell className="text-center">
-                                                    <Badge variant="outline">{assignment.term}</Badge>
-                                                </TableCell>
-                                                <TableCell className="text-center">
-                                                    <div className="text-sm text-muted-foreground">
-                                                        {new Date(assignment.created_at).toLocaleDateString()}
-                                                    </div>
-                                                </TableCell>
-                                                <TableCell className="text-right">
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="sm"
-                                                        onClick={() => handleRemoveAssignment(assignment)}
-                                                        className="text-red-500 hover:text-red-700"
-                                                    >
-                                                        <Trash2 className="h-4 w-4" />
-                                                    </Button>
-                                                </TableCell>
-                                            </TableRow>
-                                        );
-                                    })}
+                                    {paginatedAssignments.length > 0 ? (
+                                        paginatedAssignments.map((assignment) => {
+                                            const program = samplePrograms.find((p) => p.unique_code === assignment.program_code);
+                                            const subject = sampleSubjects.find((s) => s.code === assignment.subject_code);
+                                            return (
+                                                <TableRow key={assignment.id}>
+                                                    <TableCell>
+                                                        <div>
+                                                            <div className="font-medium">{program?.name || assignment.program_code}</div>
+                                                            <div className="text-sm text-muted-foreground">{assignment.program_code}</div>
+                                                        </div>
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        <div>
+                                                            <div className="font-medium">{subject?.name || assignment.subject_code}</div>
+                                                            <div className="text-sm text-muted-foreground">{assignment.subject_code}</div>
+                                                        </div>
+                                                    </TableCell>
+                                                    <TableCell className="text-center">
+                                                        <Badge variant="outline">{assignment.year_level}</Badge>
+                                                    </TableCell>
+                                                    <TableCell className="text-center">
+                                                        <Badge variant="outline">{assignment.term}</Badge>
+                                                    </TableCell>
+                                                    <TableCell className="text-center">
+                                                        <div className="text-sm text-muted-foreground">
+                                                            {new Date(assignment.created_at).toLocaleDateString()}
+                                                        </div>
+                                                    </TableCell>
+                                                    <TableCell className="text-right">
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            onClick={() => handleRemoveAssignment(assignment)}
+                                                            className="text-red-500 hover:text-red-700"
+                                                        >
+                                                            <Trash2 className="h-4 w-4" />
+                                                        </Button>
+                                                    </TableCell>
+                                                </TableRow>
+                                            );
+                                        })
+                                    ) : (
+                                        <TableRow>
+                                            <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                                                No course assignments found.
+                                            </TableCell>
+                                        </TableRow>
+                                    )}
                                 </TableBody>
                             </Table>
                         </div>
+                        
+                        {/* Pagination Controls */}
+                        {assignments.length > itemsPerPage && (
+                            <div className="flex items-center justify-between px-6 py-4 border-t">
+                                <div className="text-sm text-muted-foreground">
+                                    Showing {((currentPage - 1) * itemsPerPage) + 1} to {Math.min(currentPage * itemsPerPage, assignments.length)} of {assignments.length} assignments
+                                </div>
+                                <div className="flex items-center space-x-2">
+                                    <Button 
+                                        variant="outline" 
+                                        size="sm" 
+                                        onClick={() => handlePageChange(currentPage - 1)} 
+                                        disabled={currentPage === 1}
+                                    >
+                                        <ChevronLeft className="h-4 w-4" />
+                                        Previous
+                                    </Button>
+                                    <div className="text-sm">
+                                        Page {currentPage} of {totalPages}
+                                    </div>
+                                    <Button 
+                                        variant="outline" 
+                                        size="sm" 
+                                        onClick={() => handlePageChange(currentPage + 1)} 
+                                        disabled={currentPage === totalPages}
+                                    >
+                                        Next
+                                        <ChevronRight className="h-4 w-4" />
+                                    </Button>
+                                </div>
+                            </div>
+                        )}
                     </DialogContent>
                 </Dialog>
 
