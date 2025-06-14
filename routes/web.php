@@ -27,9 +27,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         return Inertia::render('application/calendar');
     })->name('calendar');
 
-    Route::get('term', function () {
-        return Inertia::render('application/term');
-    })->name('term');
+    Route::get('term', [\App\Http\Controllers\TermController::class, 'index'])->name('term');
 
     Route::get('program', function () {
         return Inertia::render('application/program');

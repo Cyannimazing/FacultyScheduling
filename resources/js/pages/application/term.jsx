@@ -7,9 +7,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import AppLayout from '@/layouts/app-layout';
-import { Head } from '@inertiajs/react';
+import { Head, router } from '@inertiajs/react';
 import { Calendar, ChevronLeft, ChevronRight, Clock, Edit, GraduationCap, MoreHorizontal, Plus, Search, Trash2 } from 'lucide-react';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 
 const breadcrumbs = [
     {
@@ -18,22 +18,7 @@ const breadcrumbs = [
     },
 ];
 
-const initialData = [
-    {
-        id: 1,
-        name: '1st Term',
-        created_at: '2025-06-01 09:00',
-        updated_at: '2025-06-02 14:30',
-    },
-    {
-        id: 2,
-        name: '2nd Term',
-        created_at: '2025-06-03 11:00',
-        updated_at: '2025-06-04 10:15',
-    },
-];
-
-const termOptions = ['1st Term', '2nd Term', '3rd Term'];
+const termOptions = ['1st Semester', '2nd Semester', 'Summer'];
 
 function LoadingSkeleton() {
     return (
@@ -130,35 +115,59 @@ function TermDialog({ isOpen, onClose, term = null, onSave, existingTerms = [] }
     );
 }
 
-export default function Term() {
-    const [currentPage, setCurrentPage] = useState(1);
+export default function Term({ terms = { data: [], last_page: 1, current_page: 1, total: 0 } }) {
+    const [currentPage, setCurrentPage] = useState(terms.current_page);
     const [isLoading, setIsLoading] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [editingTerm, setEditingTerm] = useState(null);
-    const [termsData, setTermsData] = useState(initialData);
+    const [termsData, setTermsData] = useState(terms.data);
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [termToDelete, setTermToDelete] = useState(null);
+    const [totalPages, setTotalPages] = useState(terms.last_page);
+    const [totalItems, setTotalItems] = useState(terms.total);
 
     const itemsPerPage = 5;
 
-    // Filter data based on search
-    const filteredData = termsData.filter((term) => {
-        return term.name.toLowerCase().includes(searchTerm.toLowerCase());
-    });
+    // Handle search with debounce
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            if (searchTerm !== '') {
+                router.visit('/term', {
+                    method: 'get',
+                    data: { search: searchTerm, page: 1 },
+                    preserveState: true,
+                    preserveScroll: true,
+                    only: ['terms'],
+                });
+            } else {
+                router.visit('/term', {
+                    method: 'get',
+                    preserveState: true,
+                    preserveScroll: true,
+                    only: ['terms'],
+                });
+            }
+        }, 300);
+        return () => clearTimeout(timer);
+    }, [searchTerm]);
 
-    const totalPages = Math.ceil(filteredData.length / itemsPerPage);
-    const paginatedData = filteredData.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
-
+    // Handle pagination
     const handlePageChange = (page) => {
         if (page > 0 && page <= totalPages) {
-            setIsLoading(true);
-            setTimeout(() => {
-                setCurrentPage(page);
-                setIsLoading(false);
-            }, 800);
+            router.visit('/term', {
+                method: 'get',
+                data: { page, search: searchTerm || undefined },
+                preserveState: true,
+                preserveScroll: true,
+                only: ['terms'],
+            });
         }
     };
+
+    // Data is already filtered and paginated by the backend
+    const paginatedData = termsData;
+
 
     const handleAddTerm = () => {
         setEditingTerm(null);
@@ -173,53 +182,45 @@ export default function Term() {
     const handleSaveTerm = (formData) => {
         if (editingTerm) {
             // Update existing term
-            setTermsData((prevData) =>
-                prevData.map((term) =>
-                    term.id === editingTerm.id
-                        ? { ...term, name: formData.name, updated_at: new Date().toISOString().slice(0, 19).replace('T', ' ') }
-                        : term,
-                ),
-            );
-            console.log('Term updated:', formData);
+            router.put(`/terms/${editingTerm.id}`, formData, {
+                onSuccess: () => {
+                    router.visit('/term', {
+                        preserveState: true,
+                        preserveScroll: true,
+                        only: ['terms'],
+                    });
+                },
+            });
         } else {
             // Add new term
-            const newTerm = {
-                id: Math.max(...termsData.map((t) => t.id), 0) + 1,
-                name: formData.name,
-                created_at: new Date().toISOString().slice(0, 19).replace('T', ' '),
-                updated_at: new Date().toISOString().slice(0, 19).replace('T', ' '),
-            };
-            setTermsData((prevData) => [...prevData, newTerm]);
-            console.log('Term added:', formData);
-        }
-        
-        // Reset current page to 1 if adding new term
-        if (!editingTerm) {
-            setCurrentPage(1);
+            router.post('/terms', formData, {
+                onSuccess: () => {
+                    router.visit('/term', {
+                        preserveState: true,
+                        preserveScroll: true,
+                        only: ['terms'],
+                    });
+                },
+            });
         }
     };
-    
+
     const handleDeleteTerm = (term) => {
         setTermToDelete(term);
         setDeleteDialogOpen(true);
     };
-    
+
     const confirmDeleteTerm = () => {
         if (termToDelete) {
-            setTermsData((prevData) => prevData.filter((term) => term.id !== termToDelete.id));
-            
-            // Adjust current page if necessary
-            const newFilteredData = termsData.filter((term) => term.id !== termToDelete.id)
-                .filter(term => term.name.toLowerCase().includes(searchTerm.toLowerCase()));
-            const newTotalPages = Math.ceil(newFilteredData.length / itemsPerPage);
-            
-            if (currentPage > newTotalPages && newTotalPages > 0) {
-                setCurrentPage(newTotalPages);
-            } else if (newFilteredData.length === 0) {
-                setCurrentPage(1);
-            }
-            
-            console.log('Term deleted:', termToDelete.name);
+            router.delete(`/terms/${termToDelete.id}`, {
+                onSuccess: () => {
+                    router.visit('/term', {
+                        preserveState: true,
+                        preserveScroll: true,
+                        only: ['terms'],
+                    });
+                },
+            });
         }
         setDeleteDialogOpen(false);
         setTermToDelete(null);
@@ -265,7 +266,7 @@ export default function Term() {
                                 />
                             </div>
                             <div className="text-muted-foreground text-sm">
-                                Showing {paginatedData.length} of {filteredData.length} terms
+                                Showing {paginatedData.length} of {totalItems} terms
                             </div>
                         </div>
                     </CardHeader>
@@ -384,15 +385,13 @@ export default function Term() {
                 onSave={handleSaveTerm}
                 existingTerms={termsData}
             />
-            
+
             {/* Delete Confirmation Dialog */}
             <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
                 <DialogContent className="sm:max-w-[400px]">
                     <DialogHeader>
                         <DialogTitle>Delete Term</DialogTitle>
-                        <DialogDescription>
-                            Are you sure you want to delete "{termToDelete?.name}"? This action cannot be undone.
-                        </DialogDescription>
+                        <DialogDescription>Are you sure you want to delete "{termToDelete?.name}"? This action cannot be undone.</DialogDescription>
                     </DialogHeader>
                     <DialogFooter>
                         <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>
