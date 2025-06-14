@@ -11,7 +11,7 @@ class StoreTimeSlotRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return false;
+        return true; // You can implement proper authorization logic here
     }
 
     /**
@@ -22,7 +22,22 @@ class StoreTimeSlotRequest extends FormRequest
     public function rules(): array
     {
         return [
-            //
+            'day' => 'required|string|in:Monday,Tuesday,Wednesday,Thursday,Friday,Saturday,Sunday',
+            'time' => 'required|string|max:255',
+        ];
+    }
+
+    /**
+     * Get custom validation messages.
+     */
+    public function messages(): array
+    {
+        return [
+            'day.required' => 'Day is required.',
+            'day.in' => 'Day must be a valid day of the week.',
+            'time.required' => 'Time is required.',
+            'time.string' => 'Time must be a string.',
+            'time.max' => 'Time cannot exceed 255 characters.',
         ];
     }
 }

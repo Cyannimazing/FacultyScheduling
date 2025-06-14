@@ -13,16 +13,16 @@ return new class extends Migration
     {
         Schema::create('lecturer_subjects', function (Blueprint $table) {
             $table->unsignedBigInteger('lecturer_id');
-            $table->string('subj_code');
+            $table->unsignedBigInteger('prog_subj_id');
             $table->unsignedBigInteger('sy_term_id');
             $table->timestamps();
 
             // Compound primary key
-            $table->primary(['lecturer_id', 'subj_code', 'sy_term_id']);
+            $table->primary(['lecturer_id', 'prog_subj_id', 'sy_term_id']);
 
             // Foreign keys
             $table->foreign('lecturer_id')->references('id')->on('lecturers')->onDelete('cascade');
-            $table->foreign('subj_code')->references('code')->on('subjects')->onDelete('cascade')->onUpdate('cascade');
+            $table->foreign('prog_subj_id')->references('id')->on('prog_subj_id')->onDelete('cascade')->onUpdate('cascade');
             $table->foreign('sy_term_id')->references('id')->on('academic_calendars')->onDelete('cascade');
         });
     }

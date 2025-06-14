@@ -11,7 +11,7 @@ class StoreLecturerSubjectRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return false;
+        return true;
     }
 
     /**
@@ -22,7 +22,9 @@ class StoreLecturerSubjectRequest extends FormRequest
     public function rules(): array
     {
         return [
-            //
+            'lecturer_id' => 'required|exists:lecturers,id',
+            'prog_subj_id' => 'required|exists:program_subjects,id',
+            'sy_term_id' => 'required|exists:academic_calendars,id',
         ];
     }
 }

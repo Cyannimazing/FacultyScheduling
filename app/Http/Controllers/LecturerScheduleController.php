@@ -13,15 +13,8 @@ class LecturerScheduleController extends Controller
      */
     public function index()
     {
-        //
-    }
-
-    /**
-     * Show the form for creating a new resource.
-     */
-    public function create()
-    {
-        //
+        $lecturerSchedules = LecturerSchedule::all();
+        return response()->json($lecturerSchedules);
     }
 
     /**
@@ -29,7 +22,8 @@ class LecturerScheduleController extends Controller
      */
     public function store(StoreLecturerScheduleRequest $request)
     {
-        //
+        $lecturerSchedule = LecturerSchedule::create($request->validated());
+        return response()->json($lecturerSchedule, 201);
     }
 
     /**
@@ -37,15 +31,7 @@ class LecturerScheduleController extends Controller
      */
     public function show(LecturerSchedule $lecturerSchedule)
     {
-        //
-    }
-
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit(LecturerSchedule $lecturerSchedule)
-    {
-        //
+        return response()->json($lecturerSchedule);
     }
 
     /**
@@ -53,7 +39,8 @@ class LecturerScheduleController extends Controller
      */
     public function update(UpdateLecturerScheduleRequest $request, LecturerSchedule $lecturerSchedule)
     {
-        //
+        $lecturerSchedule->update($request->validated());
+        return response()->json($lecturerSchedule);
     }
 
     /**
@@ -61,6 +48,7 @@ class LecturerScheduleController extends Controller
      */
     public function destroy(LecturerSchedule $lecturerSchedule)
     {
-        //
+        $lecturerSchedule->delete();
+        return response()->json(null, 204);
     }
 }

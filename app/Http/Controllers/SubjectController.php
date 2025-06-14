@@ -13,15 +13,8 @@ class SubjectController extends Controller
      */
     public function index()
     {
-        //
-    }
-
-    /**
-     * Show the form for creating a new resource.
-     */
-    public function create()
-    {
-        //
+        $subjects = Subject::all();
+        return response()->json($subjects);
     }
 
     /**
@@ -29,7 +22,8 @@ class SubjectController extends Controller
      */
     public function store(StoreSubjectRequest $request)
     {
-        //
+        $subject = Subject::create($request->validated());
+        return response()->json($subject, 201);
     }
 
     /**
@@ -37,15 +31,7 @@ class SubjectController extends Controller
      */
     public function show(Subject $subject)
     {
-        //
-    }
-
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit(Subject $subject)
-    {
-        //
+        return response()->json($subject);
     }
 
     /**
@@ -53,7 +39,8 @@ class SubjectController extends Controller
      */
     public function update(UpdateSubjectRequest $request, Subject $subject)
     {
-        //
+        $subject->update($request->validated());
+        return response()->json($subject);
     }
 
     /**
@@ -61,6 +48,7 @@ class SubjectController extends Controller
      */
     public function destroy(Subject $subject)
     {
-        //
+        $subject->delete();
+        return response()->json(null, 204);
     }
 }

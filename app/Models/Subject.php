@@ -26,29 +26,11 @@ class Subject extends Model
     }
 
     /**
-     * Get the lecturers that belong to the subject.
-     */
-    public function lecturers(): BelongsToMany
-    {
-        return $this->belongsToMany(Lecturer::class, 'lecturer_subjects', 'subj_code', 'lecturer_id', 'code', 'id')
-                    ->withPivot('sy_term_id')
-                    ->withTimestamps();
-    }
-
-    /**
      * Get the program subjects for the subject.
      */
     public function programSubjects(): HasMany
     {
         return $this->hasMany(ProgramSubject::class, 'subj_code', 'code');
-    }
-
-    /**
-     * Get the lecturer subjects for the subject.
-     */
-    public function lecturerSubjects(): HasMany
-    {
-        return $this->hasMany(LecturerSubject::class, 'subj_code', 'code');
     }
 
     /**

@@ -11,7 +11,7 @@ class UpdateRoomRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return false;
+        return true; // You can implement proper authorization logic here
     }
 
     /**
@@ -21,8 +21,23 @@ class UpdateRoomRequest extends FormRequest
      */
     public function rules(): array
     {
+        $roomId = $this->route('room'); // Get the room ID from route
+        
         return [
-            //
+            'name' => 'required|string|max:255|unique:rooms,name,' . $roomId . ',id',
+        ];
+    }
+
+    /**
+     * Get custom validation messages.
+     */
+    public function messages(): array
+    {
+        return [
+            'name.required' => 'Room name is required.',
+            'name.unique' => 'Room name must be unique.',
+            'name.string' => 'Room name must be a string.',
+            'name.max' => 'Room name cannot exceed 255 characters.',
         ];
     }
 }

@@ -12,14 +12,15 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('program_subjects', function (Blueprint $table) {
+            $table->id();
             $table->string('prog_code');
-            $table->string('subj_code');
+            $table->unsignedBigInteger('subj_code');
             $table->unsignedBigInteger('term_id');
             $table->integer('year_level');
             $table->timestamps();
 
             // Compound primary key
-            $table->primary(['prog_code', 'subj_code', 'term_id']);
+            $table->unique(['prog_code', 'subj_code']);
 
             // Foreign keys
             $table->foreign('prog_code')->references('code')->on('programs')->onDelete('cascade')->onUpdate('cascade');

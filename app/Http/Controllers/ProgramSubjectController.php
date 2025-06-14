@@ -13,15 +13,8 @@ class ProgramSubjectController extends Controller
      */
     public function index()
     {
-        //
-    }
-
-    /**
-     * Show the form for creating a new resource.
-     */
-    public function create()
-    {
-        //
+        $programSubjects = ProgramSubject::all();
+        return response()->json($programSubjects);
     }
 
     /**
@@ -29,7 +22,8 @@ class ProgramSubjectController extends Controller
      */
     public function store(StoreProgramSubjectRequest $request)
     {
-        //
+        $programSubject = ProgramSubject::create($request->validated());
+        return response()->json($programSubject, 201);
     }
 
     /**
@@ -37,15 +31,7 @@ class ProgramSubjectController extends Controller
      */
     public function show(ProgramSubject $programSubject)
     {
-        //
-    }
-
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit(ProgramSubject $programSubject)
-    {
-        //
+        return response()->json($programSubject);
     }
 
     /**
@@ -53,7 +39,8 @@ class ProgramSubjectController extends Controller
      */
     public function update(UpdateProgramSubjectRequest $request, ProgramSubject $programSubject)
     {
-        //
+        $programSubject->update($request->validated());
+        return response()->json($programSubject);
     }
 
     /**
@@ -61,6 +48,7 @@ class ProgramSubjectController extends Controller
      */
     public function destroy(ProgramSubject $programSubject)
     {
-        //
+        $programSubject->delete();
+        return response()->json(null, 204);
     }
 }

@@ -11,7 +11,7 @@ class StoreProgramRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return false;
+        return true; // You can implement proper authorization logic here
     }
 
     /**
@@ -22,7 +22,26 @@ class StoreProgramRequest extends FormRequest
     public function rules(): array
     {
         return [
-            //
+            'code' => 'required|string|max:255|unique:programs,code',
+            'name' => 'required|string|max:255',
+            'description' => 'nullable|string',
+            'number_of_year' => 'required|integer|min:1|max:10',
+        ];
+    }
+
+    /**
+     * Get custom validation messages.
+     */
+    public function messages(): array
+    {
+        return [
+            'code.required' => 'Program code is required.',
+            'code.unique' => 'Program code must be unique.',
+            'name.required' => 'Program name is required.',
+            'number_of_year.required' => 'Number of years is required.',
+            'number_of_year.integer' => 'Number of years must be an integer.',
+            'number_of_year.min' => 'Number of years must be at least 1.',
+            'number_of_year.max' => 'Number of years cannot exceed 10.',
         ];
     }
 }

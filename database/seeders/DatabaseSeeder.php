@@ -4,6 +4,7 @@ namespace Database\Seeders;
 
 use App\Models\User;
 // use Illuminate\Database\Console\Seeds\WithoutModelEvents;
+use Carbon\Carbon;
 use Illuminate\Database\Seeder;
 
 class DatabaseSeeder extends Seeder
@@ -25,6 +26,13 @@ class DatabaseSeeder extends Seeder
             LecturerSubjectSeeder::class,
             ProgramSubjectSeeder::class,
             LecturerScheduleSeeder::class,
+        ]);
+
+        User::create([
+            'email'=>'admin@gmail.com',
+            'name'=>'admin',
+            'password'=>'admin123',
+            'email_verified_at'=>Carbon::now(),
         ]);
     }
 }

@@ -13,15 +13,8 @@ class TimeSlotController extends Controller
      */
     public function index()
     {
-        //
-    }
-
-    /**
-     * Show the form for creating a new resource.
-     */
-    public function create()
-    {
-        //
+        $timeSlots = TimeSlot::all();
+        return response()->json($timeSlots);
     }
 
     /**
@@ -29,7 +22,8 @@ class TimeSlotController extends Controller
      */
     public function store(StoreTimeSlotRequest $request)
     {
-        //
+        $timeSlot = TimeSlot::create($request->validated());
+        return response()->json($timeSlot, 201);
     }
 
     /**
@@ -37,15 +31,7 @@ class TimeSlotController extends Controller
      */
     public function show(TimeSlot $timeSlot)
     {
-        //
-    }
-
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit(TimeSlot $timeSlot)
-    {
-        //
+        return response()->json($timeSlot);
     }
 
     /**
@@ -53,7 +39,8 @@ class TimeSlotController extends Controller
      */
     public function update(UpdateTimeSlotRequest $request, TimeSlot $timeSlot)
     {
-        //
+        $timeSlot->update($request->validated());
+        return response()->json($timeSlot);
     }
 
     /**
@@ -61,6 +48,7 @@ class TimeSlotController extends Controller
      */
     public function destroy(TimeSlot $timeSlot)
     {
-        //
+        $timeSlot->delete();
+        return response()->json(null, 204);
     }
 }

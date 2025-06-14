@@ -11,7 +11,7 @@ class StoreLecturerRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return false;
+        return true; // You can implement proper authorization logic here
     }
 
     /**
@@ -22,7 +22,21 @@ class StoreLecturerRequest extends FormRequest
     public function rules(): array
     {
         return [
-            //
+            'title' => 'nullable|string|max:255',
+            'fname' => 'required|string|max:255',
+            'lname' => 'nullable|string|max:255',
+        ];
+    }
+
+    /**
+     * Get custom validation messages.
+     */
+    public function messages(): array
+    {
+        return [
+            'fname.required' => 'First name is required.',
+            'fname.string' => 'First name must be a string.',
+            'fname.max' => 'First name cannot exceed 255 characters.',
         ];
     }
 }

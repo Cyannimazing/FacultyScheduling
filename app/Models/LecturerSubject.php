@@ -11,8 +11,8 @@ class LecturerSubject extends Model
     /** @use HasFactory<\Database\Factories\LecturerSubjectFactory> */
     use HasFactory;
 
-    // PRIMARY KEY (lecturer_id, subj_code),
-    protected $fillable = ['lecturer_id', 'subj_code', 'sy_term_id', 'created_at', 'updated_at'];
+    // PRIMARY KEY (lecturer_id, prog_subj_id, sy_term_id)
+    protected $fillable = ['lecturer_id', 'prog_subj_id', 'sy_term_id', 'created_at', 'updated_at'];
 
     /**
      * Get the lecturer that owns the lecturer subject.
@@ -25,9 +25,9 @@ class LecturerSubject extends Model
     /**
      * Get the subject that owns the lecturer subject.
      */
-    public function subject(): BelongsTo
+    public function programSubject(): BelongsTo
     {
-        return $this->belongsTo(Subject::class, 'subj_code', 'code');
+        return $this->belongsTo(ProgramSubject::class, 'prog_subj_id', 'id');
     }
 
     /**

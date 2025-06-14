@@ -11,7 +11,7 @@ class StoreRoomRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return false;
+        return true; // You can implement proper authorization logic here
     }
 
     /**
@@ -22,7 +22,20 @@ class StoreRoomRequest extends FormRequest
     public function rules(): array
     {
         return [
-            //
+            'name' => 'required|string|max:255|unique:rooms,name',
+        ];
+    }
+
+    /**
+     * Get custom validation messages.
+     */
+    public function messages(): array
+    {
+        return [
+            'name.required' => 'Room name is required.',
+            'name.unique' => 'Room name must be unique.',
+            'name.string' => 'Room name must be a string.',
+            'name.max' => 'Room name cannot exceed 255 characters.',
         ];
     }
 }

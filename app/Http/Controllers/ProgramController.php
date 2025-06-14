@@ -13,15 +13,8 @@ class ProgramController extends Controller
      */
     public function index()
     {
-        //
-    }
-
-    /**
-     * Show the form for creating a new resource.
-     */
-    public function create()
-    {
-        //
+        $programs = Program::all();
+        return response()->json($programs);
     }
 
     /**
@@ -29,7 +22,8 @@ class ProgramController extends Controller
      */
     public function store(StoreProgramRequest $request)
     {
-        //
+        $program = Program::create($request->validated());
+        return response()->json($program, 201);
     }
 
     /**
@@ -37,15 +31,7 @@ class ProgramController extends Controller
      */
     public function show(Program $program)
     {
-        //
-    }
-
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit(Program $program)
-    {
-        //
+        return response()->json($program);
     }
 
     /**
@@ -53,7 +39,8 @@ class ProgramController extends Controller
      */
     public function update(UpdateProgramRequest $request, Program $program)
     {
-        //
+        $program->update($request->validated());
+        return response()->json($program);
     }
 
     /**
@@ -61,6 +48,7 @@ class ProgramController extends Controller
      */
     public function destroy(Program $program)
     {
-        //
+        $program->delete();
+        return response()->json(null, 204);
     }
 }

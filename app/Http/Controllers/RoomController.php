@@ -13,15 +13,8 @@ class RoomController extends Controller
      */
     public function index()
     {
-        //
-    }
-
-    /**
-     * Show the form for creating a new resource.
-     */
-    public function create()
-    {
-        //
+        $rooms = Room::all();
+        return response()->json($rooms);
     }
 
     /**
@@ -29,7 +22,8 @@ class RoomController extends Controller
      */
     public function store(StoreRoomRequest $request)
     {
-        //
+        $room = Room::create($request->validated());
+        return response()->json($room, 201);
     }
 
     /**
@@ -37,15 +31,7 @@ class RoomController extends Controller
      */
     public function show(Room $room)
     {
-        //
-    }
-
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit(Room $room)
-    {
-        //
+        return response()->json($room);
     }
 
     /**
@@ -53,7 +39,8 @@ class RoomController extends Controller
      */
     public function update(UpdateRoomRequest $request, Room $room)
     {
-        //
+        $room->update($request->validated());
+        return response()->json($room);
     }
 
     /**
@@ -61,6 +48,7 @@ class RoomController extends Controller
      */
     public function destroy(Room $room)
     {
-        //
+        $room->delete();
+        return response()->json(null, 204);
     }
 }

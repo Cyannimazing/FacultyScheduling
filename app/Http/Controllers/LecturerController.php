@@ -13,15 +13,8 @@ class LecturerController extends Controller
      */
     public function index()
     {
-        //
-    }
-
-    /**
-     * Show the form for creating a new resource.
-     */
-    public function create()
-    {
-        //
+        $lecturers = Lecturer::all();
+        return response()->json($lecturers);
     }
 
     /**
@@ -29,7 +22,8 @@ class LecturerController extends Controller
      */
     public function store(StoreLecturerRequest $request)
     {
-        //
+        $lecturer = Lecturer::create($request->validated());
+        return response()->json($lecturer, 201);
     }
 
     /**
@@ -37,15 +31,7 @@ class LecturerController extends Controller
      */
     public function show(Lecturer $lecturer)
     {
-        //
-    }
-
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit(Lecturer $lecturer)
-    {
-        //
+        return response()->json($lecturer);
     }
 
     /**
@@ -53,7 +39,8 @@ class LecturerController extends Controller
      */
     public function update(UpdateLecturerRequest $request, Lecturer $lecturer)
     {
-        //
+        $lecturer->update($request->validated());
+        return response()->json($lecturer);
     }
 
     /**
@@ -61,6 +48,7 @@ class LecturerController extends Controller
      */
     public function destroy(Lecturer $lecturer)
     {
-        //
+        $lecturer->delete();
+        return response()->json(null, 204);
     }
 }

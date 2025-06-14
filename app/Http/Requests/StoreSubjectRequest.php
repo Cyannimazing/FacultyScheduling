@@ -11,7 +11,7 @@ class StoreSubjectRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return false;
+        return true; // You can implement proper authorization logic here
     }
 
     /**
@@ -22,7 +22,28 @@ class StoreSubjectRequest extends FormRequest
     public function rules(): array
     {
         return [
-            //
+            'code' => 'required|string|max:255|unique:subjects,code',
+            'name' => 'required|string|max:255',
+            'unit' => 'required|numeric|min:1',
+            'short' => 'nullable|string|max:255',
+            'is_gen_ed' => 'required|boolean',
+        ];
+    }
+
+    /**
+     * Get custom validation messages.
+     */
+    public function messages(): array
+    {
+        return [
+            'code.required' => 'Subject code is required.',
+            'code.unique' => 'Subject code must be unique.',
+            'name.required' => 'Subject name is required.',
+            'unit.required' => 'Unit is required.',
+            'unit.numeric' => 'Unit must be a number.',
+            'unit.min' => 'Unit must be at least 1.',
+            'is_gen_ed.required' => 'General Education status is required.',
+            'is_gen_ed.boolean' => 'General Education status must be true or false.',
         ];
     }
 }

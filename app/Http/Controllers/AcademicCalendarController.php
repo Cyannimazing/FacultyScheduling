@@ -13,15 +13,8 @@ class AcademicCalendarController extends Controller
      */
     public function index()
     {
-        //
-    }
-
-    /**
-     * Show the form for creating a new resource.
-     */
-    public function create()
-    {
-        //
+        $academicCalendars = AcademicCalendar::all();
+        return response()->json($academicCalendars);
     }
 
     /**
@@ -29,7 +22,8 @@ class AcademicCalendarController extends Controller
      */
     public function store(StoreAcademicCalendarRequest $request)
     {
-        //
+        $academicCalendar = AcademicCalendar::create($request->validated());
+        return response()->json($academicCalendar, 201);
     }
 
     /**
@@ -37,15 +31,7 @@ class AcademicCalendarController extends Controller
      */
     public function show(AcademicCalendar $academicCalendar)
     {
-        //
-    }
-
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit(AcademicCalendar $academicCalendar)
-    {
-        //
+        return response()->json($academicCalendar);
     }
 
     /**
@@ -53,7 +39,8 @@ class AcademicCalendarController extends Controller
      */
     public function update(UpdateAcademicCalendarRequest $request, AcademicCalendar $academicCalendar)
     {
-        //
+        $academicCalendar->update($request->validated());
+        return response()->json($academicCalendar);
     }
 
     /**
@@ -61,6 +48,7 @@ class AcademicCalendarController extends Controller
      */
     public function destroy(AcademicCalendar $academicCalendar)
     {
-        //
+        $academicCalendar->delete();
+        return response()->json(null, 204);
     }
 }

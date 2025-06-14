@@ -13,15 +13,8 @@ class TermController extends Controller
      */
     public function index()
     {
-        //
-    }
-
-    /**
-     * Show the form for creating a new resource.
-     */
-    public function create()
-    {
-        //
+        $terms = Term::all();
+        return response()->json($terms);
     }
 
     /**
@@ -29,7 +22,8 @@ class TermController extends Controller
      */
     public function store(StoreTermRequest $request)
     {
-        //
+        $term = Term::create($request->validated());
+        return response()->json($term, 201);
     }
 
     /**
@@ -37,15 +31,7 @@ class TermController extends Controller
      */
     public function show(Term $term)
     {
-        //
-    }
-
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit(Term $term)
-    {
-        //
+        return response()->json($term);
     }
 
     /**
@@ -53,7 +39,8 @@ class TermController extends Controller
      */
     public function update(UpdateTermRequest $request, Term $term)
     {
-        //
+        $term->update($request->validated());
+        return response()->json($term);
     }
 
     /**
@@ -61,6 +48,7 @@ class TermController extends Controller
      */
     public function destroy(Term $term)
     {
-        //
+        $term->delete();
+        return response()->json(null, 204);
     }
 }
