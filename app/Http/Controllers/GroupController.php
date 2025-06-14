@@ -5,16 +5,29 @@ namespace App\Http\Controllers;
 use App\Models\Group;
 use App\Http\Requests\StoreGroupRequest;
 use App\Http\Requests\UpdateGroupRequest;
+use Illuminate\Http\Request;
+use Inertia\Inertia;
 
 class GroupController extends Controller
 {
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function index(Request $request)
     {
-        $groups = Group::all();
-        return response()->json($groups);
+        $perPage = 5;
+        $search = $request->query('search', '');
+
+        $groups = Group::where('name', 'LIKE', "%$search%")->paginate($perPage);
+
+        return Inertia::render('application/group', [
+            'groups' => [
+                'data' => $groups->items(),
+                'last_page' => $groups->lastPage(),
+                'current_page' => $groups->currentPage(),
+                'total' => $groups->total(),
+            ],
+        ]);
     }
 
     /**
@@ -22,33 +35,37 @@ class GroupController extends Controller
      */
     public function store(StoreGroupRequest $request)
     {
-        $group = Group::create($request->validated());
-        return response()->json($group, 201);
+        Group::create($request->validated());
+        return Inertia::render('application/group');
     }
 
     /**
      * Display the specified resource.
      */
-    public function show(Group $group)
+    public function show(int $id)
     {
-        return response()->json($group);
+        $group = Group::findOrFail($id);
+        return Inertia::render('application/group', [
+            'group' => $group
+        ]);
     }
 
     /**
      * Update the specified resource in storage.
      */
-    public function update(UpdateGroupRequest $request, Group $group)
+    public function update(UpdateGroupRequest $request, int $id)
     {
-        $group->update($request->validated());
-        return response()->json($group);
+        $g = Group::find($id);
+        $g->name = $request->name;
+        $g->save();
     }
 
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(Group $group)
+    public function destroy(int $id)
     {
+        $group = Group::findOrFail($id);
         $group->delete();
-        return response()->json(null, 204);
     }
 }

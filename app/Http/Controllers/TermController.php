@@ -18,12 +18,7 @@ class TermController extends Controller
         $perPage = 5;
         $search = $request->query('search', '');
 
-        $terms = Term::query()
-            ->when($search && trim($search) !== '', function ($query, $search) {
-                $query->where('name', 'like', "%{$search}%");
-            })
-            ->paginate($perPage)
-            ->withQueryString();
+        $terms = Term::where('name', 'LIKE', "%$search%")->paginate($perPage);
 
         return Inertia::render('application/term', [
             'terms' => [
@@ -36,38 +31,21 @@ class TermController extends Controller
     }
 
     /**
-     * Show the form for creating a new resource.
-     */
-    public function create()
-    {
-        return Inertia::render('Terms/Create');
-    }
-
-    /**
      * Store a newly created resource in storage.
      */
     public function store(StoreTermRequest $request)
     {
-        $term = Term::create($request->validated());
-        return response()->json($term, 201);
+        Term::create($request->validated());
+        return Inertia::render('application/term');
     }
 
     /**
      * Display the specified resource.
      */
-    public function show(Term $term)
+    public function show(int $id)
     {
-        return Inertia::render('Terms/Show', [
-            'term' => $term
-        ]);
-    }
-
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit(Term $term)
-    {
-        return Inertia::render('Terms/Edit', [
+        $term = Term::findOrFail($id);
+        return Inertia::render('application/term', [
             'term' => $term
         ]);
     }
@@ -75,18 +53,19 @@ class TermController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(UpdateTermRequest $request, Term $term)
+    public function update(UpdateTermRequest $request, int $id)
     {
-        $term->update($request->validated());
-        return response()->json($term);
+        $t = Term::find($id);
+        $t->name = $request->name;
+        $t->save();
     }
 
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(Term $term)
+    public function destroy(int $id)
     {
+        $term = Term::findOrFail($id);
         $term->delete();
-        return response()->json(null, 204);
     }
 }

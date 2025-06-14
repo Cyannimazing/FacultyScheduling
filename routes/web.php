@@ -27,8 +27,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
         return Inertia::render('application/calendar');
     })->name('calendar');
 
-    Route::get('term', [\App\Http\Controllers\TermController::class, 'index'])->name('term');
-
     Route::get('program', function () {
         return Inertia::render('application/program');
     })->name('program');
@@ -51,19 +49,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
 });
 
-// Include API route files for controllers
-require __DIR__.'/academic-calendar.php';
-require __DIR__.'/groups.php';
-require __DIR__.'/lecturers.php';
-require __DIR__.'/lecturer-schedules.php';
-require __DIR__.'/lecturer-subjects.php';
-require __DIR__.'/programs.php';
-require __DIR__.'/program-subjects.php';
-require __DIR__.'/rooms.php';
-require __DIR__.'/subjects.php';
-require __DIR__.'/terms.php';
-require __DIR__.'/time-slots.php';
 
-// Include authentication and settings routes
 require __DIR__.'/settings.php';
 require __DIR__.'/auth.php';

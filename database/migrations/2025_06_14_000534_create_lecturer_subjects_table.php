@@ -22,7 +22,7 @@ return new class extends Migration
 
             // Foreign keys
             $table->foreign('lecturer_id')->references('id')->on('lecturers')->onDelete('cascade');
-            $table->foreign('prog_subj_id')->references('id')->on('prog_subj_id')->onDelete('cascade')->onUpdate('cascade');
+            $table->foreign('prog_subj_id')->references('id')->on('program_subjects')->onDelete('cascade')->onUpdate('cascade');
             $table->foreign('sy_term_id')->references('id')->on('academic_calendars')->onDelete('cascade');
         });
     }

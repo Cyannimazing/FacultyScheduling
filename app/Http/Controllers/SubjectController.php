@@ -5,16 +5,29 @@ namespace App\Http\Controllers;
 use App\Models\Subject;
 use App\Http\Requests\StoreSubjectRequest;
 use App\Http\Requests\UpdateSubjectRequest;
+use Illuminate\Http\Request;
+use Inertia\Inertia;
 
 class SubjectController extends Controller
 {
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function index(Request $request)
     {
-        $subjects = Subject::all();
-        return response()->json($subjects);
+        $perPage = 5;
+        $search = $request->query('search', '');
+
+        $subjects = Subject::where('name', 'LIKE', "%$search%")->paginate($perPage);
+
+        return Inertia::render('application/subject', [
+            'subjects' => [
+                'data' => $subjects->items(),
+                'last_page' => $subjects->lastPage(),
+                'current_page' => $subjects->currentPage(),
+                'total' => $subjects->total(),
+            ],
+        ]);
     }
 
     /**
@@ -22,33 +35,37 @@ class SubjectController extends Controller
      */
     public function store(StoreSubjectRequest $request)
     {
-        $subject = Subject::create($request->validated());
-        return response()->json($subject, 201);
+        Subject::create($request->validated());
+        return Inertia::render('application/subject');
     }
 
     /**
      * Display the specified resource.
      */
-    public function show(Subject $subject)
+    public function show(int $id)
     {
-        return response()->json($subject);
+        $subject = Subject::findOrFail($id);
+        return Inertia::render('application/subject', [
+            'subject' => $subject
+        ]);
     }
 
     /**
      * Update the specified resource in storage.
      */
-    public function update(UpdateSubjectRequest $request, Subject $subject)
+    public function update(UpdateSubjectRequest $request, int $id)
     {
-        $subject->update($request->validated());
-        return response()->json($subject);
+        $s = Subject::find($id);
+        $s->name = $request->name;
+        $s->save();
     }
 
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(Subject $subject)
+    public function destroy(int $id)
     {
+        $subject = Subject::findOrFail($id);
         $subject->delete();
-        return response()->json(null, 204);
     }
 }

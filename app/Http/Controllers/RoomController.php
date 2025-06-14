@@ -5,16 +5,29 @@ namespace App\Http\Controllers;
 use App\Models\Room;
 use App\Http\Requests\StoreRoomRequest;
 use App\Http\Requests\UpdateRoomRequest;
+use Illuminate\Http\Request;
+use Inertia\Inertia;
 
 class RoomController extends Controller
 {
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function index(Request $request)
     {
-        $rooms = Room::all();
-        return response()->json($rooms);
+        $perPage = 5;
+        $search = $request->query('search', '');
+
+        $rooms = Room::where('name', 'LIKE', "%$search%")->paginate($perPage);
+
+        return Inertia::render('application/room', [
+            'rooms' => [
+                'data' => $rooms->items(),
+                'last_page' => $rooms->lastPage(),
+                'current_page' => $rooms->currentPage(),
+                'total' => $rooms->total(),
+            ],
+        ]);
     }
 
     /**
@@ -22,33 +35,37 @@ class RoomController extends Controller
      */
     public function store(StoreRoomRequest $request)
     {
-        $room = Room::create($request->validated());
-        return response()->json($room, 201);
+        Room::create($request->validated());
+        return Inertia::render('application/room');
     }
 
     /**
      * Display the specified resource.
      */
-    public function show(Room $room)
+    public function show(int $id)
     {
-        return response()->json($room);
+        $room = Room::findOrFail($id);
+        return Inertia::render('application/room', [
+            'room' => $room
+        ]);
     }
 
     /**
      * Update the specified resource in storage.
      */
-    public function update(UpdateRoomRequest $request, Room $room)
+    public function update(UpdateRoomRequest $request, int $id)
     {
-        $room->update($request->validated());
-        return response()->json($room);
+        $r = Room::find($id);
+        $r->name = $request->name;
+        $r->save();
     }
 
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(Room $room)
+    public function destroy(int $id)
     {
+        $room = Room::findOrFail($id);
         $room->delete();
-        return response()->json(null, 204);
     }
 }

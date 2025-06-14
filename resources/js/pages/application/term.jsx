@@ -116,16 +116,16 @@ function TermDialog({ isOpen, onClose, term = null, onSave, existingTerms = [] }
 }
 
 export default function Term({ terms = { data: [], last_page: 1, current_page: 1, total: 0 } }) {
-    const [currentPage, setCurrentPage] = useState(terms.current_page);
+    const [currentPage, setCurrentPage] = useState(terms?.current_page);
     const [isLoading, setIsLoading] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [editingTerm, setEditingTerm] = useState(null);
-    const [termsData, setTermsData] = useState(terms.data);
+    const [termsData, setTermsData] = useState(terms?.data);
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [termToDelete, setTermToDelete] = useState(null);
-    const [totalPages, setTotalPages] = useState(terms.last_page);
-    const [totalItems, setTotalItems] = useState(terms.total);
+    const [totalPages, setTotalPages] = useState(terms?.last_page);
+    const [totalItems, setTotalItems] = useState(terms?.total);
 
     const itemsPerPage = 5;
 
@@ -133,7 +133,7 @@ export default function Term({ terms = { data: [], last_page: 1, current_page: 1
     useEffect(() => {
         const timer = setTimeout(() => {
             if (searchTerm !== '') {
-                router.visit('/term', {
+                router.visit('/terms', {
                     method: 'get',
                     data: { search: searchTerm, page: 1 },
                     preserveState: true,
@@ -141,7 +141,7 @@ export default function Term({ terms = { data: [], last_page: 1, current_page: 1
                     only: ['terms'],
                 });
             } else {
-                router.visit('/term', {
+                router.visit('/terms', {
                     method: 'get',
                     preserveState: true,
                     preserveScroll: true,
@@ -155,7 +155,7 @@ export default function Term({ terms = { data: [], last_page: 1, current_page: 1
     // Handle pagination
     const handlePageChange = (page) => {
         if (page > 0 && page <= totalPages) {
-            router.visit('/term', {
+            router.visit('/terms', {
                 method: 'get',
                 data: { page, search: searchTerm || undefined },
                 preserveState: true,
@@ -166,7 +166,6 @@ export default function Term({ terms = { data: [], last_page: 1, current_page: 1
     };
 
     // Data is already filtered and paginated by the backend
-    const paginatedData = termsData;
 
 
     const handleAddTerm = () => {
@@ -182,20 +181,21 @@ export default function Term({ terms = { data: [], last_page: 1, current_page: 1
     const handleSaveTerm = (formData) => {
         if (editingTerm) {
             // Update existing term
-            router.put(`/terms/${editingTerm.id}`, formData, {
+            console.log(editingTerm)
+            router.post(`/terms/${editingTerm.id}?_method=PUT`, formData,{
                 onSuccess: () => {
-                    router.visit('/term', {
+                        router.visit('/terms', {
                         preserveState: true,
                         preserveScroll: true,
                         only: ['terms'],
                     });
-                },
-            });
+                }
+            })
         } else {
             // Add new term
             router.post('/terms', formData, {
                 onSuccess: () => {
-                    router.visit('/term', {
+                    router.visit('/terms', {
                         preserveState: true,
                         preserveScroll: true,
                         only: ['terms'],
@@ -214,7 +214,7 @@ export default function Term({ terms = { data: [], last_page: 1, current_page: 1
         if (termToDelete) {
             router.delete(`/terms/${termToDelete.id}`, {
                 onSuccess: () => {
-                    router.visit('/term', {
+                    router.visit('/terms', {
                         preserveState: true,
                         preserveScroll: true,
                         only: ['terms'],
@@ -266,14 +266,14 @@ export default function Term({ terms = { data: [], last_page: 1, current_page: 1
                                 />
                             </div>
                             <div className="text-muted-foreground text-sm">
-                                Showing {paginatedData.length} of {totalItems} terms
+                                Showing {terms.data.length} of {totalItems} terms
                             </div>
                         </div>
                     </CardHeader>
                     <CardContent>
                         {isLoading ? (
                             <LoadingSkeleton />
-                        ) : paginatedData.length > 0 ? (
+                        ) : terms.data.length > 0 ? (
                             <div className="overflow-x-auto">
                                 <Table>
                                     <TableHeader>
@@ -286,7 +286,7 @@ export default function Term({ terms = { data: [], last_page: 1, current_page: 1
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
-                                        {paginatedData.map((term) => (
+                                        {terms.data.map((term) => (
                                             <TableRow key={term.id} className="hover:bg-muted/50">
                                                 <TableCell>
                                                     <span className="font-medium">{term.id}</span>
@@ -353,7 +353,7 @@ export default function Term({ terms = { data: [], last_page: 1, current_page: 1
                 </Card>
 
                 {/* Pagination */}
-                {!isLoading && paginatedData.length > 0 && totalPages > 1 && (
+                {!isLoading && terms.data.length > 0 && totalPages > 1 && (
                     <div className="flex items-center justify-between">
                         <div className="text-muted-foreground text-sm">
                             Page {currentPage} of {totalPages}

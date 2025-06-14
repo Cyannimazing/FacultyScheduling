@@ -5,16 +5,29 @@ namespace App\Http\Controllers;
 use App\Models\Program;
 use App\Http\Requests\StoreProgramRequest;
 use App\Http\Requests\UpdateProgramRequest;
+use Illuminate\Http\Request;
+use Inertia\Inertia;
 
 class ProgramController extends Controller
 {
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function index(Request $request)
     {
-        $programs = Program::all();
-        return response()->json($programs);
+        $perPage = 5;
+        $search = $request->query('search', '');
+
+        $programs = Program::where('name', 'LIKE', "%$search%")->paginate($perPage);
+
+        return Inertia::render('application/program', [
+            'programs' => [
+                'data' => $programs->items(),
+                'last_page' => $programs->lastPage(),
+                'current_page' => $programs->currentPage(),
+                'total' => $programs->total(),
+            ],
+        ]);
     }
 
     /**
@@ -22,33 +35,37 @@ class ProgramController extends Controller
      */
     public function store(StoreProgramRequest $request)
     {
-        $program = Program::create($request->validated());
-        return response()->json($program, 201);
+        Program::create($request->validated());
+        return Inertia::render('application/program');
     }
 
     /**
      * Display the specified resource.
      */
-    public function show(Program $program)
+    public function show(int $id)
     {
-        return response()->json($program);
+        $program = Program::findOrFail($id);
+        return Inertia::render('application/program', [
+            'program' => $program
+        ]);
     }
 
     /**
      * Update the specified resource in storage.
      */
-    public function update(UpdateProgramRequest $request, Program $program)
+    public function update(UpdateProgramRequest $request, int $id)
     {
-        $program->update($request->validated());
-        return response()->json($program);
+        $p = Program::find($id);
+        $p->name = $request->name;
+        $p->save();
     }
 
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(Program $program)
+    public function destroy(int $id)
     {
+        $program = Program::findOrFail($id);
         $program->delete();
-        return response()->json(null, 204);
     }
 }

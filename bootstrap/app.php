@@ -21,6 +21,11 @@ return Application::configure(basePath: dirname(__DIR__))
             HandleInertiaRequests::class,
             AddLinkHeadersForPreloadedAssets::class,
         ]);
+
+        $middleware->validateCsrfTokens([
+            'rooms',
+            'login',
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
         //

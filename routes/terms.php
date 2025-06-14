@@ -3,7 +3,6 @@
 use App\Http\Controllers\TermController;
 use Illuminate\Support\Facades\Route;
 
-// Term Routes
 Route::middleware(['auth', 'verified'])->prefix('terms')->name('terms.')->group(function () {
     Route::get('/', [TermController::class, 'index'])->name('index');
     Route::post('/', [TermController::class, 'store'])->name('store');

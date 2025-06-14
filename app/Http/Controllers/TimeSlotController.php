@@ -5,16 +5,31 @@ namespace App\Http\Controllers;
 use App\Models\TimeSlot;
 use App\Http\Requests\StoreTimeSlotRequest;
 use App\Http\Requests\UpdateTimeSlotRequest;
+use Illuminate\Http\Request;
+use Inertia\Inertia;
 
 class TimeSlotController extends Controller
 {
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function index(Request $request)
     {
-        $timeSlots = TimeSlot::all();
-        return response()->json($timeSlots);
+        $perPage = 5;
+        $search = $request->query('search', '');
+
+        $timeSlots = TimeSlot::where('start_time', 'LIKE', "%$search%")
+                            ->orWhere('end_time', 'LIKE', "%$search%")
+                            ->paginate($perPage);
+
+        return Inertia::render('application/timeslot', [
+            'timeSlots' => [
+                'data' => $timeSlots->items(),
+                'last_page' => $timeSlots->lastPage(),
+                'current_page' => $timeSlots->currentPage(),
+                'total' => $timeSlots->total(),
+            ],
+        ]);
     }
 
     /**
@@ -22,33 +37,38 @@ class TimeSlotController extends Controller
      */
     public function store(StoreTimeSlotRequest $request)
     {
-        $timeSlot = TimeSlot::create($request->validated());
-        return response()->json($timeSlot, 201);
+        TimeSlot::create($request->validated());
+        return Inertia::render('application/timeslot');
     }
 
     /**
      * Display the specified resource.
      */
-    public function show(TimeSlot $timeSlot)
+    public function show(int $id)
     {
-        return response()->json($timeSlot);
+        $timeSlot = TimeSlot::findOrFail($id);
+        return Inertia::render('application/timeslot', [
+            'timeSlot' => $timeSlot
+        ]);
     }
 
     /**
      * Update the specified resource in storage.
      */
-    public function update(UpdateTimeSlotRequest $request, TimeSlot $timeSlot)
+    public function update(UpdateTimeSlotRequest $request, int $id)
     {
-        $timeSlot->update($request->validated());
-        return response()->json($timeSlot);
+        $t = TimeSlot::find($id);
+        $t->start_time = $request->start_time;
+        $t->end_time = $request->end_time;
+        $t->save();
     }
 
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(TimeSlot $timeSlot)
+    public function destroy(int $id)
     {
+        $timeSlot = TimeSlot::findOrFail($id);
         $timeSlot->delete();
-        return response()->json(null, 204);
     }
 }
