@@ -15,8 +15,9 @@ class LecturerScheduleController extends Controller
      */
     public function index(Request $request)
     {
+        $search = $request->input('search');
+        $page = $request->input('page', 1);
         $perPage = 5;
-        $search = $request->query('search', '');
 
         $lecturerSchedules = LecturerSchedule::with(['lecturer', 'subject', 'room', 'timeSlot'])
                                             ->whereHas('lecturer', function($query) use ($search) {
@@ -25,15 +26,11 @@ class LecturerScheduleController extends Controller
                                             ->orWhereHas('subject', function($query) use ($search) {
                                                 $query->where('name', 'LIKE', "%$search%");
                                             })
-                                            ->paginate($perPage);
+                                            ->orderBy('day_of_week')
+                                            ->paginate($perPage, ['*'], 'page', $page);
 
         return Inertia::render('application/lecturer-schedule', [
-            'lecturerSchedules' => [
-                'data' => $lecturerSchedules->items(),
-                'last_page' => $lecturerSchedules->lastPage(),
-                'current_page' => $lecturerSchedules->currentPage(),
-                'total' => $lecturerSchedules->total(),
-            ],
+            'lecturerSchedules' => $lecturerSchedules,
         ]);
     }
 
@@ -42,8 +39,11 @@ class LecturerScheduleController extends Controller
      */
     public function store(StoreLecturerScheduleRequest $request)
     {
-        LecturerSchedule::create($request->validated());
-        return Inertia::render('application/lecturer-schedule');
+        $validated = $request->validated();
+
+        LecturerSchedule::create($validated);
+
+        return redirect()->route('lecturer-schedule')->with('success', 'Lecturer Schedule created successfully.');
     }
 
     /**
@@ -62,21 +62,26 @@ class LecturerScheduleController extends Controller
      */
     public function update(UpdateLecturerScheduleRequest $request, int $id)
     {
-        $ls = LecturerSchedule::find($id);
-        $ls->lecturer_id = $request->lecturer_id;
-        $ls->subject_id = $request->subject_id;
-        $ls->room_id = $request->room_id;
-        $ls->time_slot_id = $request->time_slot_id;
-        $ls->day_of_week = $request->day_of_week;
-        $ls->save();
+        $lecturerSchedule = LecturerSchedule::find($id);
+        if($lecturerSchedule){
+            $lecturerSchedule->update([
+                'lecturer_id' => $request->lecturer_id,
+                'subject_id' => $request->subject_id,
+                'room_id' => $request->room_id,
+                'time_slot_id' => $request->time_slot_id,
+                'day_of_week' => $request->day_of_week
+            ]);
+        }
+        return redirect()->route('lecturer-schedule')->with('success', 'Lecturer Schedule updated successfully.');
     }
 
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(int $id)
+    public function destroy(LecturerSchedule $lecturerSchedule)
     {
-        $lecturerSchedule = LecturerSchedule::findOrFail($id);
         $lecturerSchedule->delete();
+
+        return redirect()->route('lecturer-schedule')->with('success', 'Lecturer Schedule deleted successfully.');
     }
 }

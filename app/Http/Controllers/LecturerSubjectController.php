@@ -15,8 +15,9 @@ class LecturerSubjectController extends Controller
      */
     public function index(Request $request)
     {
+        $search = $request->input('search');
+        $page = $request->input('page', 1);
         $perPage = 5;
-        $search = $request->query('search', '');
 
         $lecturerSubjects = LecturerSubject::with(['lecturer', 'subject'])
                                           ->whereHas('lecturer', function($query) use ($search) {
@@ -25,15 +26,11 @@ class LecturerSubjectController extends Controller
                                           ->orWhereHas('subject', function($query) use ($search) {
                                               $query->where('name', 'LIKE', "%$search%");
                                           })
-                                          ->paginate($perPage);
+                                          ->orderBy('id')
+                                          ->paginate($perPage, ['*'], 'page', $page);
 
         return Inertia::render('application/lecturer-subject', [
-            'lecturerSubjects' => [
-                'data' => $lecturerSubjects->items(),
-                'last_page' => $lecturerSubjects->lastPage(),
-                'current_page' => $lecturerSubjects->currentPage(),
-                'total' => $lecturerSubjects->total(),
-            ],
+            'lecturerSubjects' => $lecturerSubjects,
         ]);
     }
 
@@ -42,8 +39,11 @@ class LecturerSubjectController extends Controller
      */
     public function store(StoreLecturerSubjectRequest $request)
     {
-        LecturerSubject::create($request->validated());
-        return Inertia::render('application/lecturer-subject');
+        $validated = $request->validated();
+
+        LecturerSubject::create($validated);
+
+        return redirect()->route('lecturer-subject')->with('success', 'Lecturer Subject created successfully.');
     }
 
     /**
@@ -62,18 +62,23 @@ class LecturerSubjectController extends Controller
      */
     public function update(UpdateLecturerSubjectRequest $request, int $id)
     {
-        $ls = LecturerSubject::find($id);
-        $ls->lecturer_id = $request->lecturer_id;
-        $ls->subject_id = $request->subject_id;
-        $ls->save();
+        $lecturerSubject = LecturerSubject::find($id);
+        if($lecturerSubject){
+            $lecturerSubject->update([
+                'lecturer_id' => $request->lecturer_id,
+                'subject_id' => $request->subject_id
+            ]);
+        }
+        return redirect()->route('lecturer-subject')->with('success', 'Lecturer Subject updated successfully.');
     }
 
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(int $id)
+    public function destroy(LecturerSubject $lecturerSubject)
     {
-        $lecturerSubject = LecturerSubject::findOrFail($id);
         $lecturerSubject->delete();
+
+        return redirect()->route('lecturer-subject')->with('success', 'Lecturer Subject deleted successfully.');
     }
 }

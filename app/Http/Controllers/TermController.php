@@ -17,17 +17,14 @@ class TermController extends Controller
         $page = $request->input('page', 1);
         $perPage = 5;
 
-        $query = Term::query()->orderBy('created_at', 'desc');
-
-        if ($search) {
-            $query->where('name', 'like', "%{$search}%");
-        }
-
-        $terms = $query->paginate($perPage, ['*'], 'page', $page);
+        $terms = Term::where('name' , 'LIKE', "%$search%")
+                        ->orderBy('name')
+                        ->paginate($perPage, ['*'], 'page', $page);
 
         return Inertia::render('application/term', [
-            'terms' => $terms,
-            'filters' => $request->only(['search']),
+            'data' => [
+                'terms' => $terms,
+                ]
         ]);
     }
 

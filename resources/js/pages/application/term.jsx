@@ -94,7 +94,7 @@ function TermDialog({ isOpen, onClose, term = null, onSave, existingTerms = [] }
 }
 
 export default function Index() {
-    const { terms } = usePage().props;
+    const { data } = usePage().props;
     const [isLoading, setIsLoading] = useState(false);
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [editingTerm, setEditingTerm] = useState(null);
@@ -114,7 +114,7 @@ export default function Index() {
             },
         );
     };
-
+    console.log()
     const handlePageChange = (page) => {
         setIsLoading(true);
         router.get(
@@ -195,14 +195,14 @@ export default function Index() {
                                 <Input placeholder="Search terms..." value={searchTerm} onChange={handleSearch} className="pl-9" />
                             </div>
                             <div className="text-muted-foreground text-sm">
-                                Showing {terms.data.length} of {terms.total} terms
+                                Showing {data.terms.length} of {data.terms.total} terms
                             </div>
                         </div>
                     </CardHeader>
                     <CardContent>
                         {isLoading ? (
                             <LoadingSkeleton />
-                        ) : terms.data.length === 0 ? (
+                        ) : data.terms.length === 0 ? (
                             <div className="flex flex-col items-center justify-center py-12 text-center">
                                 <GraduationCap className="text-muted-foreground mb-4 h-12 w-12" />
                                 <h3 className="mb-2 text-lg font-semibold">No terms found</h3>
@@ -229,7 +229,7 @@ export default function Index() {
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
-                                        {terms.data.map((term) => (
+                                        {data.terms.data.map((term) => (
                                             <TableRow key={term.id} className="hover:bg-muted/50">
                                                 <TableCell>{term.id}</TableCell>
                                                 <TableCell>
@@ -282,7 +282,7 @@ export default function Index() {
                     </CardContent>
                 </Card>
 
-                {!isLoading && terms.last_page > 1 && (
+                {!isLoading && data.terms.last_page > 1 && (
                     <div className="flex items-center justify-between">
                         <div className="text-muted-foreground text-sm">
                             Page {terms.current_page} of {terms.last_page}
@@ -316,7 +316,7 @@ export default function Index() {
                 onClose={() => setIsDialogOpen(false)}
                 term={editingTerm}
                 onSave={handleSaveTerm}
-                existingTerms={terms.data}
+                existingTerms={data.terms.data}
             />
 
             <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>

@@ -15,8 +15,9 @@ class ProgramSubjectController extends Controller
      */
     public function index(Request $request)
     {
+        $search = $request->input('search');
+        $page = $request->input('page', 1);
         $perPage = 5;
-        $search = $request->query('search', '');
 
         $programSubjects = ProgramSubject::with(['program', 'subject'])
                                          ->whereHas('program', function($query) use ($search) {
@@ -25,15 +26,11 @@ class ProgramSubjectController extends Controller
                                          ->orWhereHas('subject', function($query) use ($search) {
                                              $query->where('name', 'LIKE', "%$search%");
                                          })
-                                         ->paginate($perPage);
+                                         ->orderBy('id')
+                                         ->paginate($perPage, ['*'], 'page', $page);
 
         return Inertia::render('application/program-subject', [
-            'programSubjects' => [
-                'data' => $programSubjects->items(),
-                'last_page' => $programSubjects->lastPage(),
-                'current_page' => $programSubjects->currentPage(),
-                'total' => $programSubjects->total(),
-            ],
+            'programSubjects' => $programSubjects,
         ]);
     }
 
@@ -42,8 +39,11 @@ class ProgramSubjectController extends Controller
      */
     public function store(StoreProgramSubjectRequest $request)
     {
-        ProgramSubject::create($request->validated());
-        return Inertia::render('application/program-subject');
+        $validated = $request->validated();
+
+        ProgramSubject::create($validated);
+
+        return redirect()->route('program-subject')->with('success', 'Program Subject created successfully.');
     }
 
     /**
@@ -62,18 +62,23 @@ class ProgramSubjectController extends Controller
      */
     public function update(UpdateProgramSubjectRequest $request, int $id)
     {
-        $ps = ProgramSubject::find($id);
-        $ps->program_id = $request->program_id;
-        $ps->subject_id = $request->subject_id;
-        $ps->save();
+        $programSubject = ProgramSubject::find($id);
+        if($programSubject){
+            $programSubject->update([
+                'program_id' => $request->program_id,
+                'subject_id' => $request->subject_id
+            ]);
+        }
+        return redirect()->route('program-subject')->with('success', 'Program Subject updated successfully.');
     }
 
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(int $id)
+    public function destroy(ProgramSubject $programSubject)
     {
-        $programSubject = ProgramSubject::findOrFail($id);
         $programSubject->delete();
+
+        return redirect()->route('program-subject')->with('success', 'Program Subject deleted successfully.');
     }
 }

@@ -3,12 +3,12 @@
 use App\Http\Controllers\LecturerSubjectController;
 use Illuminate\Support\Facades\Route;
 
-// Lecturer Subject Routes
-Route::middleware(['auth', 'verified'])->prefix('lecturer-subjects')->name('lecturer-subjects.')->group(function () {
-    Route::get('/', [LecturerSubjectController::class, 'index'])->name('index');
-    Route::post('/', [LecturerSubjectController::class, 'store'])->name('store');
-    Route::get('/{lecturerSubject}', [LecturerSubjectController::class, 'show'])->name('show');
-    Route::put('/{lecturerSubject}', [LecturerSubjectController::class, 'update'])->name('update');
-    Route::delete('/{lecturerSubject}', [LecturerSubjectController::class, 'destroy'])->name('destroy');
+Route::middleware(['auth', 'verified'])->group(function () {
+    Route::controller(LecturerSubjectController::class)->group(function () {
+        Route::get('subject-allocation', 'index')->name('subject-allocation');
+        Route::post('subject-allocation', 'store');
+        Route::put('subject-allocation/{lecturerSubject}', 'update');
+        Route::delete('subject-allocation/{lecturerSubject}', 'destroy');
+    });
 });
 

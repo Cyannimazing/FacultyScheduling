@@ -15,18 +15,16 @@ class RoomController extends Controller
      */
     public function index(Request $request)
     {
+        $search = $request->input('search');
+        $page = $request->input('page', 1);
         $perPage = 5;
-        $search = $request->query('search', '');
 
-        $rooms = Room::where('name', 'LIKE', "%$search%")->paginate($perPage);
+        $rooms = Room::where('name', 'LIKE', "%$search%")
+                        ->orderBy('name')
+                        ->paginate($perPage, ['*'], 'page', $page);
 
         return Inertia::render('application/room', [
-            'rooms' => [
-                'data' => $rooms->items(),
-                'last_page' => $rooms->lastPage(),
-                'current_page' => $rooms->currentPage(),
-                'total' => $rooms->total(),
-            ],
+            'rooms' => $rooms,
         ]);
     }
 
@@ -35,8 +33,11 @@ class RoomController extends Controller
      */
     public function store(StoreRoomRequest $request)
     {
-        Room::create($request->validated());
-        return Inertia::render('application/room');
+        $validated = $request->validated();
+
+        Room::create($validated);
+
+        return redirect()->route('room')->with('success', 'Room created successfully.');
     }
 
     /**
@@ -55,17 +56,22 @@ class RoomController extends Controller
      */
     public function update(UpdateRoomRequest $request, int $id)
     {
-        $r = Room::find($id);
-        $r->name = $request->name;
-        $r->save();
+        $room = Room::find($id);
+        if($room){
+            $room->update([
+                'name' => $request->name
+            ]);
+        }
+        return redirect()->route('room')->with('success', 'Room updated successfully.');
     }
 
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(int $id)
+    public function destroy(Room $room)
     {
-        $room = Room::findOrFail($id);
         $room->delete();
+
+        return redirect()->route('room')->with('success', 'Room deleted successfully.');
     }
 }

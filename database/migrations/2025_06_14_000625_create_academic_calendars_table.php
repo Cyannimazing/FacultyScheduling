@@ -18,10 +18,11 @@ return new class extends Migration
             $table->date('start_date');
             $table->date('end_date');
             $table->timestamps();
-            
+
             // Unique constraint
-            $table->unique(['start_date', 'end_date']);
-            
+            $table->unique(['start_date', 'end_date'], 'academic_calendar_start_end_date');
+            $table->unique(['term_id', 'school_year'], 'academic_calendar_school_term');
+
             // Foreign key
             $table->foreign('term_id')->references('id')->on('terms')->onDelete('cascade');
         });

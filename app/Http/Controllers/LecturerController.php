@@ -15,18 +15,16 @@ class LecturerController extends Controller
      */
     public function index(Request $request)
     {
+        $search = $request->input('search');
+        $page = $request->input('page', 1);
         $perPage = 5;
-        $search = $request->query('search', '');
 
-        $lecturers = Lecturer::where('name', 'LIKE', "%$search%")->paginate($perPage);
+        $lecturers = Lecturer::where('name', 'LIKE', "%$search%")
+                        ->orderBy('name')
+                        ->paginate($perPage, ['*'], 'page', $page);
 
         return Inertia::render('application/lecturer', [
-            'lecturers' => [
-                'data' => $lecturers->items(),
-                'last_page' => $lecturers->lastPage(),
-                'current_page' => $lecturers->currentPage(),
-                'total' => $lecturers->total(),
-            ],
+            'lecturers' => $lecturers,
         ]);
     }
 
@@ -35,8 +33,11 @@ class LecturerController extends Controller
      */
     public function store(StoreLecturerRequest $request)
     {
-        Lecturer::create($request->validated());
-        return Inertia::render('application/lecturer');
+        $validated = $request->validated();
+
+        Lecturer::create($validated);
+
+        return redirect()->route('lecturer')->with('success', 'Lecturer created successfully.');
     }
 
     /**
@@ -55,17 +56,22 @@ class LecturerController extends Controller
      */
     public function update(UpdateLecturerRequest $request, int $id)
     {
-        $l = Lecturer::find($id);
-        $l->name = $request->name;
-        $l->save();
+        $lecturer = Lecturer::find($id);
+        if($lecturer){
+            $lecturer->update([
+                'name' => $request->name
+            ]);
+        }
+        return redirect()->route('lecturer')->with('success', 'Lecturer updated successfully.');
     }
 
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(int $id)
+    public function destroy(Lecturer $lecturer)
     {
-        $lecturer = Lecturer::findOrFail($id);
         $lecturer->delete();
+
+        return redirect()->route('lecturer')->with('success', 'Lecturer deleted successfully.');
     }
 }

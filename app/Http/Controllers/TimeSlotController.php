@@ -15,20 +15,17 @@ class TimeSlotController extends Controller
      */
     public function index(Request $request)
     {
+        $search = $request->input('search');
+        $page = $request->input('page', 1);
         $perPage = 5;
-        $search = $request->query('search', '');
 
         $timeSlots = TimeSlot::where('start_time', 'LIKE', "%$search%")
                             ->orWhere('end_time', 'LIKE', "%$search%")
-                            ->paginate($perPage);
+                            ->orderBy('start_time')
+                            ->paginate($perPage, ['*'], 'page', $page);
 
         return Inertia::render('application/timeslot', [
-            'timeSlots' => [
-                'data' => $timeSlots->items(),
-                'last_page' => $timeSlots->lastPage(),
-                'current_page' => $timeSlots->currentPage(),
-                'total' => $timeSlots->total(),
-            ],
+            'timeSlots' => $timeSlots,
         ]);
     }
 
@@ -37,8 +34,11 @@ class TimeSlotController extends Controller
      */
     public function store(StoreTimeSlotRequest $request)
     {
-        TimeSlot::create($request->validated());
-        return Inertia::render('application/timeslot');
+        $validated = $request->validated();
+
+        TimeSlot::create($validated);
+
+        return redirect()->route('time-slot')->with('success', 'Time Slot created successfully.');
     }
 
     /**
@@ -57,18 +57,23 @@ class TimeSlotController extends Controller
      */
     public function update(UpdateTimeSlotRequest $request, int $id)
     {
-        $t = TimeSlot::find($id);
-        $t->start_time = $request->start_time;
-        $t->end_time = $request->end_time;
-        $t->save();
+        $timeSlot = TimeSlot::find($id);
+        if($timeSlot){
+            $timeSlot->update([
+                'start_time' => $request->start_time,
+                'end_time' => $request->end_time
+            ]);
+        }
+        return redirect()->route('time-slot')->with('success', 'Time Slot updated successfully.');
     }
 
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(int $id)
+    public function destroy(TimeSlot $timeSlot)
     {
-        $timeSlot = TimeSlot::findOrFail($id);
         $timeSlot->delete();
+
+        return redirect()->route('time-slot')->with('success', 'Time Slot deleted successfully.');
     }
 }

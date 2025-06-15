@@ -15,18 +15,16 @@ class GroupController extends Controller
      */
     public function index(Request $request)
     {
+        $search = $request->input('search');
+        $page = $request->input('page', 1);
         $perPage = 5;
-        $search = $request->query('search', '');
 
-        $groups = Group::where('name', 'LIKE', "%$search%")->paginate($perPage);
+        $groups = Group::where('name', 'LIKE', "%$search%")
+                        ->orderBy('name')
+                        ->paginate($perPage, ['*'], 'page', $page);
 
         return Inertia::render('application/group', [
-            'groups' => [
-                'data' => $groups->items(),
-                'last_page' => $groups->lastPage(),
-                'current_page' => $groups->currentPage(),
-                'total' => $groups->total(),
-            ],
+            'groups' => $groups,
         ]);
     }
 
@@ -35,8 +33,11 @@ class GroupController extends Controller
      */
     public function store(StoreGroupRequest $request)
     {
-        Group::create($request->validated());
-        return Inertia::render('application/group');
+        $validated = $request->validated();
+
+        Group::create($validated);
+
+        return redirect()->route('group')->with('success', 'Group created successfully.');
     }
 
     /**
@@ -55,17 +56,22 @@ class GroupController extends Controller
      */
     public function update(UpdateGroupRequest $request, int $id)
     {
-        $g = Group::find($id);
-        $g->name = $request->name;
-        $g->save();
+        $group = Group::find($id);
+        if($group){
+            $group->update([
+                'name' => $request->name
+            ]);
+        }
+        return redirect()->route('group')->with('success', 'Group updated successfully.');
     }
 
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(int $id)
+    public function destroy(Group $group)
     {
-        $group = Group::findOrFail($id);
         $group->delete();
+
+        return redirect()->route('group')->with('success', 'Group deleted successfully.');
     }
 }

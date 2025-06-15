@@ -11,7 +11,7 @@ class UpdateAcademicCalendarRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return false;
+        return true;
     }
 
     /**
@@ -22,7 +22,10 @@ class UpdateAcademicCalendarRequest extends FormRequest
     public function rules(): array
     {
         return [
-            //
+            'school_year' => 'required|regex:/^\d{4}-\d{4}$/|string',
+            'term_id' => 'required',
+            'start_date' => 'required|date',
+            'end_date' => 'required|date'
         ];
     }
 }

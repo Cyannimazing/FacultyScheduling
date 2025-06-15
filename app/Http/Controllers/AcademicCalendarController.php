@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\AcademicCalendar;
 use App\Http\Requests\StoreAcademicCalendarRequest;
 use App\Http\Requests\UpdateAcademicCalendarRequest;
+use App\Models\Term;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -15,20 +16,25 @@ class AcademicCalendarController extends Controller
      */
     public function index(Request $request)
     {
+        $search = $request->input('search');
+        $page = $request->input('page', 1);
         $perPage = 5;
-        $search = $request->query('search', '');
 
-        $academicCalendars = AcademicCalendar::where('name', 'LIKE', "%$search%")
-                                           ->orWhere('description', 'LIKE', "%$search%")
-                                           ->paginate($perPage);
+        $academicCalendars = AcademicCalendar::with('term')
+            ->where('school_year', 'LIKE', "%$search%")
+            ->orWhereHas('term', function ($query) use ($search) {
+                $query->where('name', 'LIKE', "%$search%");
+            })
+            ->orderBy('school_year')
+            ->paginate($perPage, ['*'], 'page', $page);
 
-        return Inertia::render('application/academic-calendar', [
-            'academicCalendars' => [
-                'data' => $academicCalendars->items(),
-                'last_page' => $academicCalendars->lastPage(),
-                'current_page' => $academicCalendars->currentPage(),
-                'total' => $academicCalendars->total(),
-            ],
+        $termOptions = Term::select(["id, name"])->orderBy('name')->get();
+
+        return Inertia::render('application/calendar', [
+            'data'=> [
+                'academicCalendars' => $academicCalendars,
+                'termOptions' => $termOptions
+            ]
         ]);
     }
 
@@ -37,8 +43,11 @@ class AcademicCalendarController extends Controller
      */
     public function store(StoreAcademicCalendarRequest $request)
     {
-        AcademicCalendar::create($request->validated());
-        return Inertia::render('application/academic-calendar');
+        $validated = $request->validated();
+
+        AcademicCalendar::create($validated);
+
+        return redirect()->route('calendar')->with('success', 'Academic Calendar created successfully.');
     }
 
     /**
@@ -47,7 +56,7 @@ class AcademicCalendarController extends Controller
     public function show(int $id)
     {
         $academicCalendar = AcademicCalendar::findOrFail($id);
-        return Inertia::render('application/academic-calendar', [
+        return Inertia::render('application/calendar', [
             'academicCalendar' => $academicCalendar
         ]);
     }
@@ -57,18 +66,25 @@ class AcademicCalendarController extends Controller
      */
     public function update(UpdateAcademicCalendarRequest $request, int $id)
     {
-        $ac = AcademicCalendar::find($id);
-        $ac->name = $request->name;
-        $ac->description = $request->description;
-        $ac->save();
+        $academicCalendar = AcademicCalendar::find($id);
+        if($academicCalendar){
+            $academicCalendar->update([
+                'term_id' => $request->term_id,
+                'school_year' => $request->school_year,
+                'start_date' => $request->start_date,
+                'end_date' => $request->end_date,
+            ]);
+        }
+        return redirect()->route('calendar')->with('success', 'Academic Calendar updated successfully.');
     }
 
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(int $id)
+    public function destroy(AcademicCalendar $academicCalendar)
     {
-        $academicCalendar = AcademicCalendar::findOrFail($id);
         $academicCalendar->delete();
+
+        return redirect()->route('calendar')->with('success', 'Academic Calendar deleted successfully.');
     }
 }

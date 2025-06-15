@@ -3,12 +3,12 @@
 use App\Http\Controllers\RoomController;
 use Illuminate\Support\Facades\Route;
 
-// Room Routes
-Route::middleware(['auth'])->prefix('rooms')->name('rooms.')->group(function () {
-    Route::post('/', [RoomController::class, 'store'])->name('store');
-    Route::get('/', [RoomController::class, 'index'])->name('index');
-    Route::get('/{room}', [RoomController::class, 'show'])->name('show');
-    Route::put('/{room}', [RoomController::class, 'update'])->name('update');
-    Route::delete('/{room}', [RoomController::class, 'destroy'])->name('destroy');
+Route::middleware(['auth', 'verified'])->group(function () {
+    Route::controller(RoomController::class)->group(function () {
+        Route::get('room', 'index')->name('room');
+        Route::post('room', 'store');
+        Route::put('room/{room}', 'update');
+        Route::delete('room/{room}', 'destroy');
+    });
 });
 

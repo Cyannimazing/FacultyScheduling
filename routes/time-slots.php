@@ -3,12 +3,12 @@
 use App\Http\Controllers\TimeSlotController;
 use Illuminate\Support\Facades\Route;
 
-// Time Slot Routes
-Route::middleware(['auth', 'verified'])->prefix('time-slots')->name('time-slots.')->group(function () {
-    Route::get('/', [TimeSlotController::class, 'index'])->name('index');
-    Route::post('/', [TimeSlotController::class, 'store'])->name('store');
-    Route::get('/{timeSlot}', [TimeSlotController::class, 'show'])->name('show');
-    Route::put('/{timeSlot}', [TimeSlotController::class, 'update'])->name('update');
-    Route::delete('/{timeSlot}', [TimeSlotController::class, 'destroy'])->name('destroy');
+Route::middleware(['auth', 'verified'])->group(function () {
+    Route::controller(TimeSlotController::class)->group(function () {
+        Route::get('time-slot', 'index')->name('time-slot');
+        Route::post('time-slot', 'store');
+        Route::put('time-slot/{timeSlot}', 'update');
+        Route::delete('time-slot/{timeSlot}', 'destroy');
+    });
 });
 

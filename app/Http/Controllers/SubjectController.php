@@ -15,18 +15,16 @@ class SubjectController extends Controller
      */
     public function index(Request $request)
     {
+        $search = $request->input('search');
+        $page = $request->input('page', 1);
         $perPage = 5;
-        $search = $request->query('search', '');
 
-        $subjects = Subject::where('name', 'LIKE', "%$search%")->paginate($perPage);
+        $subjects = Subject::where('name', 'LIKE', "%$search%")
+                        ->orderBy('name')
+                        ->paginate($perPage, ['*'], 'page', $page);
 
         return Inertia::render('application/subject', [
-            'subjects' => [
-                'data' => $subjects->items(),
-                'last_page' => $subjects->lastPage(),
-                'current_page' => $subjects->currentPage(),
-                'total' => $subjects->total(),
-            ],
+            'subjects' => $subjects,
         ]);
     }
 
@@ -35,8 +33,11 @@ class SubjectController extends Controller
      */
     public function store(StoreSubjectRequest $request)
     {
-        Subject::create($request->validated());
-        return Inertia::render('application/subject');
+        $validated = $request->validated();
+
+        Subject::create($validated);
+
+        return redirect()->route('subject')->with('success', 'Subject created successfully.');
     }
 
     /**
@@ -55,17 +56,22 @@ class SubjectController extends Controller
      */
     public function update(UpdateSubjectRequest $request, int $id)
     {
-        $s = Subject::find($id);
-        $s->name = $request->name;
-        $s->save();
+        $subject = Subject::find($id);
+        if($subject){
+            $subject->update([
+                'name' => $request->name
+            ]);
+        }
+        return redirect()->route('subject')->with('success', 'Subject updated successfully.');
     }
 
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(int $id)
+    public function destroy(Subject $subject)
     {
-        $subject = Subject::findOrFail($id);
         $subject->delete();
+
+        return redirect()->route('subject')->with('success', 'Subject deleted successfully.');
     }
 }

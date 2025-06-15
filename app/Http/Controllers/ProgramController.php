@@ -15,18 +15,16 @@ class ProgramController extends Controller
      */
     public function index(Request $request)
     {
+        $search = $request->input('search');
+        $page = $request->input('page', 1);
         $perPage = 5;
-        $search = $request->query('search', '');
 
-        $programs = Program::where('name', 'LIKE', "%$search%")->paginate($perPage);
+        $programs = Program::where('name', 'LIKE', "%$search%")
+                        ->orderBy('name')
+                        ->paginate($perPage, ['*'], 'page', $page);
 
         return Inertia::render('application/program', [
-            'programs' => [
-                'data' => $programs->items(),
-                'last_page' => $programs->lastPage(),
-                'current_page' => $programs->currentPage(),
-                'total' => $programs->total(),
-            ],
+            'programs' => $programs,
         ]);
     }
 
@@ -35,8 +33,11 @@ class ProgramController extends Controller
      */
     public function store(StoreProgramRequest $request)
     {
-        Program::create($request->validated());
-        return Inertia::render('application/program');
+        $validated = $request->validated();
+
+        Program::create($validated);
+
+        return redirect()->route('program')->with('success', 'Program created successfully.');
     }
 
     /**
@@ -55,17 +56,22 @@ class ProgramController extends Controller
      */
     public function update(UpdateProgramRequest $request, int $id)
     {
-        $p = Program::find($id);
-        $p->name = $request->name;
-        $p->save();
+        $program = Program::find($id);
+        if($program){
+            $program->update([
+                'name' => $request->name
+            ]);
+        }
+        return redirect()->route('program')->with('success', 'Program updated successfully.');
     }
 
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(int $id)
+    public function destroy(Program $program)
     {
-        $program = Program::findOrFail($id);
         $program->delete();
+
+        return redirect()->route('program')->with('success', 'Program deleted successfully.');
     }
 }
