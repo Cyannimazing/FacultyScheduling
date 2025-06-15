@@ -133,9 +133,7 @@ function SubjectDialog({ isOpen, onClose, subjectData = null, onSave }) {
             <DialogContent className="sm:max-w-[500px]">
                 <DialogHeader>
                     <DialogTitle>{subjectData ? 'Edit Subject' : 'Add New Subject'}</DialogTitle>
-                    <DialogDescription>
-                        {subjectData ? 'Update the subject details below.' : 'Create a new academic subject.'}
-                    </DialogDescription>
+                    <DialogDescription>{subjectData ? 'Update the subject details below.' : 'Create a new academic subject.'}</DialogDescription>
                 </DialogHeader>
                 <div className="grid gap-4 py-4">
                     <div className="grid grid-cols-4 items-center gap-4">
@@ -200,10 +198,7 @@ function SubjectDialog({ isOpen, onClose, subjectData = null, onSave }) {
                     <Button variant="outline" onClick={onClose}>
                         Cancel
                     </Button>
-                    <Button 
-                        onClick={handleSave} 
-                        disabled={!formData.code || !formData.name || !formData.unit}
-                    >
+                    <Button onClick={handleSave} disabled={!formData.code || !formData.name || !formData.unit}>
                         {subjectData ? 'Update' : 'Create'} Subject
                     </Button>
                 </DialogFooter>
@@ -222,17 +217,16 @@ export default function Subject() {
     const [subjectsData, setSubjectsData] = useState(sampleData);
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [subjectToDelete, setSubjectToDelete] = useState(null);
+    const [isDeleting, setIsDeleting] = useState(false); // Add state to prevent multiple delete clicks
 
     const itemsPerPage = 5;
 
     // Filter data based on search and type
     const filteredData = subjectsData.filter((subject) => {
-        const matchesSearch = 
-            subject.code.toLowerCase().includes(searchTerm.toLowerCase()) || 
-            subject.name.toLowerCase().includes(searchTerm.toLowerCase());
-        const matchesType = typeFilter === 'all' || 
-            (typeFilter === 'ge' && subject.isGeneralEducation) ||
-            (typeFilter === 'major' && !subject.isGeneralEducation);
+        const matchesSearch =
+            subject.code.toLowerCase().includes(searchTerm.toLowerCase()) || subject.name.toLowerCase().includes(searchTerm.toLowerCase());
+        const matchesType =
+            typeFilter === 'all' || (typeFilter === 'ge' && subject.isGeneralEducation) || (typeFilter === 'major' && !subject.isGeneralEducation);
         return matchesSearch && matchesType;
     });
 
@@ -293,22 +287,32 @@ export default function Subject() {
     };
 
     const handleDeleteSubject = (subject) => {
+        // Prevent opening delete dialog if already deleting
+        if (isDeleting) return;
+
         setSubjectToDelete(subject);
         setDeleteDialogOpen(true);
     };
 
     const confirmDeleteSubject = () => {
-        if (subjectToDelete) {
+        // Prevent multiple delete operations
+        if (isDeleting || !subjectToDelete) return;
+
+        setIsDeleting(true);
+
+        // Simulate API call delay
+        setTimeout(() => {
             setSubjectsData((prevData) => prevData.filter((subject) => subject.id !== subjectToDelete.id));
 
             // Adjust current page if necessary
             const newFilteredData = subjectsData
                 .filter((subject) => subject.id !== subjectToDelete.id)
                 .filter((subject) => {
-                    const matchesSearch = 
-                        subject.code.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                    const matchesSearch =
+                        subject.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
                         subject.name.toLowerCase().includes(searchTerm.toLowerCase());
-                    const matchesType = typeFilter === 'all' || 
+                    const matchesType =
+                        typeFilter === 'all' ||
                         (typeFilter === 'ge' && subject.isGeneralEducation) ||
                         (typeFilter === 'major' && !subject.isGeneralEducation);
                     return matchesSearch && matchesType;
@@ -322,7 +326,18 @@ export default function Subject() {
             }
 
             console.log('Subject deleted:', subjectToDelete.name);
-        }
+
+            // Reset delete states
+            setDeleteDialogOpen(false);
+            setSubjectToDelete(null);
+            setIsDeleting(false);
+        }, 1000); // Simulate 1 second delay
+    };
+
+    const cancelDelete = () => {
+        // Don't allow canceling while deleting
+        if (isDeleting) return;
+
         setDeleteDialogOpen(false);
         setSubjectToDelete(null);
     };
@@ -337,7 +352,6 @@ export default function Subject() {
         });
     };
 
-
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Subjects" />
@@ -346,16 +360,13 @@ export default function Subject() {
                 <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                     <div>
                         <h1 className="text-3xl font-bold tracking-tight">Academic Subjects</h1>
-                        <p className="text-muted-foreground mt-2">
-                            Manage subjects and course offerings
-                        </p>
+                        <p className="text-muted-foreground mt-2">Manage subjects and course offerings</p>
                     </div>
                     <Button onClick={handleAddSubject} className="w-full md:w-auto">
                         <Plus className="mr-2 h-4 w-4" />
                         Add Subject
                     </Button>
                 </div>
-
 
                 {/* Filters and Search */}
                 <Card>
@@ -416,12 +427,18 @@ export default function Subject() {
                                                     <span className="font-medium">{subject.name}</span>
                                                 </TableCell>
                                                 <TableCell className="text-center">
-                                                    <Badge variant="outline">{subject.unit} unit{subject.unit !== 1 ? 's' : ''}</Badge>
+                                                    <Badge variant="outline">
+                                                        {subject.unit} unit{subject.unit !== 1 ? 's' : ''}
+                                                    </Badge>
                                                 </TableCell>
                                                 <TableCell className="text-center">
-                                                    <Badge 
-                                                        variant={subject.isGeneralEducation ? "default" : "secondary"}
-                                                        className={subject.isGeneralEducation ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200" : ""}
+                                                    <Badge
+                                                        variant={subject.isGeneralEducation ? 'default' : 'secondary'}
+                                                        className={
+                                                            subject.isGeneralEducation
+                                                                ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+                                                                : ''
+                                                        }
                                                     >
                                                         {subject.isGeneralEducation ? 'General Education' : 'Major Subject'}
                                                     </Badge>
@@ -435,19 +452,20 @@ export default function Subject() {
                                                 <TableCell className="text-right">
                                                     <DropdownMenu>
                                                         <DropdownMenuTrigger asChild>
-                                                            <Button variant="ghost" size="icon">
+                                                            <Button variant="ghost" size="icon" disabled={isDeleting}>
                                                                 <MoreHorizontal className="h-4 w-4" />
                                                             </Button>
                                                         </DropdownMenuTrigger>
                                                         <DropdownMenuContent align="end">
-                                                            <DropdownMenuItem onClick={() => handleEditSubject(subject)}>
+                                                            <DropdownMenuItem onClick={() => handleEditSubject(subject)} disabled={isDeleting}>
                                                                 <Edit className="mr-2 h-4 w-4" />
                                                                 Edit Subject
                                                             </DropdownMenuItem>
                                                             <DropdownMenuSeparator />
-                                                            <DropdownMenuItem 
-                                                                className="text-red-600 focus:text-red-600" 
+                                                            <DropdownMenuItem
+                                                                className="text-red-600 focus:text-red-600"
                                                                 onClick={() => handleDeleteSubject(subject)}
+                                                                disabled={isDeleting}
                                                             >
                                                                 <Trash2 className="mr-2 h-4 w-4" />
                                                                 Delete Subject
@@ -487,12 +505,7 @@ export default function Subject() {
                             Page {currentPage} of {totalPages}
                         </div>
                         <div className="flex items-center space-x-2">
-                            <Button 
-                                variant="outline" 
-                                size="sm" 
-                                onClick={() => handlePageChange(currentPage - 1)} 
-                                disabled={currentPage === 1}
-                            >
+                            <Button variant="outline" size="sm" onClick={() => handlePageChange(currentPage - 1)} disabled={currentPage === 1}>
                                 <ChevronLeft className="h-4 w-4" />
                                 Previous
                             </Button>
@@ -511,15 +524,10 @@ export default function Subject() {
             </div>
 
             {/* Add/Edit Subject Dialog */}
-            <SubjectDialog 
-                isOpen={isDialogOpen} 
-                onClose={() => setIsDialogOpen(false)} 
-                subjectData={editingSubject} 
-                onSave={handleSaveSubject} 
-            />
+            <SubjectDialog isOpen={isDialogOpen} onClose={() => setIsDialogOpen(false)} subjectData={editingSubject} onSave={handleSaveSubject} />
 
             {/* Delete Confirmation Dialog */}
-            <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+            <Dialog open={deleteDialogOpen} onOpenChange={cancelDelete}>
                 <DialogContent className="sm:max-w-[400px]">
                     <DialogHeader>
                         <DialogTitle>Delete Subject</DialogTitle>
@@ -528,11 +536,11 @@ export default function Subject() {
                         </DialogDescription>
                     </DialogHeader>
                     <DialogFooter>
-                        <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>
+                        <Button variant="outline" onClick={cancelDelete} disabled={isDeleting}>
                             Cancel
                         </Button>
-                        <Button variant="destructive" onClick={confirmDeleteSubject}>
-                            Delete Subject
+                        <Button variant="destructive" onClick={confirmDeleteSubject} disabled={isDeleting}>
+                            {isDeleting ? 'Deleting...' : 'Delete Subject'}
                         </Button>
                     </DialogFooter>
                 </DialogContent>

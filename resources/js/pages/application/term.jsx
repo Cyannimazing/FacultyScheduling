@@ -33,7 +33,6 @@ function LoadingSkeleton() {
 function TermDialog({ isOpen, onClose, term = null, onSave, existingTerms = [] }) {
     const [formData, setFormData] = useState({ name: '' });
 
-    // Reset form when dialog opens/closes or term changes
     useEffect(() => {
         if (isOpen) {
             setFormData({
@@ -47,7 +46,6 @@ function TermDialog({ isOpen, onClose, term = null, onSave, existingTerms = [] }
     const handleSave = () => {
         if (formData.name) {
             onSave(formData);
-            onClose();
         }
     };
 
@@ -101,6 +99,7 @@ export default function Index() {
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [termToDelete, setTermToDelete] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
+    const [isProcessing, setIsProcessing] = useState(false);
 
     const handleSearch = (e) => {
         setSearchTerm(e.target.value);
@@ -138,13 +137,26 @@ export default function Index() {
     };
 
     const handleSaveTerm = (formData) => {
+        setIsProcessing(true);
         if (editingTerm) {
             router.put(`/term/${editingTerm.id}`, formData, {
-                onSuccess: () => setIsDialogOpen(false),
+                onSuccess: () => {
+                    setIsDialogOpen(false);
+                    setIsProcessing(false);
+                },
+                onError: () => {
+                    setIsProcessing(false);
+                },
             });
         } else {
             router.post('/term', formData, {
-                onSuccess: () => setIsDialogOpen(false),
+                onSuccess: () => {
+                    setIsDialogOpen(false);
+                    setIsProcessing(false);
+                },
+                onError: () => {
+                    setIsProcessing(false);
+                },
             });
         }
     };
@@ -156,8 +168,15 @@ export default function Index() {
 
     const confirmDeleteTerm = () => {
         if (termToDelete) {
+            setIsProcessing(true);
             router.delete(`/term/${termToDelete.id}`, {
-                onSuccess: () => setDeleteDialogOpen(false),
+                onSuccess: () => {
+                    setDeleteDialogOpen(false);
+                    setIsProcessing(false);
+                },
+                onError: () => {
+                    setIsProcessing(false);
+                },
             });
         }
     };
@@ -326,11 +345,11 @@ export default function Index() {
                         <DialogDescription>Are you sure you want to delete "{termToDelete?.name}"? This action cannot be undone.</DialogDescription>
                     </DialogHeader>
                     <DialogFooter>
-                        <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>
+                        <Button variant="outline" onClick={() => setDeleteDialogOpen(false)} disabled={isProcessing}>
                             Cancel
                         </Button>
-                        <Button variant="destructive" onClick={confirmDeleteTerm}>
-                            Delete Term
+                        <Button variant="destructive" onClick={confirmDeleteTerm} disabled={isProcessing}>
+                            {isProcessing ? 'Deleting...' : 'Delete Term'}
                         </Button>
                     </DialogFooter>
                 </DialogContent>

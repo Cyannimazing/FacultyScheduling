@@ -1,4 +1,3 @@
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -114,9 +113,7 @@ function RoomDialog({ isOpen, onClose, roomData = null, onSave }) {
             <DialogContent className="sm:max-w-[400px]">
                 <DialogHeader>
                     <DialogTitle>{roomData ? 'Edit Room' : 'Add New Room'}</DialogTitle>
-                    <DialogDescription>
-                        {roomData ? 'Update the room details below.' : 'Create a new room.'}
-                    </DialogDescription>
+                    <DialogDescription>{roomData ? 'Update the room details below.' : 'Create a new room.'}</DialogDescription>
                 </DialogHeader>
                 <div className="grid gap-4 py-4">
                     <div className="grid grid-cols-4 items-center gap-4">
@@ -136,10 +133,7 @@ function RoomDialog({ isOpen, onClose, roomData = null, onSave }) {
                     <Button variant="outline" onClick={onClose}>
                         Cancel
                     </Button>
-                    <Button 
-                        onClick={handleSave} 
-                        disabled={!formData.name}
-                    >
+                    <Button onClick={handleSave} disabled={!formData.name}>
                         {roomData ? 'Update' : 'Create'} Room
                     </Button>
                 </DialogFooter>
@@ -157,6 +151,7 @@ export default function Room() {
     const [roomsData, setRoomsData] = useState(sampleData);
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [roomToDelete, setRoomToDelete] = useState(null);
+    const [isProcessing, setIsProcessing] = useState(false); // Add processing state
 
     const itemsPerPage = 5;
 
@@ -228,24 +223,31 @@ export default function Room() {
 
     const confirmDeleteRoom = () => {
         if (roomToDelete) {
-            setRoomsData((prevData) => prevData.filter((room) => room.id !== roomToDelete.id));
+            setIsProcessing(true); // Set processing to true
 
-            // Adjust current page if necessary
-            const newFilteredData = roomsData
-                .filter((room) => room.id !== roomToDelete.id)
-                .filter((room) => room.name.toLowerCase().includes(searchTerm.toLowerCase()));
-            const newTotalPages = Math.ceil(newFilteredData.length / itemsPerPage);
+            // Simulate API call delay
+            setTimeout(() => {
+                setRoomsData((prevData) => prevData.filter((room) => room.id !== roomToDelete.id));
 
-            if (currentPage > newTotalPages && newTotalPages > 0) {
-                setCurrentPage(newTotalPages);
-            } else if (newFilteredData.length === 0) {
-                setCurrentPage(1);
-            }
+                // Adjust current page if necessary
+                const newFilteredData = roomsData
+                    .filter((room) => room.id !== roomToDelete.id)
+                    .filter((room) => room.name.toLowerCase().includes(searchTerm.toLowerCase()));
+                const newTotalPages = Math.ceil(newFilteredData.length / itemsPerPage);
 
-            console.log('Room deleted:', roomToDelete.name);
+                if (currentPage > newTotalPages && newTotalPages > 0) {
+                    setCurrentPage(newTotalPages);
+                } else if (newFilteredData.length === 0) {
+                    setCurrentPage(1);
+                }
+
+                console.log('Room deleted:', roomToDelete.name);
+
+                setDeleteDialogOpen(false);
+                setRoomToDelete(null);
+                setIsProcessing(false); // Reset processing state
+            }, 1000); // Simulate 1 second API call
         }
-        setDeleteDialogOpen(false);
-        setRoomToDelete(null);
     };
 
     const formatDate = (dateString) => {
@@ -258,7 +260,6 @@ export default function Room() {
         });
     };
 
-
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Rooms" />
@@ -267,16 +268,13 @@ export default function Room() {
                 <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                     <div>
                         <h1 className="text-3xl font-bold tracking-tight">Room Management</h1>
-                        <p className="text-muted-foreground mt-2">
-                            Manage classrooms, laboratories, and other facilities
-                        </p>
+                        <p className="text-muted-foreground mt-2">Manage classrooms, laboratories, and other facilities</p>
                     </div>
                     <Button onClick={handleAddRoom} className="w-full md:w-auto">
                         <Plus className="mr-2 h-4 w-4" />
                         Add Room
                     </Button>
                 </div>
-
 
                 {/* Search and Table */}
                 <Card>
@@ -328,30 +326,30 @@ export default function Room() {
                                                         <span>{formatDate(room.updated_at)}</span>
                                                     </div>
                                                 </TableCell>
-                                                    <TableCell className="text-right">
-                                                        <DropdownMenu>
-                                                            <DropdownMenuTrigger asChild>
-                                                                <Button variant="ghost" size="icon">
-                                                                    <MoreHorizontal className="h-4 w-4" />
-                                                                </Button>
-                                                            </DropdownMenuTrigger>
-                                                            <DropdownMenuContent align="end">
-                                                                <DropdownMenuItem onClick={() => handleEditRoom(room)}>
-                                                                    <Edit className="mr-2 h-4 w-4" />
-                                                                    Edit Room
-                                                                </DropdownMenuItem>
-                                                                <DropdownMenuSeparator />
-                                                                <DropdownMenuItem 
-                                                                    className="text-red-600 focus:text-red-600" 
-                                                                    onClick={() => handleDeleteRoom(room)}
-                                                                >
-                                                                    <Trash2 className="mr-2 h-4 w-4" />
-                                                                    Delete Room
-                                                                </DropdownMenuItem>
-                                                            </DropdownMenuContent>
-                                                        </DropdownMenu>
-                                                    </TableCell>
-                                                </TableRow>
+                                                <TableCell className="text-right">
+                                                    <DropdownMenu>
+                                                        <DropdownMenuTrigger asChild>
+                                                            <Button variant="ghost" size="icon">
+                                                                <MoreHorizontal className="h-4 w-4" />
+                                                            </Button>
+                                                        </DropdownMenuTrigger>
+                                                        <DropdownMenuContent align="end">
+                                                            <DropdownMenuItem onClick={() => handleEditRoom(room)}>
+                                                                <Edit className="mr-2 h-4 w-4" />
+                                                                Edit Room
+                                                            </DropdownMenuItem>
+                                                            <DropdownMenuSeparator />
+                                                            <DropdownMenuItem
+                                                                className="text-red-600 focus:text-red-600"
+                                                                onClick={() => handleDeleteRoom(room)}
+                                                            >
+                                                                <Trash2 className="mr-2 h-4 w-4" />
+                                                                Delete Room
+                                                            </DropdownMenuItem>
+                                                        </DropdownMenuContent>
+                                                    </DropdownMenu>
+                                                </TableCell>
+                                            </TableRow>
                                         ))}
                                     </TableBody>
                                 </Table>
@@ -361,9 +359,7 @@ export default function Room() {
                                 <Building className="text-muted-foreground mb-4 h-12 w-12" />
                                 <h3 className="mb-2 text-lg font-semibold">No rooms found</h3>
                                 <p className="text-muted-foreground mb-4">
-                                    {searchTerm
-                                        ? 'Try adjusting your search criteria.'
-                                        : 'Get started by creating your first room.'}
+                                    {searchTerm ? 'Try adjusting your search criteria.' : 'Get started by creating your first room.'}
                                 </p>
                                 {!searchTerm && (
                                     <Button onClick={handleAddRoom}>
@@ -383,12 +379,7 @@ export default function Room() {
                             Page {currentPage} of {totalPages}
                         </div>
                         <div className="flex items-center space-x-2">
-                            <Button 
-                                variant="outline" 
-                                size="sm" 
-                                onClick={() => handlePageChange(currentPage - 1)} 
-                                disabled={currentPage === 1}
-                            >
+                            <Button variant="outline" size="sm" onClick={() => handlePageChange(currentPage - 1)} disabled={currentPage === 1}>
                                 <ChevronLeft className="h-4 w-4" />
                                 Previous
                             </Button>
@@ -407,28 +398,21 @@ export default function Room() {
             </div>
 
             {/* Add/Edit Room Dialog */}
-            <RoomDialog 
-                isOpen={isDialogOpen} 
-                onClose={() => setIsDialogOpen(false)} 
-                roomData={editingRoom} 
-                onSave={handleSaveRoom} 
-            />
+            <RoomDialog isOpen={isDialogOpen} onClose={() => setIsDialogOpen(false)} roomData={editingRoom} onSave={handleSaveRoom} />
 
             {/* Delete Confirmation Dialog */}
             <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
                 <DialogContent className="sm:max-w-[400px]">
                     <DialogHeader>
                         <DialogTitle>Delete Room</DialogTitle>
-                        <DialogDescription>
-                            Are you sure you want to delete "{roomToDelete?.name}"? This action cannot be undone.
-                        </DialogDescription>
+                        <DialogDescription>Are you sure you want to delete "{roomToDelete?.name}"? This action cannot be undone.</DialogDescription>
                     </DialogHeader>
                     <DialogFooter>
-                        <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>
+                        <Button variant="outline" onClick={() => setDeleteDialogOpen(false)} disabled={isProcessing}>
                             Cancel
                         </Button>
-                        <Button variant="destructive" onClick={confirmDeleteRoom}>
-                            Delete Room
+                        <Button variant="destructive" onClick={confirmDeleteRoom} disabled={isProcessing}>
+                            {isProcessing ? 'Deleting...' : 'Delete Room'}
                         </Button>
                     </DialogFooter>
                 </DialogContent>

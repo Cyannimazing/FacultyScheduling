@@ -7,7 +7,6 @@ use App\Http\Requests\UpdateTermRequest;
 use App\Models\Term;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
-use function Termwind\terminal;
 
 class TermController extends Controller
 {

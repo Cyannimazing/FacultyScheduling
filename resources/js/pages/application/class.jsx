@@ -20,7 +20,6 @@ const breadcrumbs = [
     },
 ];
 
-// Available programs with auto-populated details
 const availablePrograms = [
     {
         name: 'Computer Science',
@@ -44,7 +43,6 @@ const availablePrograms = [
     },
 ];
 
-// Sample data for classes
 const sampleData = [
     {
         id: 1,
@@ -111,7 +109,6 @@ function ClassDialog({ isOpen, onClose, classData = null, onSave }) {
         program_details: '',
     });
 
-    // Auto-populate program details based on selection
     const handleProgramChange = (value) => {
         const selectedProgram = availablePrograms.find((p) => p.name === value);
         setFormData({
@@ -121,7 +118,6 @@ function ClassDialog({ isOpen, onClose, classData = null, onSave }) {
         });
     };
 
-    // Update form data when classData prop changes (for edit mode)
     React.useEffect(() => {
         if (classData) {
             setFormData({
@@ -130,7 +126,6 @@ function ClassDialog({ isOpen, onClose, classData = null, onSave }) {
                 program_details: classData.program_details || '',
             });
         } else {
-            // Reset form for add mode
             setFormData({ name: '', program: '', program_details: '' });
         }
     }, [classData]);
@@ -215,13 +210,11 @@ export default function Class() {
     const [classesData, setClassesData] = useState(sampleData);
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [classToDelete, setClassToDelete] = useState(null);
+    const [isDeleting, setIsDeleting] = useState(false);
 
     const itemsPerPage = 5;
-
-    // Get unique programs for filter
     const uniquePrograms = [...new Set(classesData.map((c) => c.program))];
 
-    // Filter data based on search and program
     const filteredData = classesData.filter((classItem) => {
         const matchesSearch =
             classItem.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -256,7 +249,6 @@ export default function Class() {
 
     const handleSaveClass = (formData) => {
         if (editingClass) {
-            // Update existing class
             setClassesData((prevData) =>
                 prevData.map((classItem) =>
                     classItem.id === editingClass.id
@@ -268,9 +260,7 @@ export default function Class() {
                         : classItem,
                 ),
             );
-            console.log('Class updated:', formData);
         } else {
-            // Add new class
             const newClass = {
                 id: Math.max(...classesData.map((c) => c.id), 0) + 1,
                 ...formData,
@@ -278,10 +268,8 @@ export default function Class() {
                 updated_at: new Date().toISOString().slice(0, 19).replace('T', ' '),
             };
             setClassesData((prevData) => [...prevData, newClass]);
-            console.log('Class added:', formData);
         }
 
-        // Reset current page to 1 if adding new class
         if (!editingClass) {
             setCurrentPage(1);
         }
@@ -294,31 +282,34 @@ export default function Class() {
 
     const confirmDeleteClass = () => {
         if (classToDelete) {
-            setClassesData((prevData) => prevData.filter((classItem) => classItem.id !== classToDelete.id));
+            setIsDeleting(true);
+            // Simulate API call delay
+            setTimeout(() => {
+                setClassesData((prevData) => prevData.filter((classItem) => classItem.id !== classToDelete.id));
 
-            // Adjust current page if necessary
-            const newFilteredData = classesData
-                .filter((classItem) => classItem.id !== classToDelete.id)
-                .filter((classItem) => {
-                    const matchesSearch =
-                        classItem.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                        classItem.program.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                        classItem.program_details.toLowerCase().includes(searchTerm.toLowerCase());
-                    const matchesProgram = programFilter === 'all' || classItem.program === programFilter;
-                    return matchesSearch && matchesProgram;
-                });
-            const newTotalPages = Math.ceil(newFilteredData.length / itemsPerPage);
+                // Adjust pagination if needed
+                const newFilteredData = classesData
+                    .filter((classItem) => classItem.id !== classToDelete.id)
+                    .filter((classItem) => {
+                        const matchesSearch =
+                            classItem.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                            classItem.program.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                            classItem.program_details.toLowerCase().includes(searchTerm.toLowerCase());
+                        const matchesProgram = programFilter === 'all' || classItem.program === programFilter;
+                        return matchesSearch && matchesProgram;
+                    });
+                const newTotalPages = Math.ceil(newFilteredData.length / itemsPerPage);
 
-            if (currentPage > newTotalPages && newTotalPages > 0) {
-                setCurrentPage(newTotalPages);
-            } else if (newFilteredData.length === 0) {
-                setCurrentPage(1);
-            }
+                if (currentPage > newTotalPages && newTotalPages > 0) {
+                    setCurrentPage(newTotalPages);
+                } else if (newFilteredData.length === 0) {
+                    setCurrentPage(1);
+                }
 
-            console.log('Class deleted:', classToDelete.name);
+                setDeleteDialogOpen(false);
+                setIsDeleting(false);
+            }, 800);
         }
-        setDeleteDialogOpen(false);
-        setClassToDelete(null);
     };
 
     const formatDate = (dateString) => {
@@ -331,16 +322,10 @@ export default function Class() {
         });
     };
 
-    const truncateText = (text, maxLength = 100) => {
-        if (text.length <= maxLength) return text;
-        return text.slice(0, maxLength) + '...';
-    };
-
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Classes" />
             <div className="space-y-6 p-6">
-                {/* Header Section */}
                 <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                     <div>
                         <h1 className="text-3xl font-bold tracking-tight">Academic Classes</h1>
@@ -352,7 +337,6 @@ export default function Class() {
                     </Button>
                 </div>
 
-                {/* Filters and Search */}
                 <Card>
                     <CardHeader>
                         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
@@ -411,9 +395,7 @@ export default function Class() {
                                                 <TableCell>
                                                     <div className="space-y-1">
                                                         <Badge variant="secondary">{classItem.program}</Badge>
-                                                        <div className="text-sm text-muted-foreground">
-                                                            {classItem.program_details}
-                                                        </div>
+                                                        <div className="text-muted-foreground text-sm">{classItem.program_details}</div>
                                                     </div>
                                                 </TableCell>
                                                 <TableCell className="text-center">
@@ -470,7 +452,6 @@ export default function Class() {
                     </CardContent>
                 </Card>
 
-                {/* Pagination */}
                 {!isLoading && filteredData.length > itemsPerPage && (
                     <div className="flex items-center justify-between">
                         <div className="text-muted-foreground text-sm">
@@ -495,10 +476,8 @@ export default function Class() {
                 )}
             </div>
 
-            {/* Add/Edit Class Dialog */}
             <ClassDialog isOpen={isDialogOpen} onClose={() => setIsDialogOpen(false)} classData={editingClass} onSave={handleSaveClass} />
 
-            {/* Delete Confirmation Dialog */}
             <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
                 <DialogContent className="sm:max-w-[400px]">
                     <DialogHeader>
@@ -506,11 +485,11 @@ export default function Class() {
                         <DialogDescription>Are you sure you want to delete "{classToDelete?.name}"? This action cannot be undone.</DialogDescription>
                     </DialogHeader>
                     <DialogFooter>
-                        <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>
+                        <Button variant="outline" onClick={() => setDeleteDialogOpen(false)} disabled={isDeleting}>
                             Cancel
                         </Button>
-                        <Button variant="destructive" onClick={confirmDeleteClass}>
-                            Delete Class
+                        <Button variant="destructive" onClick={confirmDeleteClass} disabled={isDeleting}>
+                            {isDeleting ? 'Deleting...' : 'Delete Class'}
                         </Button>
                     </DialogFooter>
                 </DialogContent>
