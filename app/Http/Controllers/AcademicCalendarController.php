@@ -28,12 +28,12 @@ class AcademicCalendarController extends Controller
             ->orderBy('school_year')
             ->paginate($perPage, ['*'], 'page', $page);
 
-        $termOptions = Term::select(["id, name"])->orderBy('name')->get();
+        $terms = Term::select(['id', 'name'])->orderBy('name')->get();
 
         return Inertia::render('application/calendar', [
             'data'=> [
                 'academicCalendars' => $academicCalendars,
-                'termOptions' => $termOptions
+                'terms' => $terms
             ]
         ]);
     }

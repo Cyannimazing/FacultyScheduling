@@ -24,9 +24,8 @@ class StoreSubjectRequest extends FormRequest
         return [
             'code' => 'required|string|max:255|unique:subjects,code',
             'name' => 'required|string|max:255',
-            'unit' => 'required|numeric|min:1',
-            'short' => 'nullable|string|max:255',
-            'is_gen_ed' => 'required|boolean',
+            'unit' => 'required|integer|min:1|max:10',
+            'is_gen_ed' => 'nullable|boolean',
         ];
     }
 
@@ -40,9 +39,9 @@ class StoreSubjectRequest extends FormRequest
             'code.unique' => 'Subject code must be unique.',
             'name.required' => 'Subject name is required.',
             'unit.required' => 'Unit is required.',
-            'unit.numeric' => 'Unit must be a number.',
+            'unit.integer' => 'Unit must be an integer.',
             'unit.min' => 'Unit must be at least 1.',
-            'is_gen_ed.required' => 'General Education status is required.',
+            'unit.max' => 'Unit cannot exceed 10.',
             'is_gen_ed.boolean' => 'General Education status must be true or false.',
         ];
     }

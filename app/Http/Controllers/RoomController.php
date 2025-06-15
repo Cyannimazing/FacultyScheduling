@@ -24,7 +24,9 @@ class RoomController extends Controller
                         ->paginate($perPage, ['*'], 'page', $page);
 
         return Inertia::render('application/room', [
-            'rooms' => $rooms,
+           'data' => [
+                'rooms' => $rooms
+           ]
         ]);
     }
 

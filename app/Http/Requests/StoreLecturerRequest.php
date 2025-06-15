@@ -23,7 +23,21 @@ class StoreLecturerRequest extends FormRequest
     {
         return [
             'title' => 'nullable|string|max:255',
-            'fname' => 'required|string|max:255',
+            'fname' => [
+                'required',
+                'string',
+                'max:255',
+                // Unique validation with composite key (fname + lname)
+                function ($attribute, $value, $fail) {
+                    $exists = \App\Models\Lecturer::where('fname', $value)
+                        ->where('lname', $this->input('lname'))
+                        ->exists();
+                    
+                    if ($exists) {
+                        $fail('A lecturer with this name combination already exists.');
+                    }
+                },
+            ],
             'lname' => 'nullable|string|max:255',
         ];
     }

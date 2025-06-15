@@ -16,15 +16,21 @@ class SubjectController extends Controller
     public function index(Request $request)
     {
         $search = $request->input('search');
+        $isGenEdFilter = $request->input('isGenEdFilter');
         $page = $request->input('page', 1);
         $perPage = 5;
 
-        $subjects = Subject::where('name', 'LIKE', "%$search%")
+        $subjects = Subject::where(function ($query) use ($search) {
+                            $query->where('name', 'LIKE', "%$search%")
+                                ->orWhere('code', 'LIKE', "%$search%");
+                        })->where('is_gen_ed', 'LIKE', "%$isGenEdFilter%")
                         ->orderBy('name')
                         ->paginate($perPage, ['*'], 'page', $page);
 
         return Inertia::render('application/subject', [
-            'subjects' => $subjects,
+            'data' => [
+                'subjects' => $subjects,
+            ]
         ]);
     }
 
@@ -59,7 +65,10 @@ class SubjectController extends Controller
         $subject = Subject::find($id);
         if($subject){
             $subject->update([
-                'name' => $request->name
+                'code' => $request->code,
+                'name' => $request->name,
+                'unit' => $request->unit,
+                'is_gen_ed' => $request->is_gen_ed
             ]);
         }
         return redirect()->route('subject')->with('success', 'Subject updated successfully.');

@@ -22,9 +22,35 @@ class StoreProgramSubjectRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'prog_code' => 'required|string|exists:programs,code',
+            'prog_code' => [
+                'required',
+                'string',
+                'exists:programs,code',
+                // Unique validation for prog_code + subj_code combination
+                function ($attribute, $value, $fail) {
+                    $exists = \App\Models\ProgramSubject::where('prog_code', $value)
+                        ->where('subj_code', $this->input('subj_code'))
+                        ->exists();
+                    
+                    if ($exists) {
+                        $fail('This subject is already assigned to this program.');
+                    }
+                },
+            ],
             'subj_code' => 'required|string|exists:subjects,code',
-            'year_level' => 'required|integer|min:1|max:10',
+            'year_level' => [
+                'required',
+                'integer',
+                'min:1',
+                'max:10',
+                // Validate year_level doesn't exceed program's number_of_year
+                function ($attribute, $value, $fail) {
+                    $program = \App\Models\Program::where('code', $this->input('prog_code'))->first();
+                    if ($program && $value > $program->number_of_year) {
+                        $fail('Year level cannot exceed the program\'s total number of years (' . $program->number_of_year . ').');
+                    }
+                },
+            ],
             'term_id' => 'required|integer|exists:terms,id',
         ];
     }

@@ -19,7 +19,7 @@ class LecturerController extends Controller
         $page = $request->input('page', 1);
         $perPage = 5;
 
-        $lecturers = Lecturer::where('name', 'LIKE', "%$search%")
+        $lecturers = Lecturer::whereRaw("CONCAT(title, ' ', fname, ' ', lname) LIKE ?", ["%$search%"])
                         ->orderBy('name')
                         ->paginate($perPage, ['*'], 'page', $page);
 
@@ -59,7 +59,9 @@ class LecturerController extends Controller
         $lecturer = Lecturer::find($id);
         if($lecturer){
             $lecturer->update([
-                'name' => $request->name
+                'title' => $request->input('title'),
+                'fname' => $request->input('fname'),
+                'lname' => $request->input('lname'),
             ]);
         }
         return redirect()->route('lecturer')->with('success', 'Lecturer updated successfully.');

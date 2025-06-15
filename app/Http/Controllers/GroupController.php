@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Group;
 use App\Http\Requests\StoreGroupRequest;
 use App\Http\Requests\UpdateGroupRequest;
+use App\Models\Program;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -16,15 +17,25 @@ class GroupController extends Controller
     public function index(Request $request)
     {
         $search = $request->input('search');
+        $prog_code = $request->input('prog_code');
         $page = $request->input('page', 1);
         $perPage = 5;
 
-        $groups = Group::where('name', 'LIKE', "%$search%")
-                        ->orderBy('name')
-                        ->paginate($perPage, ['*'], 'page', $page);
+        $groups = Group::with('program')
+                    ->where('name', 'LIKE', "%$search%")
+                    ->whereHas('program', function($query) use ($prog_code){
+                        $query->where('code', 'LIKE', "%$prog_code%");
+                    })
+                    ->orderBy('name')
+                    ->paginate($perPage, ['*'], 'page', $page);
 
-        return Inertia::render('application/group', [
-            'groups' => $groups,
+        $programs = Program::select(['code', 'name'])->orderBy('name')->get();
+
+        return Inertia::render('application/class', [
+            'data' => [
+                'groups' => $groups,
+                'programs' => $programs
+            ]
         ]);
     }
 
@@ -37,7 +48,7 @@ class GroupController extends Controller
 
         Group::create($validated);
 
-        return redirect()->route('group')->with('success', 'Group created successfully.');
+        return redirect()->route('class')->with('success', 'Group created successfully.');
     }
 
     /**
@@ -46,8 +57,8 @@ class GroupController extends Controller
     public function show(int $id)
     {
         $group = Group::findOrFail($id);
-        return Inertia::render('application/group', [
-            'group' => $group
+        return Inertia::render('application/class', [
+            'class' => $group
         ]);
     }
 
@@ -59,10 +70,11 @@ class GroupController extends Controller
         $group = Group::find($id);
         if($group){
             $group->update([
-                'name' => $request->name
+                'name' => $request->name,
+                'prog_code' => $request->prog_code
             ]);
         }
-        return redirect()->route('group')->with('success', 'Group updated successfully.');
+        return redirect()->route('class')->with('success', 'Group updated successfully.');
     }
 
     /**
@@ -72,6 +84,6 @@ class GroupController extends Controller
     {
         $group->delete();
 
-        return redirect()->route('group')->with('success', 'Group deleted successfully.');
+        return redirect()->route('class')->with('success', 'Group deleted successfully.');
     }
 }

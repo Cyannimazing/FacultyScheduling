@@ -66,10 +66,11 @@ class LecturerScheduleController extends Controller
         if($lecturerSchedule){
             $lecturerSchedule->update([
                 'lecturer_id' => $request->lecturer_id,
-                'subject_id' => $request->subject_id,
-                'room_id' => $request->room_id,
+                'subj_code' => $request->subj_code,
+                'room_code' => $request->room_code,
                 'time_slot_id' => $request->time_slot_id,
-                'day_of_week' => $request->day_of_week
+                'class_id' => $request->class_id,
+                'sy_term_id' => $request->sy_term_id
             ]);
         }
         return redirect()->route('lecturer-schedule')->with('success', 'Lecturer Schedule updated successfully.');

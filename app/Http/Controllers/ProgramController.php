@@ -20,11 +20,14 @@ class ProgramController extends Controller
         $perPage = 5;
 
         $programs = Program::where('name', 'LIKE', "%$search%")
+                        ->orWhere('code', 'LIKE', "%$search%")
                         ->orderBy('name')
                         ->paginate($perPage, ['*'], 'page', $page);
 
         return Inertia::render('application/program', [
-            'programs' => $programs,
+            'data' => [
+                'programs' => $programs
+            ]
         ]);
     }
 
@@ -59,7 +62,10 @@ class ProgramController extends Controller
         $program = Program::find($id);
         if($program){
             $program->update([
-                'name' => $request->name
+                'code' => $request->code,
+                'name' => $request->name,
+                'description' => $request->description,
+                'number_of_year' => $request->number_of_year
             ]);
         }
         return redirect()->route('program')->with('success', 'Program updated successfully.');

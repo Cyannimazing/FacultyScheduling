@@ -25,6 +25,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->validateCsrfTokens([
             'rooms',
             'login',
+            'calendar'
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {

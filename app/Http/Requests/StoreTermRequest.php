@@ -25,4 +25,17 @@ class StoreTermRequest extends FormRequest
             'name' => 'required|string|max:255|unique:terms,name',
         ];
     }
+
+    /**
+     * Get custom validation messages.
+     */
+    public function messages(): array
+    {
+        return [
+            'name.required' => 'Term name is required.',
+            'name.string' => 'Term name must be a string.',
+            'name.max' => 'Term name cannot exceed 255 characters.',
+            'name.unique' => 'Term name must be unique.',
+        ];
+    }
 }

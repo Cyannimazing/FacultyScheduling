@@ -21,12 +21,68 @@ class UpdateLecturerScheduleRequest extends FormRequest
      */
     public function rules(): array
     {
+        $lecturerScheduleId = $this->route('lecturerSchedule') ?? $this->route('facultySchedule');
+        
         return [
-            'lecturer_id' => 'required|integer|exists:lecturers,id',
+            'lecturer_id' => [
+                'required',
+                'integer',
+                'exists:lecturers,id',
+                // Check if lecturer is already scheduled at this time slot and term (excluding current record)
+                function ($attribute, $value, $fail) use ($lecturerScheduleId) {
+                    $query = \App\Models\LecturerSchedule::where('lecturer_id', $value)
+                        ->where('time_slot_id', $this->input('time_slot_id'))
+                        ->where('sy_term_id', $this->input('sy_term_id'));
+                    
+                    if ($lecturerScheduleId) {
+                        $query->where('id', '!=', $lecturerScheduleId);
+                    }
+                    
+                    if ($query->exists()) {
+                        $fail('This lecturer is already scheduled at this time slot.');
+                    }
+                },
+            ],
             'subj_code' => 'required|string|exists:subjects,code',
-            'room_code' => 'required|string|exists:rooms,name',
+            'room_code' => [
+                'required',
+                'string',
+                'exists:rooms,name',
+                // Check if room is already booked at this time slot and term (excluding current record)
+                function ($attribute, $value, $fail) use ($lecturerScheduleId) {
+                    $query = \App\Models\LecturerSchedule::where('room_code', $value)
+                        ->where('time_slot_id', $this->input('time_slot_id'))
+                        ->where('sy_term_id', $this->input('sy_term_id'));
+                    
+                    if ($lecturerScheduleId) {
+                        $query->where('id', '!=', $lecturerScheduleId);
+                    }
+                    
+                    if ($query->exists()) {
+                        $fail('This room is already booked at this time slot.');
+                    }
+                },
+            ],
             'time_slot_id' => 'required|integer|exists:time_slots,id',
-            'class_id' => 'required|integer|exists:groups,id',
+            'class_id' => [
+                'required',
+                'integer',
+                'exists:groups,id',
+                // Check if class is already scheduled at this time slot and term (excluding current record)
+                function ($attribute, $value, $fail) use ($lecturerScheduleId) {
+                    $query = \App\Models\LecturerSchedule::where('class_id', $value)
+                        ->where('time_slot_id', $this->input('time_slot_id'))
+                        ->where('sy_term_id', $this->input('sy_term_id'));
+                    
+                    if ($lecturerScheduleId) {
+                        $query->where('id', '!=', $lecturerScheduleId);
+                    }
+                    
+                    if ($query->exists()) {
+                        $fail('This class is already scheduled at this time slot.');
+                    }
+                },
+            ],
             'sy_term_id' => 'required|integer|exists:academic_calendars,id',
         ];
     }

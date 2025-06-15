@@ -15,7 +15,6 @@ return new class extends Migration
             $table->string('code')->primary();
             $table->string('name');
             $table->integer('unit');
-            $table->string('short')->nullable();
             $table->boolean('is_gen_ed')->default(false);
             $table->timestamps();
         });

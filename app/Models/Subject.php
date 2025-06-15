@@ -13,7 +13,7 @@ class Subject extends Model
     use HasFactory;
 
     // Unique(code)
-    protected $fillable = ['code', 'name', 'unit', 'short', 'is_gen_ed', 'created_at', 'updated_at'];
+    protected $fillable = ['code', 'name', 'unit', 'is_gen_ed', 'created_at', 'updated_at'];
 
     /**
      * Get the programs that belong to the subject.

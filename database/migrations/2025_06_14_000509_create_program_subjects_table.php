@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::create('program_subjects', function (Blueprint $table) {
             $table->id();
             $table->string('prog_code');
-            $table->unsignedBigInteger('subj_code');
+            $table->string('subj_code');
             $table->unsignedBigInteger('term_id');
             $table->integer('year_level');
             $table->timestamps();

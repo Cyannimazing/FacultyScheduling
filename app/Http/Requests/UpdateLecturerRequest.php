@@ -21,9 +21,26 @@ class UpdateLecturerRequest extends FormRequest
      */
     public function rules(): array
     {
+        $lecturerId = $this->route('lecturer'); // Assuming the route parameter is 'lecturer'
+        
         return [
             'title' => 'nullable|string|max:255',
-            'fname' => 'required|string|max:255',
+            'fname' => [
+                'required',
+                'string',
+                'max:255',
+                // Unique validation with composite key (fname + lname) excluding current record
+                function ($attribute, $value, $fail) use ($lecturerId) {
+                    $exists = \App\Models\Lecturer::where('fname', $value)
+                        ->where('lname', $this->input('lname'))
+                        ->where('id', '!=', $lecturerId)
+                        ->exists();
+                    
+                    if ($exists) {
+                        $fail('A lecturer with this name combination already exists.');
+                    }
+                },
+            ],
             'lname' => 'nullable|string|max:255',
         ];
     }

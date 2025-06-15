@@ -22,8 +22,22 @@ class StoreTimeSlotRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'day' => 'required|string|in:Monday,Tuesday,Wednesday,Thursday,Friday,Saturday,Sunday',
-            'time' => 'required|string|max:255',
+            'day' => [
+                'required',
+                'string',
+                'in:Monday,Tuesday,Wednesday,Thursday,Friday,Saturday,Sunday',
+                // Unique validation with composite key (day + time)
+                function ($attribute, $value, $fail) {
+                    $exists = \App\Models\TimeSlot::where('day', $value)
+                        ->where('time', $this->input('time'))
+                        ->exists();
+                    
+                    if ($exists) {
+                        $fail('This time slot already exists for the selected day.');
+                    }
+                },
+            ],
+            'time' => 'required|date_format:H:i',
         ];
     }
 
@@ -36,8 +50,7 @@ class StoreTimeSlotRequest extends FormRequest
             'day.required' => 'Day is required.',
             'day.in' => 'Day must be a valid day of the week.',
             'time.required' => 'Time is required.',
-            'time.string' => 'Time must be a string.',
-            'time.max' => 'Time cannot exceed 255 characters.',
+            'time.date_format' => 'Time must be in HH:MM format.',
         ];
     }
 }
