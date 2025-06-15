@@ -48,7 +48,6 @@ class TermController extends Controller
                 'name' => $request->name
             ]);
         }
-
         return redirect()->route('term')->with('success', 'Term updated successfully.');
     }
 
