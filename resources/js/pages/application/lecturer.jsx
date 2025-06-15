@@ -106,7 +106,6 @@ function LecturerDialog({ isOpen, onClose, lecturer = null, onSave }) {
         lname: '',
     });
 
-    // Update form data when lecturer prop changes (for edit mode)
     React.useEffect(() => {
         if (lecturer) {
             setFormData({
@@ -115,7 +114,6 @@ function LecturerDialog({ isOpen, onClose, lecturer = null, onSave }) {
                 lname: lecturer.lname || '',
             });
         } else {
-            // Reset form for add mode
             setFormData({ title: '', fname: '', lname: '' });
         }
     }, [lecturer]);
@@ -124,7 +122,6 @@ function LecturerDialog({ isOpen, onClose, lecturer = null, onSave }) {
         if (formData.title && formData.fname && formData.lname) {
             onSave(formData);
             onClose();
-            // Don't reset form here - let useEffect handle it when lecturer prop changes
         }
     };
 
@@ -200,10 +197,10 @@ export default function Lecturer() {
     const [lecturersData, setLecturersData] = useState(initialData);
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [lecturerToDelete, setLecturerToDelete] = useState(null);
+    const [isDeleting, setIsDeleting] = useState(false);
 
     const itemsPerPage = 5;
 
-    // Filter data based on search
     const filteredData = lecturersData.filter((lecturer) => {
         const fullName = `${lecturer.fname} ${lecturer.lname}`.toLowerCase();
         const titleName = `${lecturer.title} ${lecturer.fname} ${lecturer.lname}`.toLowerCase();
@@ -235,7 +232,6 @@ export default function Lecturer() {
 
     const handleSaveLecturer = (formData) => {
         if (editingLecturer) {
-            // Update existing lecturer
             setLecturersData((prevData) =>
                 prevData.map((lecturer) =>
                     lecturer.id === editingLecturer.id
@@ -247,9 +243,7 @@ export default function Lecturer() {
                         : lecturer,
                 ),
             );
-            console.log('Lecturer updated:', formData);
         } else {
-            // Add new lecturer
             const newLecturer = {
                 id: Math.max(...lecturersData.map((l) => l.id), 0) + 1,
                 ...formData,
@@ -257,10 +251,8 @@ export default function Lecturer() {
                 updated_at: new Date().toISOString().slice(0, 19).replace('T', ' '),
             };
             setLecturersData((prevData) => [...prevData, newLecturer]);
-            console.log('Lecturer added:', formData);
         }
 
-        // Reset current page to 1 if adding new lecturer
         if (!editingLecturer) {
             setCurrentPage(1);
         }
@@ -273,28 +265,31 @@ export default function Lecturer() {
 
     const confirmDeleteLecturer = () => {
         if (lecturerToDelete) {
-            setLecturersData((prevData) => prevData.filter((lecturer) => lecturer.id !== lecturerToDelete.id));
+            setIsDeleting(true);
+            // Simulate API call delay
+            setTimeout(() => {
+                setLecturersData((prevData) => prevData.filter((lecturer) => lecturer.id !== lecturerToDelete.id));
 
-            // Adjust current page if necessary
-            const newFilteredData = lecturersData
-                .filter((lecturer) => lecturer.id !== lecturerToDelete.id)
-                .filter((lecturer) => {
-                    const fullName = `${lecturer.fname} ${lecturer.lname}`.toLowerCase();
-                    const titleName = `${lecturer.title} ${lecturer.fname} ${lecturer.lname}`.toLowerCase();
-                    return fullName.includes(searchTerm.toLowerCase()) || titleName.includes(searchTerm.toLowerCase());
-                });
-            const newTotalPages = Math.ceil(newFilteredData.length / itemsPerPage);
+                // Adjust pagination if needed
+                const newFilteredData = lecturersData
+                    .filter((lecturer) => lecturer.id !== lecturerToDelete.id)
+                    .filter((lecturer) => {
+                        const fullName = `${lecturer.fname} ${lecturer.lname}`.toLowerCase();
+                        const titleName = `${lecturer.title} ${lecturer.fname} ${lecturer.lname}`.toLowerCase();
+                        return fullName.includes(searchTerm.toLowerCase()) || titleName.includes(searchTerm.toLowerCase());
+                    });
+                const newTotalPages = Math.ceil(newFilteredData.length / itemsPerPage);
 
-            if (currentPage > newTotalPages && newTotalPages > 0) {
-                setCurrentPage(newTotalPages);
-            } else if (newFilteredData.length === 0) {
-                setCurrentPage(1);
-            }
+                if (currentPage > newTotalPages && newTotalPages > 0) {
+                    setCurrentPage(newTotalPages);
+                } else if (newFilteredData.length === 0) {
+                    setCurrentPage(1);
+                }
 
-            console.log('Lecturer deleted:', `${lecturerToDelete.title} ${lecturerToDelete.fname} ${lecturerToDelete.lname}`);
+                setDeleteDialogOpen(false);
+                setIsDeleting(false);
+            }, 800);
         }
-        setDeleteDialogOpen(false);
-        setLecturerToDelete(null);
     };
 
     const formatDate = (dateString) => {
@@ -311,7 +306,6 @@ export default function Lecturer() {
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Lecturers" />
             <div className="space-y-6 p-6">
-                {/* Header Section */}
                 <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                     <div>
                         <h1 className="text-3xl font-bold tracking-tight">Lecturers</h1>
@@ -323,7 +317,6 @@ export default function Lecturer() {
                     </Button>
                 </div>
 
-                {/* Filters and Search */}
                 <Card>
                     <CardHeader>
                         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
@@ -430,7 +423,6 @@ export default function Lecturer() {
                     </CardContent>
                 </Card>
 
-                {/* Pagination */}
                 {!isLoading && paginatedData.length > 0 && totalPages > 1 && (
                     <div className="flex items-center justify-between">
                         <div className="text-muted-foreground text-sm">
@@ -455,24 +447,23 @@ export default function Lecturer() {
                 )}
             </div>
 
-            {/* Add/Edit Lecturer Dialog */}
             <LecturerDialog isOpen={isDialogOpen} onClose={() => setIsDialogOpen(false)} lecturer={editingLecturer} onSave={handleSaveLecturer} />
 
-            {/* Delete Confirmation Dialog */}
             <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
                 <DialogContent className="sm:max-w-[400px]">
                     <DialogHeader>
                         <DialogTitle>Delete Lecturer</DialogTitle>
                         <DialogDescription>
-                            Are you sure you want to delete "{lecturerToDelete?.title} {lecturerToDelete?.fname} {lecturerToDelete?.lname}"? This action cannot be undone.
+                            Are you sure you want to delete "{lecturerToDelete?.title} {lecturerToDelete?.fname} {lecturerToDelete?.lname}"? This
+                            action cannot be undone.
                         </DialogDescription>
                     </DialogHeader>
                     <DialogFooter>
-                        <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>
+                        <Button variant="outline" onClick={() => setDeleteDialogOpen(false)} disabled={isDeleting}>
                             Cancel
                         </Button>
-                        <Button variant="destructive" onClick={confirmDeleteLecturer}>
-                            Delete Lecturer
+                        <Button variant="destructive" onClick={confirmDeleteLecturer} disabled={isDeleting}>
+                            {isDeleting ? 'Deleting...' : 'Delete Lecturer'}
                         </Button>
                     </DialogFooter>
                 </DialogContent>

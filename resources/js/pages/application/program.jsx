@@ -9,7 +9,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import AppLayout from '@/layouts/app-layout';
 import { Head } from '@inertiajs/react';
-import { BookOpen, Calendar, ChevronLeft, ChevronRight, Clock, Code, Edit, MoreHorizontal, Plus, Search, Trash2, Users } from 'lucide-react';
+import { BookOpen, Calendar, ChevronLeft, ChevronRight, Code, Edit, MoreHorizontal, Plus, Search, Trash2 } from 'lucide-react';
 import React, { useState } from 'react';
 
 const breadcrumbs = [
@@ -92,7 +92,6 @@ function ProgramDialog({ isOpen, onClose, program = null, onSave }) {
         year_length: '',
     });
 
-    // Update form data when program prop changes (for edit mode)
     React.useEffect(() => {
         if (program) {
             setFormData({
@@ -102,7 +101,6 @@ function ProgramDialog({ isOpen, onClose, program = null, onSave }) {
                 year_length: program.year_length || '',
             });
         } else {
-            // Reset form for add mode
             setFormData({ unique_code: '', name: '', description: '', year_length: '' });
         }
     }, [program]);
@@ -111,7 +109,6 @@ function ProgramDialog({ isOpen, onClose, program = null, onSave }) {
         if (formData.unique_code && formData.name && formData.description && formData.year_length) {
             onSave(formData);
             onClose();
-            // Don't reset form here - let useEffect handle it when program prop changes
         }
     };
 
@@ -163,7 +160,10 @@ function ProgramDialog({ isOpen, onClose, program = null, onSave }) {
                         <label htmlFor="year_length" className="text-right text-sm font-medium">
                             Program Length
                         </label>
-                        <Select value={formData.year_length.toString()} onValueChange={(value) => setFormData({ ...formData, year_length: parseInt(value) })}>
+                        <Select
+                            value={formData.year_length.toString()}
+                            onValueChange={(value) => setFormData({ ...formData, year_length: parseInt(value) })}
+                        >
                             <SelectTrigger className="col-span-3">
                                 <SelectValue placeholder="Select program length" />
                             </SelectTrigger>
@@ -199,10 +199,10 @@ export default function Program() {
     const [programsData, setProgramsData] = useState(sampleData);
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [programToDelete, setProgramToDelete] = useState(null);
+    const [isDeleting, setIsDeleting] = useState(false);
 
     const itemsPerPage = 5;
 
-    // Filter data based on search and status
     const filteredData = programsData.filter((program) => {
         const matchesSearch =
             program.name.toLowerCase().includes(searchTerm.toLowerCase()) || program.unique_code.toLowerCase().includes(searchTerm.toLowerCase());
@@ -235,7 +235,6 @@ export default function Program() {
 
     const handleSaveProgram = (formData) => {
         if (editingProgram) {
-            // Update existing program
             setProgramsData((prevData) =>
                 prevData.map((program) =>
                     program.id === editingProgram.id
@@ -247,9 +246,7 @@ export default function Program() {
                         : program,
                 ),
             );
-            console.log('Program updated:', formData);
         } else {
-            // Add new program
             const newProgram = {
                 id: Math.max(...programsData.map((p) => p.id), 0) + 1,
                 ...formData,
@@ -257,10 +254,8 @@ export default function Program() {
                 updated_at: new Date().toISOString().slice(0, 19).replace('T', ' '),
             };
             setProgramsData((prevData) => [...prevData, newProgram]);
-            console.log('Program added:', formData);
         }
 
-        // Reset current page to 1 if adding new program
         if (!editingProgram) {
             setCurrentPage(1);
         }
@@ -273,41 +268,33 @@ export default function Program() {
 
     const confirmDeleteProgram = () => {
         if (programToDelete) {
-            setProgramsData((prevData) => prevData.filter((program) => program.id !== programToDelete.id));
+            setIsDeleting(true);
+            // Simulate API call delay
+            setTimeout(() => {
+                setProgramsData((prevData) => prevData.filter((program) => program.id !== programToDelete.id));
 
-            // Adjust current page if necessary
-            const newFilteredData = programsData
-                .filter((program) => program.id !== programToDelete.id)
-                .filter((program) => {
-                    const matchesSearch =
-                        program.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                        program.unique_code.toLowerCase().includes(searchTerm.toLowerCase());
-                    const matchesStatus = statusFilter === 'all' || program.status === statusFilter;
-                    return matchesSearch && matchesStatus;
-                });
-            const newTotalPages = Math.ceil(newFilteredData.length / itemsPerPage);
+                // Adjust pagination if needed
+                const newFilteredData = programsData
+                    .filter((program) => program.id !== programToDelete.id)
+                    .filter((program) => {
+                        const matchesSearch =
+                            program.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                            program.unique_code.toLowerCase().includes(searchTerm.toLowerCase());
+                        const matchesStatus = statusFilter === 'all' || program.status === statusFilter;
+                        return matchesSearch && matchesStatus;
+                    });
+                const newTotalPages = Math.ceil(newFilteredData.length / itemsPerPage);
 
-            if (currentPage > newTotalPages && newTotalPages > 0) {
-                setCurrentPage(newTotalPages);
-            } else if (newFilteredData.length === 0) {
-                setCurrentPage(1);
-            }
+                if (currentPage > newTotalPages && newTotalPages > 0) {
+                    setCurrentPage(newTotalPages);
+                } else if (newFilteredData.length === 0) {
+                    setCurrentPage(1);
+                }
 
-            console.log('Program deleted:', programToDelete.name);
+                setDeleteDialogOpen(false);
+                setIsDeleting(false);
+            }, 800);
         }
-        setDeleteDialogOpen(false);
-        setProgramToDelete(null);
-    };
-
-    const getStatusBadge = (status) => {
-        return (
-            <Badge
-                variant={status === 'active' ? 'default' : 'secondary'}
-                className={status === 'active' ? 'bg-green-500 hover:bg-green-600' : 'bg-gray-500 hover:bg-gray-600'}
-            >
-                {status === 'active' ? 'Active' : 'Inactive'}
-            </Badge>
-        );
     };
 
     const formatDate = (dateString) => {
@@ -320,43 +307,10 @@ export default function Program() {
         });
     };
 
-    // Statistics cards data
-    const stats = [
-        {
-            title: 'Total Programs',
-            value: sampleData.length,
-            icon: BookOpen,
-            change: '+2 from last month',
-            changeType: 'positive',
-        },
-        {
-            title: 'Active Programs',
-            value: sampleData.filter((p) => p.status === 'active').length,
-            icon: Users,
-            change: '+1 from last month',
-            changeType: 'positive',
-        },
-        {
-            title: 'Total Students',
-            value: sampleData.reduce((acc, p) => acc + p.students_count, 0),
-            icon: Users,
-            change: '+45 from last month',
-            changeType: 'positive',
-        },
-        {
-            title: 'Avg Duration',
-            value: '3.6 years',
-            icon: Clock,
-            change: 'No change',
-            changeType: 'neutral',
-        },
-    ];
-
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Programs" />
             <div className="space-y-6 p-6">
-                {/* Header Section */}
                 <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                     <div>
                         <h1 className="text-3xl font-bold tracking-tight">Academic Programs</h1>
@@ -368,7 +322,6 @@ export default function Program() {
                     </Button>
                 </div>
 
-                {/* Filters and Search */}
                 <Card>
                     <CardHeader>
                         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
@@ -417,7 +370,10 @@ export default function Program() {
                                                     </div>
                                                 </TableCell>
                                                 <TableCell className="text-center">
-                                                    <Badge variant="outline" className="bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
+                                                    <Badge
+                                                        variant="outline"
+                                                        className="bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"
+                                                    >
                                                         {program.year_length} {program.year_length === 1 ? 'Year' : 'Years'}
                                                     </Badge>
                                                 </TableCell>
@@ -472,7 +428,6 @@ export default function Program() {
                     </CardContent>
                 </Card>
 
-                {/* Pagination */}
                 {!isLoading && filteredData.length > itemsPerPage && (
                     <div className="flex items-center justify-between">
                         <div className="text-muted-foreground text-sm">
@@ -497,10 +452,8 @@ export default function Program() {
                 )}
             </div>
 
-            {/* Add/Edit Program Dialog */}
             <ProgramDialog isOpen={isDialogOpen} onClose={() => setIsDialogOpen(false)} program={editingProgram} onSave={handleSaveProgram} />
 
-            {/* Delete Confirmation Dialog */}
             <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
                 <DialogContent className="sm:max-w-[400px]">
                     <DialogHeader>
@@ -510,11 +463,11 @@ export default function Program() {
                         </DialogDescription>
                     </DialogHeader>
                     <DialogFooter>
-                        <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>
+                        <Button variant="outline" onClick={() => setDeleteDialogOpen(false)} disabled={isDeleting}>
                             Cancel
                         </Button>
-                        <Button variant="destructive" onClick={confirmDeleteProgram}>
-                            Delete Program
+                        <Button variant="destructive" onClick={confirmDeleteProgram} disabled={isDeleting}>
+                            {isDeleting ? 'Deleting...' : 'Delete Program'}
                         </Button>
                     </DialogFooter>
                 </DialogContent>

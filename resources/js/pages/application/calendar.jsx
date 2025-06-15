@@ -88,7 +88,6 @@ function CalendarDialog({ isOpen, onClose, calendar = null, onSave }) {
         end_date: '',
     });
 
-    // Update form data when calendar prop changes (for edit mode)
     React.useEffect(() => {
         if (calendar) {
             setFormData({
@@ -98,7 +97,6 @@ function CalendarDialog({ isOpen, onClose, calendar = null, onSave }) {
                 end_date: calendar.end_date || '',
             });
         } else {
-            // Reset form for add mode
             setFormData({ term: '', school_year: '', start_date: '', end_date: '' });
         }
     }, [calendar]);
@@ -106,8 +104,6 @@ function CalendarDialog({ isOpen, onClose, calendar = null, onSave }) {
     const handleSave = () => {
         if (formData.term && formData.school_year && formData.start_date && formData.end_date) {
             onSave(formData);
-            onClose();
-            // Don't reset form here - let useEffect handle it when calendar prop changes
         }
     };
 
@@ -208,10 +204,10 @@ export default function Calendar() {
     const [calendarsData, setCalendarsData] = useState(initialData);
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [calendarToDelete, setCalendarToDelete] = useState(null);
+    const [isDeleting, setIsDeleting] = useState(false);
 
     const itemsPerPage = 5;
 
-    // Define getDateRangeStatus function before using it
     const getDateRangeStatus = (startDate, endDate) => {
         const today = new Date();
         const start = new Date(startDate);
@@ -226,17 +222,14 @@ export default function Calendar() {
         }
     };
 
-    // Filter data based on search
     const filteredData = calendarsData.filter((calendar) => {
         return calendar.term.toLowerCase().includes(searchTerm.toLowerCase()) || calendar.school_year.includes(searchTerm);
     });
 
-    // Sort filtered data by status - active/upcoming first, completed last
     const sortedData = filteredData.sort((a, b) => {
         const statusA = getDateRangeStatus(a.start_date, a.end_date);
         const statusB = getDateRangeStatus(b.start_date, b.end_date);
 
-        // Define priority order: active (1), upcoming (2), completed (3)
         const statusPriority = {
             active: 1,
             upcoming: 2,
@@ -246,20 +239,16 @@ export default function Calendar() {
         const priorityA = statusPriority[statusA.status];
         const priorityB = statusPriority[statusB.status];
 
-        // If priorities are different, sort by priority
         if (priorityA !== priorityB) {
             return priorityA - priorityB;
         }
 
-        // If same priority, sort by start date (newest first for active/upcoming, oldest first for completed)
         const dateA = new Date(a.start_date);
         const dateB = new Date(b.start_date);
 
         if (statusA.status === 'completed') {
-            // For completed items, show most recently completed first
             return dateB - dateA;
         } else {
-            // For active/upcoming items, show nearest dates first
             return dateA - dateB;
         }
     });
@@ -289,7 +278,6 @@ export default function Calendar() {
 
     const handleSaveCalendar = (formData) => {
         if (editingCalendar) {
-            // Update existing calendar
             setCalendarsData((prevData) =>
                 prevData.map((calendar) =>
                     calendar.id === editingCalendar.id
@@ -301,9 +289,7 @@ export default function Calendar() {
                         : calendar,
                 ),
             );
-            console.log('Calendar updated:', formData);
         } else {
-            // Add new calendar
             const newCalendar = {
                 id: Math.max(...calendarsData.map((c) => c.id), 0) + 1,
                 ...formData,
@@ -311,13 +297,8 @@ export default function Calendar() {
                 updated_at: new Date().toISOString().slice(0, 19).replace('T', ' '),
             };
             setCalendarsData((prevData) => [...prevData, newCalendar]);
-            console.log('Calendar added:', formData);
         }
-
-        // Reset current page to 1 if adding new calendar
-        if (!editingCalendar) {
-            setCurrentPage(1);
-        }
+        setIsDialogOpen(false);
     };
 
     const handleDeleteCalendar = (calendar) => {
@@ -327,24 +308,29 @@ export default function Calendar() {
 
     const confirmDeleteCalendar = () => {
         if (calendarToDelete) {
-            setCalendarsData((prevData) => prevData.filter((calendar) => calendar.id !== calendarToDelete.id));
+            setIsDeleting(true);
+            // Simulate API call delay
+            setTimeout(() => {
+                setCalendarsData((prevData) => prevData.filter((calendar) => calendar.id !== calendarToDelete.id));
 
-            // Adjust current page if necessary
-            const newFilteredData = calendarsData
-                .filter((calendar) => calendar.id !== calendarToDelete.id)
-                .filter((calendar) => calendar.term.toLowerCase().includes(searchTerm.toLowerCase()) || calendar.school_year.includes(searchTerm));
-            const newTotalPages = Math.ceil(newFilteredData.length / itemsPerPage);
+                // Adjust pagination if needed
+                const newFilteredData = calendarsData
+                    .filter((calendar) => calendar.id !== calendarToDelete.id)
+                    .filter(
+                        (calendar) => calendar.term.toLowerCase().includes(searchTerm.toLowerCase()) || calendar.school_year.includes(searchTerm),
+                    );
+                const newTotalPages = Math.ceil(newFilteredData.length / itemsPerPage);
 
-            if (currentPage > newTotalPages && newTotalPages > 0) {
-                setCurrentPage(newTotalPages);
-            } else if (newFilteredData.length === 0) {
-                setCurrentPage(1);
-            }
+                if (currentPage > newTotalPages && newTotalPages > 0) {
+                    setCurrentPage(newTotalPages);
+                } else if (newFilteredData.length === 0) {
+                    setCurrentPage(1);
+                }
 
-            console.log('Calendar deleted:', calendarToDelete.term, calendarToDelete.school_year);
+                setDeleteDialogOpen(false);
+                setIsDeleting(false);
+            }, 800);
         }
-        setDeleteDialogOpen(false);
-        setCalendarToDelete(null);
     };
 
     const formatDate = (dateString) => {
@@ -369,7 +355,6 @@ export default function Calendar() {
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Calendar" />
             <div className="space-y-6 p-6">
-                {/* Header Section */}
                 <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                     <div>
                         <h1 className="text-3xl font-bold tracking-tight">Academic Calendar</h1>
@@ -381,7 +366,6 @@ export default function Calendar() {
                     </Button>
                 </div>
 
-                {/* Filters and Search */}
                 <Card>
                     <CardHeader>
                         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
@@ -508,7 +492,6 @@ export default function Calendar() {
                     </CardContent>
                 </Card>
 
-                {/* Pagination */}
                 {!isLoading && paginatedData.length > 0 && totalPages > 1 && (
                     <div className="flex items-center justify-between">
                         <div className="text-muted-foreground text-sm">
@@ -533,10 +516,8 @@ export default function Calendar() {
                 )}
             </div>
 
-            {/* Add/Edit Calendar Dialog */}
             <CalendarDialog isOpen={isDialogOpen} onClose={() => setIsDialogOpen(false)} calendar={editingCalendar} onSave={handleSaveCalendar} />
 
-            {/* Delete Confirmation Dialog */}
             <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
                 <DialogContent className="sm:max-w-[400px]">
                     <DialogHeader>
@@ -547,11 +528,11 @@ export default function Calendar() {
                         </DialogDescription>
                     </DialogHeader>
                     <DialogFooter>
-                        <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>
+                        <Button variant="outline" onClick={() => setDeleteDialogOpen(false)} disabled={isDeleting}>
                             Cancel
                         </Button>
-                        <Button variant="destructive" onClick={confirmDeleteCalendar}>
-                            Delete Calendar
+                        <Button variant="destructive" onClick={confirmDeleteCalendar} disabled={isDeleting}>
+                            {isDeleting ? 'Deleting...' : 'Delete Calendar'}
                         </Button>
                     </DialogFooter>
                 </DialogContent>
