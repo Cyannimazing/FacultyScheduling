@@ -2,9 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\StoreTermRequest;
+use App\Http\Requests\UpdateTermRequest;
 use App\Models\Term;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
+use function Termwind\terminal;
 
 class TermController extends Controller
 {
@@ -28,24 +31,23 @@ class TermController extends Controller
         ]);
     }
 
-    public function store(Request $request)
+    public function store(StoreTermRequest $request)
     {
-        $validated = $request->validate([
-            'name' => 'required|string|max:255|unique:terms,name',
-        ]);
+        $validated = $request->validated();
 
         Term::create($validated);
 
         return redirect()->route('term')->with('success', 'Term created successfully.');
     }
 
-    public function update(Request $request, Term $term)
+    public function update(UpdateTermRequest $request, int $id)
     {
-        $validated = $request->validate([
-            'name' => 'required|string|max:255|unique:terms,name,'.$term->id,
-        ]);
-
-        $term->update($validated);
+        $term = Term::find($id);
+        if($term){
+            $term->update([
+                'name' => $request->name
+            ]);
+        }
 
         return redirect()->route('term')->with('success', 'Term updated successfully.');
     }

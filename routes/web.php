@@ -48,14 +48,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
         return Inertia::render('application/room');
     })->name('room');
 
-    //TERM ROUTES
-    Route::controller(TermController::class)->group(function () {
-        Route::get('term', 'index')->name('term');
-        Route::post('term', 'store');
-        Route::put('term/{term}', 'update');
-        Route::delete('term/{term}', 'destroy');
-    });
-    
 });
 
 require __DIR__.'/settings.php';
