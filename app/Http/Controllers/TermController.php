@@ -3,69 +3,57 @@
 namespace App\Http\Controllers;
 
 use App\Models\Term;
-use App\Http\Requests\StoreTermRequest;
-use App\Http\Requests\UpdateTermRequest;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
 class TermController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
     public function index(Request $request)
     {
+        $search = $request->input('search');
+        $page = $request->input('page', 1);
         $perPage = 5;
-        $search = $request->query('search', '');
 
-        $terms = Term::where('name', 'LIKE', "%$search%")->paginate($perPage);
+        $query = Term::query()->orderBy('created_at', 'desc');
+
+        if ($search) {
+            $query->where('name', 'like', "%{$search}%");
+        }
+
+        $terms = $query->paginate($perPage, ['*'], 'page', $page);
 
         return Inertia::render('application/term', [
-            'terms' => [
-                'data' => $terms->items(),
-                'last_page' => $terms->lastPage(),
-                'current_page' => $terms->currentPage(),
-                'total' => $terms->total(),
-            ],
+            'terms' => $terms,
+            'filters' => $request->only(['search']),
         ]);
     }
 
-    /**
-     * Store a newly created resource in storage.
-     */
-    public function store(StoreTermRequest $request)
+    public function store(Request $request)
     {
-        Term::create($request->validated());
-        return Inertia::render('application/term');
-    }
-
-    /**
-     * Display the specified resource.
-     */
-    public function show(int $id)
-    {
-        $term = Term::findOrFail($id);
-        return Inertia::render('application/term', [
-            'term' => $term
+        $validated = $request->validate([
+            'name' => 'required|string|max:255|unique:terms,name',
         ]);
+
+        Term::create($validated);
+
+        return redirect()->route('term')->with('success', 'Term created successfully.');
     }
 
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(UpdateTermRequest $request, int $id)
+    public function update(Request $request, Term $term)
     {
-        $t = Term::find($id);
-        $t->name = $request->name;
-        $t->save();
+        $validated = $request->validate([
+            'name' => 'required|string|max:255|unique:terms,name,'.$term->id,
+        ]);
+
+        $term->update($validated);
+
+        return redirect()->route('term')->with('success', 'Term updated successfully.');
     }
 
-    /**
-     * Remove the specified resource from storage.
-     */
-    public function destroy(int $id)
+    public function destroy(Term $term)
     {
-        $term = Term::findOrFail($id);
         $term->delete();
+
+        return redirect()->route('term')->with('success', 'Term deleted successfully.');
     }
 }

@@ -7,18 +7,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import AppLayout from '@/layouts/app-layout';
-import { Head, router } from '@inertiajs/react';
+import { Head, router, usePage } from '@inertiajs/react';
 import { Calendar, ChevronLeft, ChevronRight, Clock, Edit, GraduationCap, MoreHorizontal, Plus, Search, Trash2 } from 'lucide-react';
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 
-const breadcrumbs = [
-    {
-        title: 'Term',
-        href: '/term',
-    },
-];
+const breadcrumbs = [{ title: 'Term', href: '/term' }];
 
-const termOptions = ['1st Semester', '2nd Semester', 'Summer'];
+const termOptions = ['1st Term', '2nd Term', '3rd Term', 'Summer'];
 
 function LoadingSkeleton() {
     return (
@@ -36,42 +31,25 @@ function LoadingSkeleton() {
 }
 
 function TermDialog({ isOpen, onClose, term = null, onSave, existingTerms = [] }) {
-    const [formData, setFormData] = useState({
-        name: '',
-    });
+    const [formData, setFormData] = useState({ name: '' });
 
-    // Update form data when term prop changes (for edit mode)
-    React.useEffect(() => {
-        if (term) {
+    // Reset form when dialog opens/closes or term changes
+    useEffect(() => {
+        if (isOpen) {
             setFormData({
-                name: term.name || '',
+                name: term?.name || '',
             });
-        } else {
-            // Reset form for add mode
-            setFormData({ name: '' });
         }
-    }, [term]);
+    }, [isOpen, term]);
+
+    const availableTerms = term ? termOptions : termOptions.filter((option) => !existingTerms.some((t) => t.name === option));
 
     const handleSave = () => {
         if (formData.name) {
             onSave(formData);
             onClose();
-            // Don't reset form here - let useEffect handle it when term prop changes
         }
     };
-
-    // Get available term options (exclude already existing terms for add mode)
-    const getAvailableTerms = () => {
-        if (term) {
-            // Edit mode: show all options
-            return termOptions;
-        } else {
-            // Add mode: exclude already existing terms
-            return termOptions.filter((termOption) => !existingTerms.some((existingTerm) => existingTerm.name === termOption));
-        }
-    };
-
-    const availableTerms = getAvailableTerms();
 
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
@@ -85,7 +63,7 @@ function TermDialog({ isOpen, onClose, term = null, onSave, existingTerms = [] }
                         <label htmlFor="name" className="text-right text-sm font-medium">
                             Term
                         </label>
-                        <Select value={formData.name} onValueChange={(value) => setFormData({ ...formData, name: value })}>
+                        <Select value={formData.name} onValueChange={(value) => setFormData({ name: value })}>
                             <SelectTrigger className="col-span-3">
                                 <SelectValue placeholder="Select a term" />
                             </SelectTrigger>
@@ -115,58 +93,39 @@ function TermDialog({ isOpen, onClose, term = null, onSave, existingTerms = [] }
     );
 }
 
-export default function Term({ terms = { data: [], last_page: 1, current_page: 1, total: 0 } }) {
-    const [currentPage, setCurrentPage] = useState(terms?.current_page);
+export default function Index() {
+    const { terms } = usePage().props;
     const [isLoading, setIsLoading] = useState(false);
-    const [searchTerm, setSearchTerm] = useState('');
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [editingTerm, setEditingTerm] = useState(null);
-    const [termsData, setTermsData] = useState(terms?.data);
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [termToDelete, setTermToDelete] = useState(null);
-    const [totalPages, setTotalPages] = useState(terms?.last_page);
-    const [totalItems, setTotalItems] = useState(terms?.total);
+    const [searchTerm, setSearchTerm] = useState('');
 
-    const itemsPerPage = 5;
-
-    // Handle search with debounce
-    useEffect(() => {
-        const timer = setTimeout(() => {
-            if (searchTerm !== '') {
-                router.visit('/terms', {
-                    method: 'get',
-                    data: { search: searchTerm, page: 1 },
-                    preserveState: true,
-                    preserveScroll: true,
-                    only: ['terms'],
-                });
-            } else {
-                router.visit('/terms', {
-                    method: 'get',
-                    preserveState: true,
-                    preserveScroll: true,
-                    only: ['terms'],
-                });
-            }
-        }, 300);
-        return () => clearTimeout(timer);
-    }, [searchTerm]);
-
-    // Handle pagination
-    const handlePageChange = (page) => {
-        if (page > 0 && page <= totalPages) {
-            router.visit('/terms', {
-                method: 'get',
-                data: { page, search: searchTerm || undefined },
+    const handleSearch = (e) => {
+        setSearchTerm(e.target.value);
+        setIsLoading(true);
+        router.get(
+            '/term',
+            { search: e.target.value, page: 1 },
+            {
                 preserveState: true,
-                preserveScroll: true,
-                only: ['terms'],
-            });
-        }
+                onFinish: () => setIsLoading(false),
+            },
+        );
     };
 
-    // Data is already filtered and paginated by the backend
-
+    const handlePageChange = (page) => {
+        setIsLoading(true);
+        router.get(
+            '/term',
+            { page },
+            {
+                preserveState: true,
+                onFinish: () => setIsLoading(false),
+            },
+        );
+    };
 
     const handleAddTerm = () => {
         setEditingTerm(null);
@@ -180,27 +139,12 @@ export default function Term({ terms = { data: [], last_page: 1, current_page: 1
 
     const handleSaveTerm = (formData) => {
         if (editingTerm) {
-            // Update existing term
-            console.log(editingTerm)
-            router.post(`/terms/${editingTerm.id}?_method=PUT`, formData,{
-                onSuccess: () => {
-                        router.visit('/terms', {
-                        preserveState: true,
-                        preserveScroll: true,
-                        only: ['terms'],
-                    });
-                }
-            })
+            router.put(`/term/${editingTerm.id}`, formData, {
+                onSuccess: () => setIsDialogOpen(false),
+            });
         } else {
-            // Add new term
-            router.post('/terms', formData, {
-                onSuccess: () => {
-                    router.visit('/terms', {
-                        preserveState: true,
-                        preserveScroll: true,
-                        only: ['terms'],
-                    });
-                },
+            router.post('/term', formData, {
+                onSuccess: () => setIsDialogOpen(false),
             });
         }
     };
@@ -212,18 +156,10 @@ export default function Term({ terms = { data: [], last_page: 1, current_page: 1
 
     const confirmDeleteTerm = () => {
         if (termToDelete) {
-            router.delete(`/terms/${termToDelete.id}`, {
-                onSuccess: () => {
-                    router.visit('/terms', {
-                        preserveState: true,
-                        preserveScroll: true,
-                        only: ['terms'],
-                    });
-                },
+            router.delete(`/term/${termToDelete.id}`, {
+                onSuccess: () => setDeleteDialogOpen(false),
             });
         }
-        setDeleteDialogOpen(false);
-        setTermToDelete(null);
     };
 
     const formatDate = (dateString) => {
@@ -240,7 +176,6 @@ export default function Term({ terms = { data: [], last_page: 1, current_page: 1
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Terms" />
             <div className="space-y-6 p-6">
-                {/* Header Section */}
                 <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                     <div>
                         <h1 className="text-3xl font-bold tracking-tight">Academic Terms</h1>
@@ -252,28 +187,36 @@ export default function Term({ terms = { data: [], last_page: 1, current_page: 1
                     </Button>
                 </div>
 
-                {/* Filters and Search */}
                 <Card>
                     <CardHeader>
                         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                             <div className="relative flex-1 md:max-w-sm">
                                 <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
-                                <Input
-                                    placeholder="Search terms..."
-                                    value={searchTerm}
-                                    onChange={(e) => setSearchTerm(e.target.value)}
-                                    className="pl-9"
-                                />
+                                <Input placeholder="Search terms..." value={searchTerm} onChange={handleSearch} className="pl-9" />
                             </div>
                             <div className="text-muted-foreground text-sm">
-                                Showing {terms.data.length} of {totalItems} terms
+                                Showing {terms.data.length} of {terms.total} terms
                             </div>
                         </div>
                     </CardHeader>
                     <CardContent>
                         {isLoading ? (
                             <LoadingSkeleton />
-                        ) : terms.data.length > 0 ? (
+                        ) : terms.data.length === 0 ? (
+                            <div className="flex flex-col items-center justify-center py-12 text-center">
+                                <GraduationCap className="text-muted-foreground mb-4 h-12 w-12" />
+                                <h3 className="mb-2 text-lg font-semibold">No terms found</h3>
+                                <p className="text-muted-foreground mb-4">
+                                    {searchTerm ? 'Try adjusting your search criteria.' : 'Get started by creating your first academic term.'}
+                                </p>
+                                {!searchTerm && (
+                                    <Button onClick={handleAddTerm}>
+                                        <Plus className="mr-2 h-4 w-4" />
+                                        Add Your First Term
+                                    </Button>
+                                )}
+                            </div>
+                        ) : (
                             <div className="overflow-x-auto">
                                 <Table>
                                     <TableHeader>
@@ -288,9 +231,7 @@ export default function Term({ terms = { data: [], last_page: 1, current_page: 1
                                     <TableBody>
                                         {terms.data.map((term) => (
                                             <TableRow key={term.id} className="hover:bg-muted/50">
-                                                <TableCell>
-                                                    <span className="font-medium">{term.id}</span>
-                                                </TableCell>
+                                                <TableCell>{term.id}</TableCell>
                                                 <TableCell>
                                                     <div className="flex items-center gap-2">
                                                         <GraduationCap className="text-muted-foreground h-4 w-4" />
@@ -322,7 +263,10 @@ export default function Term({ terms = { data: [], last_page: 1, current_page: 1
                                                                 Edit Term
                                                             </DropdownMenuItem>
                                                             <DropdownMenuSeparator />
-                                                            <DropdownMenuItem variant="destructive" onClick={() => handleDeleteTerm(term)}>
+                                                            <DropdownMenuItem
+                                                                className="text-red-600 focus:text-red-600"
+                                                                onClick={() => handleDeleteTerm(term)}
+                                                            >
                                                                 <Trash2 className="mr-2 h-4 w-4" />
                                                                 Delete Term
                                                             </DropdownMenuItem>
@@ -334,40 +278,30 @@ export default function Term({ terms = { data: [], last_page: 1, current_page: 1
                                     </TableBody>
                                 </Table>
                             </div>
-                        ) : (
-                            <div className="flex flex-col items-center justify-center py-12 text-center">
-                                <GraduationCap className="text-muted-foreground mb-4 h-12 w-12" />
-                                <h3 className="mb-2 text-lg font-semibold">No terms found</h3>
-                                <p className="text-muted-foreground mb-4">
-                                    {searchTerm ? 'Try adjusting your search criteria.' : 'Get started by creating your first academic term.'}
-                                </p>
-                                {!searchTerm && (
-                                    <Button onClick={handleAddTerm}>
-                                        <Plus className="mr-2 h-4 w-4" />
-                                        Add Your First Term
-                                    </Button>
-                                )}
-                            </div>
                         )}
                     </CardContent>
                 </Card>
 
-                {/* Pagination */}
-                {!isLoading && terms.data.length > 0 && totalPages > 1 && (
+                {!isLoading && terms.last_page > 1 && (
                     <div className="flex items-center justify-between">
                         <div className="text-muted-foreground text-sm">
-                            Page {currentPage} of {totalPages}
+                            Page {terms.current_page} of {terms.last_page}
                         </div>
                         <div className="flex items-center space-x-2">
-                            <Button variant="outline" size="sm" onClick={() => handlePageChange(currentPage - 1)} disabled={currentPage === 1}>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handlePageChange(terms.current_page - 1)}
+                                disabled={terms.current_page === 1}
+                            >
                                 <ChevronLeft className="h-4 w-4" />
                                 Previous
                             </Button>
                             <Button
                                 variant="outline"
                                 size="sm"
-                                onClick={() => handlePageChange(currentPage + 1)}
-                                disabled={currentPage === totalPages}
+                                onClick={() => handlePageChange(terms.current_page + 1)}
+                                disabled={terms.current_page === terms.last_page}
                             >
                                 Next
                                 <ChevronRight className="h-4 w-4" />
@@ -377,16 +311,14 @@ export default function Term({ terms = { data: [], last_page: 1, current_page: 1
                 )}
             </div>
 
-            {/* Add/Edit Term Dialog */}
             <TermDialog
                 isOpen={isDialogOpen}
                 onClose={() => setIsDialogOpen(false)}
                 term={editingTerm}
                 onSave={handleSaveTerm}
-                existingTerms={termsData}
+                existingTerms={terms.data}
             />
 
-            {/* Delete Confirmation Dialog */}
             <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
                 <DialogContent className="sm:max-w-[400px]">
                     <DialogHeader>
