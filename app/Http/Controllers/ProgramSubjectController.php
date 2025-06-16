@@ -2,9 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Program;
 use App\Models\ProgramSubject;
 use App\Http\Requests\StoreProgramSubjectRequest;
 use App\Http\Requests\UpdateProgramSubjectRequest;
+use App\Models\Subject;
+use App\Models\Term;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -16,22 +19,42 @@ class ProgramSubjectController extends Controller
     public function index(Request $request)
     {
         $search = $request->input('search');
+        $programFilter = $request->input('programFilter');
         $page = $request->input('page', 1);
         $perPage = 5;
 
+        $totalAssignment = ProgramSubject::all()->count();
+        $totalProgramWithSubject = ProgramSubject::distinct('prog_code')->count();
+        $totalSubjectAssigned = ProgramSubject::distinct('subj_code')->count();
+
+        $programs = Program::all();
+        $subjects = Subject::where(function ($query) use ($search) {
+                    $query->where('name', 'LIKE', "%$search%")
+                        ->orWhere('code', 'LIKE', "%$search%");
+                })->orderBy('name')
+                ->get();
+        $terms = Term::all();
+
         $programSubjects = ProgramSubject::with(['program', 'subject'])
-                                         ->whereHas('program', function($query) use ($search) {
-                                             $query->where('name', 'LIKE', "%$search%");
-                                         })
-                                         ->orWhereHas('subject', function($query) use ($search) {
-                                             $query->where('name', 'LIKE', "%$search%");
-                                         })
-                                         ->orderBy('id')
-                                         ->paginate($perPage, ['*'], 'page', $page);
+                        ->where('prog_code', 'LIKE', "%$programFilter%")
+                        ->orderBy('prog_code')
+                        ->get();
 
         return Inertia::render('application/course-assignment', [
-            'programSubjects' => $programSubjects,
+            'data' => [
+                'totalAssignment' => $totalAssignment,
+                'totalProgramWithSubject' => $totalProgramWithSubject,
+                'totalSubjectAssigned' => $totalSubjectAssigned,
+                'programs' => $programs,
+                'subjects' => $subjects,
+                'terms' => $terms,
+                'programSubjects' => $programSubjects
+            ]
         ]);
+
+        // return response()->json([
+
+        // ]);
     }
 
     /**

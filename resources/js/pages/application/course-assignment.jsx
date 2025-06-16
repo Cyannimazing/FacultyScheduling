@@ -22,28 +22,28 @@ const breadcrumbs = [
 const samplePrograms = [
     {
         id: 1,
-        unique_code: 'PROG001',
+        code: 'PROG001',
         name: 'Computer Science',
         description: 'Bachelor of Science in Computer Science',
         year_length: 4,
     },
     {
         id: 2,
-        unique_code: 'PROG002',
+        code: 'PROG002',
         name: 'Information Technology',
         description: 'Bachelor of Science in Information Technology',
         year_length: 4,
     },
     {
         id: 3,
-        unique_code: 'PROG003',
+        code: 'PROG003',
         name: 'Data Science',
         description: 'Master of Science in Data Science',
         year_length: 2,
     },
     {
         id: 4,
-        unique_code: 'PROG004',
+        code: 'PROG004',
         name: 'Cybersecurity',
         description: 'Bachelor of Science in Cybersecurity',
         year_length: 4,
@@ -229,7 +229,7 @@ function ProgramDropZone({ program, assignments, onDrop, onRemoveAssignment }) {
         onDrop(e, program);
     };
 
-    const programAssignments = assignments.filter((a) => a.program_code === program.unique_code);
+    const programAssignments = assignments.filter((a) => a.program_code === program.code);
 
     // Group assignments by year and term
     const groupedAssignments = programAssignments.reduce((acc, assignment) => {
@@ -247,7 +247,7 @@ function ProgramDropZone({ program, assignments, onDrop, onRemoveAssignment }) {
                 <div className="flex items-center justify-between">
                     <div>
                         <CardTitle className="text-lg">{program.name}</CardTitle>
-                        <p className="text-sm text-muted-foreground">{program.unique_code}</p>
+                        <p className="text-sm text-muted-foreground">{program.code}</p>
                     </div>
                     <Badge variant="outline">{programAssignments.length} subjects</Badge>
                 </div>
@@ -404,7 +404,7 @@ function AssignmentDialog({ isOpen, onClose, onSave }) {
     });
 
     // Get selected program to determine available year levels
-    const selectedProgram = samplePrograms.find(p => p.unique_code === formData.program_code);
+    const selectedProgram = samplePrograms.find(p => p.code === formData.program_code);
     const availableYearLevels = getAvailableYearLevels(selectedProgram?.year_length);
 
     // Reset year level when program changes
@@ -438,8 +438,8 @@ function AssignmentDialog({ isOpen, onClose, onSave }) {
                             </SelectTrigger>
                             <SelectContent>
                                 {samplePrograms.map((program) => (
-                                    <SelectItem key={program.id} value={program.unique_code}>
-                                        {program.unique_code} - {program.name}
+                                    <SelectItem key={program.id} value={program.code}>
+                                        {program.code} - {program.name}
                                     </SelectItem>
                                 ))}
                             </SelectContent>
@@ -560,7 +560,7 @@ export default function CourseAssignment() {
     );
 
     // Filter programs based on selection
-    const filteredPrograms = selectedProgram === 'all' ? samplePrograms : samplePrograms.filter((p) => p.unique_code === selectedProgram);
+    const filteredPrograms = selectedProgram === 'all' ? samplePrograms : samplePrograms.filter((p) => p.code === selectedProgram);
 
     const handleDragStart = (e, subject) => {
         setDraggedSubject(subject);
@@ -580,7 +580,7 @@ export default function CourseAssignment() {
 
         const newAssignment = {
             id: Math.max(...assignments.map((a) => a.id), 0) + 1,
-            program_code: dropTarget.unique_code,
+            program_code: dropTarget.code,
             subject_code: draggedSubject.code,
             year_level: yearTerm.year_level,
             term: yearTerm.term,
@@ -591,7 +591,7 @@ export default function CourseAssignment() {
         // Check if assignment already exists
         const existingAssignment = assignments.find(
             (a) =>
-                a.program_code === dropTarget.unique_code &&
+                a.program_code === dropTarget.code &&
                 a.subject_code === draggedSubject.code &&
                 a.year_level === yearTerm.year_level &&
                 a.term === yearTerm.term,
@@ -603,7 +603,7 @@ export default function CourseAssignment() {
             // TODO: ROUTE - POST request to create course assignment
             // POST /api/course-assignments
             // Body: {
-            //   program_code: dropTarget.unique_code,
+            //   program_code: dropTarget.code,
             //   subject_code: draggedSubject.code,
             //   year_level: yearTerm.year_level,
             //   term: yearTerm.term
@@ -778,8 +778,8 @@ export default function CourseAssignment() {
                                     <SelectContent>
                                         <SelectItem value="all">All Programs</SelectItem>
                                         {samplePrograms.map((program) => (
-                                            <SelectItem key={program.id} value={program.unique_code}>
-                                                {program.unique_code} - {program.name}
+                                            <SelectItem key={program.id} value={program.code}>
+                                                {program.code} - {program.name}
                                             </SelectItem>
                                         ))}
                                     </SelectContent>
@@ -823,7 +823,7 @@ export default function CourseAssignment() {
                                 <TableBody>
                                     {paginatedAssignments.length > 0 ? (
                                         paginatedAssignments.map((assignment) => {
-                                            const program = samplePrograms.find((p) => p.unique_code === assignment.program_code);
+                                            const program = samplePrograms.find((p) => p.code === assignment.program_code);
                                             const subject = sampleSubjects.find((s) => s.code === assignment.subject_code);
                                             return (
                                                 <TableRow key={assignment.id}>
@@ -873,7 +873,7 @@ export default function CourseAssignment() {
                                 </TableBody>
                             </Table>
                         </div>
-                        
+
                         {/* Pagination Controls */}
                         {assignments.length > itemsPerPage && (
                             <div className="flex items-center justify-between px-6 py-4 border-t">
@@ -881,10 +881,10 @@ export default function CourseAssignment() {
                                     Showing {((currentPage - 1) * itemsPerPage) + 1} to {Math.min(currentPage * itemsPerPage, assignments.length)} of {assignments.length} assignments
                                 </div>
                                 <div className="flex items-center space-x-2">
-                                    <Button 
-                                        variant="outline" 
-                                        size="sm" 
-                                        onClick={() => handlePageChange(currentPage - 1)} 
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => handlePageChange(currentPage - 1)}
                                         disabled={currentPage === 1}
                                     >
                                         <ChevronLeft className="h-4 w-4" />
@@ -893,10 +893,10 @@ export default function CourseAssignment() {
                                     <div className="text-sm">
                                         Page {currentPage} of {totalPages}
                                     </div>
-                                    <Button 
-                                        variant="outline" 
-                                        size="sm" 
-                                        onClick={() => handlePageChange(currentPage + 1)} 
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => handlePageChange(currentPage + 1)}
                                         disabled={currentPage === totalPages}
                                     >
                                         Next
@@ -936,7 +936,7 @@ export default function CourseAssignment() {
                                         <strong>Assignment Details:</strong>
                                         <br />
                                         <strong>Program:</strong>{' '}
-                                        {samplePrograms.find((p) => p.unique_code === assignmentToDelete.program_code)?.name ||
+                                        {samplePrograms.find((p) => p.code === assignmentToDelete.program_code)?.name ||
                                             assignmentToDelete.program_code}
                                         <br />
                                         <strong>Subject:</strong>{' '}
