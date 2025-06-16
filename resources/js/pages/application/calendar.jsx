@@ -63,12 +63,13 @@ function CalendarDialog({ isOpen, onClose, calendar = null, onSave }) {
 
     React.useEffect(() => {
         if (calendar) {
+            console.log('Calendar data:', calendar); // Debug log
             setFormData({
-                term_id: calendar.term_id || '',
-                term_name: calendar.term.name || '',
+                term_id: calendar.term_id ? calendar.term_id.toString() : '',
+                term_name: calendar.term?.name || '',
                 school_year: calendar.school_year || '',
-                start_date: calendar.start_date || '',
-                end_date: calendar.end_date || '',
+                start_date: calendar.start_date ? calendar.start_date.split('T')[0] : '',
+                end_date: calendar.end_date ? calendar.end_date.split('T')[0] : '',
             });
         } else {
             setFormData({ term_id:'', term_name: '', school_year: '', start_date: '', end_date: '' });
@@ -101,13 +102,13 @@ function CalendarDialog({ isOpen, onClose, calendar = null, onSave }) {
                         <label htmlFor="term" className="text-right text-sm font-medium">
                             Term
                         </label>
-                        <Select value={formData.term} onValueChange={(value) => setFormData({ ...formData, term_id: value })}>
+                        <Select value={formData.term_id} onValueChange={(value) => setFormData({ ...formData, term_id: value })}>
                             <SelectTrigger className="col-span-3">
                                 <SelectValue placeholder="Select a term" />
                             </SelectTrigger>
                             <SelectContent>
                                 {termOptions.map((term) => (
-                                    <SelectItem key={term.id} value={term.id}>
+                                    <SelectItem key={term.id} value={term.id.toString()}>
                                         {term.name}
                                     </SelectItem>
                                 ))}
@@ -202,7 +203,7 @@ export default function Calendar() {
         setIsLoading(true);
         router.get(
             '/calendar',
-            { search: seachCalendar, page: page },
+            { page },
             {
                 preserveState: true,
                 onFinish: () => setIsLoading(false),
@@ -210,20 +211,12 @@ export default function Calendar() {
         );
     };
 
-    useEffect(()=>{
-        if(seachCalendar){
-            handleSearch()
-        }else{
-            setSearchCalendar('')
-            handleSearch()
-        }
-    }, [seachCalendar])
-
-    const handleSearch = () => {
+    const handleSearch = (e) => {
+        setSearchCalendar(e.target.value);
         setIsLoading(true);
         router.get(
-            '/calendar?page=1',
-            { search: seachCalendar, page: 1 },
+            '/calendar',
+            { search: e.target.value, page: 1 },
             {
                 preserveState: true,
                 onFinish: () => setIsLoading(false),
@@ -318,7 +311,7 @@ export default function Calendar() {
                                 <Input
                                     placeholder="Search calendars..."
                                     value={seachCalendar}
-                                    onChange={(e) => setSearchCalendar(e.target.value)}
+                                    onChange={handleSearch}
                                     className="pl-9"
                                 />
                             </div>

@@ -54,9 +54,6 @@ class ProgramController extends Controller
         ]);
     }
 
-    /**
-     * Update the specified resource in storage.
-     */
     public function update(UpdateProgramRequest $request, int $id)
     {
         $program = Program::find($id);
@@ -71,13 +68,12 @@ class ProgramController extends Controller
         return redirect()->route('program')->with('success', 'Program updated successfully.');
     }
 
-    /**
-     * Remove the specified resource from storage.
-     */
-    public function destroy(Program $program)
+    public function destroy(int $id)
     {
-        $program->delete();
-
+        $program = Program::find($id);
+        if($program){
+            $program->delete();
+        }
         return redirect()->route('program')->with('success', 'Program deleted successfully.');
     }
 }

@@ -10,7 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import AppLayout from '@/layouts/app-layout';
 import { Head, router, usePage } from '@inertiajs/react';
 import { BookOpen, Calendar, ChevronLeft, ChevronRight, Code, Edit, MoreHorizontal, Plus, Search, Trash2 } from 'lucide-react';
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 
 const breadcrumbs = [
     {
@@ -45,17 +45,20 @@ function ProgramDialog({ isOpen, onClose, program = null, onSave }) {
     });
 
     React.useEffect(() => {
-        if (program) {
-            setFormData({
-                code: program.code || '',
-                name: program.name || '',
-                description: program.description || '',
-                number_of_year: program.number_of_year || '',
-            });
-        } else {
-            setFormData({ code: '', name: '', description: '', number_of_year: '' });
+        if (isOpen) {
+            if (program) {
+                console.log('Program data:', program); // Debug log
+                setFormData({
+                    code: program.code || '',
+                    name: program.name || '',
+                    description: program.description || '',
+                    number_of_year: program.number_of_year ? program.number_of_year.toString() : '',
+                });
+            } else {
+                setFormData({ code: '', name: '', description: '', number_of_year: '' });
+            }
         }
-    }, [program]);
+    }, [isOpen, program]);
 
     const handleSave = () => {
         if (formData.code && formData.name && formData.description && formData.number_of_year) {
@@ -142,9 +145,9 @@ function ProgramDialog({ isOpen, onClose, program = null, onSave }) {
 }
 
 export default function Program() {
-    const { data } = usePage().props
+    const { data } = usePage().props;
     const [isLoading, setIsLoading] = useState(false);
-    const [statusFilter] = useState('all')
+    const [statusFilter] = useState('all');
     const [searchProgram, setSearchProgram] = useState('');
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [editingProgram, setEditingProgram] = useState(null);
@@ -154,24 +157,15 @@ export default function Program() {
 
     const itemsPerPage = data.programs.per_page;
 
-    const totalPages = data.programs.last_page
-    const paginatedData = data.programs.data
-    console.log(paginatedData)
-
-    useEffect(()=>{
-        if(searchProgram){
-            handleSearch()
-        }else{
-            setSearchProgram('')
-            handleSearch()
-        }
-    }, [searchProgram])
+    const totalPages = data.programs.last_page;
+    const paginatedData = data.programs.data;
+    console.log(paginatedData);
 
     const handlePageChange = (page) => {
         setIsLoading(true);
         router.get(
             '/program',
-            { search: searchProgram, page: page },
+            { page },
             {
                 preserveState: true,
                 onFinish: () => setIsLoading(false),
@@ -179,11 +173,12 @@ export default function Program() {
         );
     };
 
-    const handleSearch = () => {
+    const handleSearch = (e) => {
+        setSearchProgram(e.target.value);
         setIsLoading(true);
         router.get(
-            '/program?page=1',
-            { search: searchProgram, page: 1 },
+            '/program',
+            { search: e.target.value, page: 1 },
             {
                 preserveState: true,
                 onFinish: () => setIsLoading(false),
@@ -267,12 +262,7 @@ export default function Program() {
                         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                             <div className="relative flex-1 md:max-w-sm">
                                 <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
-                                <Input
-                                    placeholder="Search programs..."
-                                    value={searchProgram}
-                                    onChange={(e) => setSearchProgram(e.target.value)}
-                                    className="pl-9"
-                                />
+                                <Input placeholder="Search programs..." value={searchProgram} onChange={handleSearch} className="pl-9" />
                             </div>
                             <div className="text-muted-foreground text-sm">
                                 Showing {paginatedData.length} of {data.programs.total} programs
@@ -374,7 +364,12 @@ export default function Program() {
                             Page {data.programs.current_page} of {totalPages}
                         </div>
                         <div className="flex items-center space-x-2">
-                            <Button variant="outline" size="sm" onClick={() => handlePageChange(data.programs.current_page - 1)} disabled={data.programs.current_page === 1}>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handlePageChange(data.programs.current_page - 1)}
+                                disabled={data.programs.current_page === 1}
+                            >
                                 <ChevronLeft className="h-4 w-4" />
                                 Previous
                             </Button>

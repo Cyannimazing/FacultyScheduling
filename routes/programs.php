@@ -7,8 +7,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::controller(ProgramController::class)->group(function () {
         Route::get('program', 'index')->name('program');
         Route::post('program', 'store');
-        Route::put('program/{program}', 'update');
-        Route::delete('program/{program}', 'destroy');
+        Route::put('program/{id}', 'update');
+        Route::delete('program/{id}', 'destroy');
     });
 });
 

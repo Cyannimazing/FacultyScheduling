@@ -9,7 +9,7 @@ import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetT
 import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import AppLayout from '@/layouts/app-layout';
-import { Head } from '@inertiajs/react';
+import { Head, router } from '@inertiajs/react';
 import {
     BookOpen,
     Calendar as CalendarIcon,
@@ -747,6 +747,34 @@ function SubjectAllocationSheet({ isOpen, onClose, allocation = null, onSave, ex
 }
 
 export default function SubjectAllocation() {
+    // TODO: BACKEND REQUEST - Initialize data using Inertia.js
+    // Replace sample data with props from backend controller:
+    // 
+    // const { data } = usePage().props;
+    // const { 
+    //     lecturerSubjects = [], 
+    //     lecturers = [], 
+    //     academicCalendars = [], 
+    //     programs = [], 
+    //     programSubjects = [], 
+    //     subjects = [], 
+    //     terms = [] 
+    // } = data;
+    // 
+    // Backend controller should return all necessary data via Inertia::render()
+    // Example: LecturerSubjectController@index should return:
+    // return Inertia::render('application/subject-allocation', [
+    //     'data' => [
+    //         'lecturerSubjects' => LecturerSubject::with(['lecturer', 'programSubject', 'academicCalendar'])->get(),
+    //         'lecturers' => Lecturer::all(),
+    //         'academicCalendars' => AcademicCalendar::with('term')->get(),
+    //         'programs' => Program::all(),
+    //         'programSubjects' => ProgramSubject::with(['program', 'subject'])->get(),
+    //         'subjects' => Subject::all(),
+    //         'terms' => Term::all()
+    //     ]
+    // ]);
+
     const [currentPage, setCurrentPage] = useState(1);
     const [isLoading, setIsLoading] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
@@ -850,7 +878,25 @@ export default function SubjectAllocation() {
             return;
         }
 
+        // TODO: BACKEND REQUEST - Store/Update subject allocation
         if (editingAllocation) {
+            // UPDATE: Edit existing allocation
+            // router.put(`/subject-allocation/${editingAllocation.id}`, {
+            //     lecturer_id: formData.lecturer_id,
+            //     prog_subj_id: formData.course_assignment_id,
+            //     sy_term_id: formData.calendar_id
+            // }, {
+            //     preserveScroll: true,
+            //     onSuccess: () => {
+            //         console.log('Allocation updated successfully');
+            //         setIsDialogOpen(false);
+            //     },
+            //     onError: (errors) => {
+            //         console.error('Error updating allocation:', errors);
+            //     }
+            // });
+            
+            // TEMPORARY: Local state update (remove when backend is implemented)
             setAllocationsData((prevData) =>
                 prevData.map((allocation) =>
                     allocation.id === editingAllocation.id
@@ -863,6 +909,24 @@ export default function SubjectAllocation() {
                 ),
             );
         } else {
+            // CREATE: Add new allocation
+            // router.post('/subject-allocation', {
+            //     lecturer_id: formData.lecturer_id,
+            //     prog_subj_id: formData.course_assignment_id,
+            //     sy_term_id: formData.calendar_id
+            // }, {
+            //     preserveScroll: true,
+            //     onSuccess: () => {
+            //         console.log('Allocation created successfully');
+            //         setCurrentPage(1);
+            //         setIsDialogOpen(false);
+            //     },
+            //     onError: (errors) => {
+            //         console.error('Error creating allocation:', errors);
+            //     }
+            // });
+            
+            // TEMPORARY: Local state update (remove when backend is implemented)
             const newAllocation = {
                 id: Math.max(...allocationsData.map((a) => a.id), 0) + 1,
                 ...formData,
@@ -887,8 +951,35 @@ export default function SubjectAllocation() {
         if (allocationToDelete && !isDeleting) {
             setIsDeleting(true);
 
+            // TODO: BACKEND REQUEST - Delete subject allocation
+            // DELETE: Remove existing allocation
+            // router.delete(`/subject-allocation/${allocationToDelete.id}`, {
+            //     preserveScroll: true,
+            //     onSuccess: () => {
+            //         console.log('Allocation deleted successfully');
+            //         
+            //         // Adjust current page if necessary
+            //         const newTotalPages = Math.ceil((filteredData.length - 1) / itemsPerPage);
+            //         if (currentPage > newTotalPages && newTotalPages > 0) {
+            //             setCurrentPage(newTotalPages);
+            //         } else if (filteredData.length === 1) {
+            //             setCurrentPage(1);
+            //         }
+            //         
+            //         setIsDeleting(false);
+            //         setDeleteDialogOpen(false);
+            //         setAllocationToDelete(null);
+            //     },
+            //     onError: (errors) => {
+            //         console.error('Error deleting allocation:', errors);
+            //         setIsDeleting(false);
+            //         setDeleteDialogOpen(false);
+            //         setAllocationToDelete(null);
+            //     }
+            // });
+
             try {
-                // Simulate API call
+                // TEMPORARY: Simulate API call (remove when backend is implemented)
                 await new Promise((resolve) => setTimeout(resolve, 1000));
 
                 setAllocationsData((prevData) => prevData.filter((allocation) => allocation.id !== allocationToDelete.id));

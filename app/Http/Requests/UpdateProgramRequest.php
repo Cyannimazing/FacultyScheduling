@@ -21,12 +21,10 @@ class UpdateProgramRequest extends FormRequest
      */
     public function rules(): array
     {
-        $programCode = $this->route('program'); // Get the program code from route
-
         return [
-            'code' => 'required|string|max:255|',
+            'code' => 'required|string|max:255|unique:programs,code,' . $this->route('id'),
             'name' => 'required|string|max:255',
-            'description' => 'nullable|string',
+            'description' => 'required|string',
             'number_of_year' => 'required|integer|min:1|max:10',
         ];
     }

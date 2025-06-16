@@ -98,10 +98,12 @@ class ProgramSubjectController extends Controller
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(ProgramSubject $programSubject)
+    public function destroy(int $id)
     {
-        $programSubject->delete();
-
+        $programSubject = ProgramSubject::find($id);
+        if($programSubject){
+            $programSubject->delete();
+        }
         return redirect()->route('course-assignment')->with('success', 'Program Subject deleted successfully.');
     }
 }

@@ -46,27 +46,32 @@ function ClassDialog({ isOpen, onClose, classData = null, onSave }) {
         prog_name: ''
     });
 
-    const handleProgramChange = (value) => {
-        setFormData(prevState =>({
-            ...prevState,
-            prog_code: value.code,
-            description: value.description,
-            prog_name: value.name
-        }));
-        console.log(formData)
-    };
-    React.useEffect(() => {
-        if (classData) {
-            setFormData({
-                name: classData.name || '',
-                prog_code: classData.program.name || '',
-                description: classData.program.description || '',
-                prog_name: classData.program.name || ''
-            });
-        } else {
-            setFormData({ name: '', prog_code: '', description: '' });
+    const handleProgramChange = (progCode) => {
+        const selectedProgram = availablePrograms.find(p => p.code === progCode);
+        if (selectedProgram) {
+            setFormData(prevState => ({
+                ...prevState,
+                prog_code: selectedProgram.code,
+                description: selectedProgram.description,
+                prog_name: selectedProgram.name
+            }));
         }
-    }, [classData]);
+    };
+    
+    React.useEffect(() => {
+        if (isOpen) {
+            if (classData) {
+                setFormData({
+                    name: classData.name || '',
+                    prog_code: classData.prog_code || '',
+                    description: classData.program?.description || '',
+                    prog_name: classData.program?.name || ''
+                });
+            } else {
+                setFormData({ name: '', prog_code: '', description: '', prog_name: '' });
+            }
+        }
+    }, [isOpen, classData]);
 
     const handleSave = () => {
         if (formData.name && formData.prog_code && formData.description) {
@@ -99,13 +104,13 @@ function ClassDialog({ isOpen, onClose, classData = null, onSave }) {
                         <Label htmlFor="program" className="text-right text-sm font-medium">
                             Program
                         </Label>
-                        <Select value={formData?.prog_name} onValueChange={handleProgramChange}>
+                        <Select value={formData?.prog_code} onValueChange={handleProgramChange}>
                             <SelectTrigger className="col-span-3">
                                 <SelectValue placeholder="Select a program" />
                             </SelectTrigger>
                             <SelectContent>
                                 {availablePrograms.map((program) => (
-                                    <SelectItem key={program.id} value={program}>
+                                    <SelectItem key={program.id} value={program.code}>
                                         {program.name}
                                     </SelectItem>
                                 ))}
@@ -161,7 +166,7 @@ export default function Class() {
         setIsLoading(true);
         router.get(
             '/class',
-            { search: searchClass, page: page },
+            { page },
             {
                 preserveState: true,
                 onFinish: () => setIsLoading(false),
@@ -169,20 +174,25 @@ export default function Class() {
         );
     };
 
-    useEffect(()=>{
-        if(programFilter || searchClass){
-            handleSearch()
-        }else{
-            setSearchClass('')
-            handleSearch()
-        }
-    }, [searchClass, programFilter])
-
-    const handleSearch = () => {
+    const handleSearch = (e) => {
+        setSearchClass(e.target.value);
         setIsLoading(true);
         router.get(
-            '/class?page=1',
-            { search: searchClass, prog_code: programFilter, page: 1 },
+            '/class',
+            { search: e.target.value, prog_code: programFilter, page: 1 },
+            {
+                preserveState: true,
+                onFinish: () => setIsLoading(false),
+            },
+        );
+    };
+
+    const handleProgramFilter = (value) => {
+        setProgramFilter(value);
+        setIsLoading(true);
+        router.get(
+            '/class',
+            { search: searchClass, prog_code: value, page: 1 },
             {
                 preserveState: true,
                 onFinish: () => setIsLoading(false),
@@ -270,11 +280,11 @@ export default function Class() {
                                     <Input
                                         placeholder="Search classes, programs..."
                                         value={searchClass}
-                                        onChange={(e) => setSearchClass(e.target.value)}
+                                        onChange={handleSearch}
                                         className="pl-9"
                                     />
                                 </div>
-                                <Select value={programFilter} onValueChange={setProgramFilter}>
+                                <Select value={programFilter} onValueChange={handleProgramFilter}>
                                     <SelectTrigger className="w-full md:w-[200px]">
                                         <SelectValue placeholder="Filter by program" />
                                     </SelectTrigger>

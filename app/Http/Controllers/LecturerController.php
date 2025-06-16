@@ -19,7 +19,12 @@ class LecturerController extends Controller
         $page = $request->input('page', 1);
         $perPage = 5;
 
-        $lecturers = Lecturer::whereRaw("CONCAT(title, ' ', fname, ' ', lname) LIKE ?", ["%$search%"])
+        $lecturers = Lecturer::where(function($query) use ($search) {
+                            $query->where('title', 'LIKE', "%$search%")
+                                  ->orWhere('fname', 'LIKE', "%$search%")
+                                  ->orWhere('lname', 'LIKE', "%$search%")
+                                  ->orWhereRaw("(title || ' ' || fname || ' ' || lname) LIKE ?", ["%$search%"]);
+                        })
                         ->orderBy('fname')
                         ->paginate($perPage, ['*'], 'page', $page);
 

@@ -176,20 +176,11 @@ export default function Lecturer() {
     const totalPages = data.lecturers.last_page;
     const paginatedData = data.lecturers.data;
 
-    useEffect(()=>{
-        if(searchLecturer){
-            handleSearch()
-        }else{
-            setSearchLecturer('')
-            handleSearch()
-        }
-    }, [searchLecturer])
-
     const handlePageChange = (page) => {
         setIsLoading(true);
         router.get(
             '/lecturer',
-            { search: searchLecturer, page: page },
+            { page },
             {
                 preserveState: true,
                 onFinish: () => setIsLoading(false),
@@ -197,11 +188,12 @@ export default function Lecturer() {
         );
     };
 
-    const handleSearch = () => {
+    const handleSearch = (e) => {
+        setSearchLecturer(e.target.value);
         setIsLoading(true);
         router.get(
-            '/lecturer?page=1',
-            { search: searchLecturer, page: 1 },
+            '/lecturer',
+            { search: e.target.value, page: 1 },
             {
                 preserveState: true,
                 onFinish: () => setIsLoading(false),
@@ -288,7 +280,7 @@ export default function Lecturer() {
                                 <Input
                                     placeholder="Search lecturers..."
                                     value={searchLecturer}
-                                    onChange={(e) => setSearchLecturer(e.target.value)}
+                                    onChange={handleSearch}
                                     className="pl-9"
                                 />
                             </div>

@@ -7,8 +7,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::controller(ProgramSubjectController::class)->group(function () {
         Route::get('course-assignment', 'index')->name('course-assignment');
         Route::post('course-assignment', 'store');
-        Route::put('course-assignment/{programSubject}', 'update');
-        Route::delete('course-assignment/{programSubject}', 'destroy');
+        Route::put('course-assignment/{id}', 'update');
+        Route::delete('course-assignment/{id}', 'destroy');
     });
 });
 

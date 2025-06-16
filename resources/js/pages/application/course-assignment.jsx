@@ -7,8 +7,8 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import AppLayout from '@/layouts/app-layout';
-import { Head } from '@inertiajs/react';
-import { BookOpen, Code, GripVertical, Plus, Search, Trash2, Users, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Head, usePage, router } from '@inertiajs/react';
+import { BookOpen, ChevronLeft, ChevronRight, Code, GripVertical, Plus, Search, Trash2, Users } from 'lucide-react';
 import { useState } from 'react';
 
 const breadcrumbs = [
@@ -18,165 +18,15 @@ const breadcrumbs = [
     },
 ];
 
-// Sample data for programs
-const samplePrograms = [
-    {
-        id: 1,
-        code: 'PROG001',
-        name: 'Computer Science',
-        description: 'Bachelor of Science in Computer Science',
-        year_length: 4,
-    },
-    {
-        id: 2,
-        code: 'PROG002',
-        name: 'Information Technology',
-        description: 'Bachelor of Science in Information Technology',
-        year_length: 4,
-    },
-    {
-        id: 3,
-        code: 'PROG003',
-        name: 'Data Science',
-        description: 'Master of Science in Data Science',
-        year_length: 2,
-    },
-    {
-        id: 4,
-        code: 'PROG004',
-        name: 'Cybersecurity',
-        description: 'Bachelor of Science in Cybersecurity',
-        year_length: 4,
-    },
-];
-
-// Sample data for subjects
-const sampleSubjects = [
-    {
-        id: 1,
-        code: 'CS101',
-        name: 'Introduction to Computer Science',
-        unit: 3,
-        isGeneralEducation: false,
-    },
-    {
-        id: 2,
-        code: 'MATH101',
-        name: 'College Algebra',
-        unit: 3,
-        isGeneralEducation: true,
-    },
-    {
-        id: 3,
-        code: 'ENG101',
-        name: 'English Composition',
-        unit: 3,
-        isGeneralEducation: true,
-    },
-    {
-        id: 4,
-        code: 'CS201',
-        name: 'Data Structures and Algorithms',
-        unit: 4,
-        isGeneralEducation: false,
-    },
-    {
-        id: 5,
-        code: 'PHIL101',
-        name: 'Introduction to Philosophy',
-        unit: 3,
-        isGeneralEducation: true,
-    },
-    {
-        id: 6,
-        code: 'CS301',
-        name: 'Database Management Systems',
-        unit: 3,
-        isGeneralEducation: false,
-    },
-    {
-        id: 7,
-        code: 'CS401',
-        name: 'Software Engineering',
-        unit: 3,
-        isGeneralEducation: false,
-    },
-    {
-        id: 8,
-        code: 'STAT101',
-        name: 'Statistics',
-        unit: 3,
-        isGeneralEducation: true,
-    },
-];
-
-// Sample data for terms
-const sampleTerms = [
-    {
-        id: 1,
-        name: '1st Term',
-    },
-    {
-        id: 2,
-        name: '2nd Term',
-    },
-    {
-        id: 3,
-        name: '3rd Term',
-    },
-];
-
-// Sample data for year levels
-const sampleYearLevels = [
-    {
-        id: 1,
-        name: '1st Year',
-    },
-    {
-        id: 2,
-        name: '2nd Year',
-    },
-    {
-        id: 3,
-        name: '3rd Year',
-    },
-    {
-        id: 4,
-        name: '4th Year',
-    },
-    {
-        id: 5,
-        name: '5th Year',
-    },
-];
-
 // Function to get available year levels based on program's year_length
 const getAvailableYearLevels = (yearLength) => {
     if (!yearLength) return [];
-    return sampleYearLevels.slice(0, yearLength);
+    const levels = [];
+    for (let i = 1; i <= yearLength; i++) {
+        levels.push({ id: i, name: `${i}${i === 1 ? 'st' : i === 2 ? 'nd' : i === 3 ? 'rd' : 'th'} Year` });
+    }
+    return levels;
 };
-
-// Sample data for course assignments
-const sampleCourseAssignments = [
-    {
-        id: 1,
-        program_code: 'PROG001',
-        subject_code: 'CS101',
-        year_level: '1st Year',
-        term: '1st Term',
-        created_at: '2025-06-10 09:00',
-        updated_at: '2025-06-11 14:30',
-    },
-    {
-        id: 2,
-        program_code: 'PROG002',
-        subject_code: 'CS101',
-        year_level: '1st Year',
-        term: '1st Term',
-        created_at: '2025-06-10 09:00',
-        updated_at: '2025-06-11 14:30',
-    },
-];
 
 // Subject item component for drag and drop
 function SubjectItem({ subject, onDragStart }) {
@@ -184,33 +34,33 @@ function SubjectItem({ subject, onDragStart }) {
         <div
             draggable
             onDragStart={(e) => onDragStart(e, subject)}
-            className="flex cursor-move items-center justify-between rounded-lg border border-border bg-card p-3 shadow-sm transition-all hover:border-border/80 hover:shadow-md"
+            className="border-border bg-card hover:border-border/80 flex cursor-move items-center justify-between rounded-lg border p-3 shadow-sm transition-all hover:shadow-md"
         >
             <div className="flex items-center gap-3">
-                <GripVertical className="h-4 w-4 text-muted-foreground" />
+                <GripVertical className="text-muted-foreground h-4 w-4" />
                 <div className="flex items-center gap-2">
-                    <Code className="h-4 w-4 text-muted-foreground" />
+                    <Code className="text-muted-foreground h-4 w-4" />
                     <span className="font-mono text-sm font-medium">{subject.code}</span>
                 </div>
                 <div>
                     <div className="text-sm font-medium">{subject.name}</div>
-                    <div className="text-xs text-muted-foreground">
+                    <div className="text-muted-foreground text-xs">
                         {subject.unit} unit{subject.unit !== 1 ? 's' : ''}
                     </div>
                 </div>
             </div>
             <Badge
-                variant={subject.isGeneralEducation ? 'default' : 'secondary'}
-                className={subject.isGeneralEducation ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' : ''}
+                variant={subject.is_general_education ? 'default' : 'secondary'}
+                className={subject.is_general_education ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' : ''}
             >
-                {subject.isGeneralEducation ? 'GE' : 'Major'}
+                {subject.is_general_education ? 'GE' : 'Major'}
             </Badge>
         </div>
     );
 }
 
 // Program drop zone component
-function ProgramDropZone({ program, assignments, onDrop, onRemoveAssignment }) {
+function ProgramDropZone({ program, assignments, onDrop, onRemoveAssignment, terms }) {
     const [dragOver, setDragOver] = useState(false);
 
     const handleDragOver = (e) => {
@@ -229,11 +79,11 @@ function ProgramDropZone({ program, assignments, onDrop, onRemoveAssignment }) {
         onDrop(e, program);
     };
 
-    const programAssignments = assignments.filter((a) => a.program_code === program.code);
+    const programAssignments = assignments.filter((a) => a.prog_code === program.code);
 
     // Group assignments by year and term
     const groupedAssignments = programAssignments.reduce((acc, assignment) => {
-        const key = `${assignment.year_level}-${assignment.term}`;
+        const key = `${assignment.year_level}-${assignment.term_id}`;
         if (!acc[key]) {
             acc[key] = [];
         }
@@ -247,7 +97,7 @@ function ProgramDropZone({ program, assignments, onDrop, onRemoveAssignment }) {
                 <div className="flex items-center justify-between">
                     <div>
                         <CardTitle className="text-lg">{program.name}</CardTitle>
-                        <p className="text-sm text-muted-foreground">{program.code}</p>
+                        <p className="text-muted-foreground text-sm">{program.code}</p>
                     </div>
                     <Badge variant="outline">{programAssignments.length} subjects</Badge>
                 </div>
@@ -269,21 +119,25 @@ function ProgramDropZone({ program, assignments, onDrop, onRemoveAssignment }) {
                         .map(([key, yearTermAssignments]) => {
                             // Get the first assignment to extract year and term display text
                             const firstAssignment = yearTermAssignments[0];
+                            const yearName = `${firstAssignment.year_level}${firstAssignment.year_level === 1 ? 'st' : firstAssignment.year_level === 2 ? 'nd' : firstAssignment.year_level === 3 ? 'rd' : 'th'} Year`;
+                            const term = terms.find(t => t.id === firstAssignment.term_id);
+                            const termName = term ? term.name : `Term ${firstAssignment.term_id}`;
+
                             return (
                                 <div key={key} className="space-y-2">
-                                    <h4 className="text-sm font-medium text-foreground">
-                                        {firstAssignment.year_level}, {firstAssignment.term}
+                                    <h4 className="text-foreground text-sm font-medium">
+                                        {yearName}, {termName}
                                     </h4>
                                     <div className="space-y-1">
                                         {yearTermAssignments.map((assignment) => {
-                                            const subject = sampleSubjects.find((s) => s.code === assignment.subject_code);
+                                            const subject = assignment.subject;
                                             return subject ? (
                                                 <div
                                                     key={assignment.id}
-                                                    className="flex items-center justify-between rounded-md border border-border bg-muted p-2"
+                                                    className="border-border bg-muted flex items-center justify-between rounded-md border p-2"
                                                 >
                                                     <div className="flex items-center gap-2">
-                                                        <Code className="h-3 w-3 text-muted-foreground" />
+                                                        <Code className="text-muted-foreground h-3 w-3" />
                                                         <span className="font-mono text-xs">{subject.code}</span>
                                                         <span className="text-xs">{subject.name}</span>
                                                     </div>
@@ -303,7 +157,7 @@ function ProgramDropZone({ program, assignments, onDrop, onRemoveAssignment }) {
                             );
                         })
                 ) : (
-                    <div className="flex h-32 items-center justify-center rounded-lg border-2 border-dashed border-border text-sm text-muted-foreground">
+                    <div className="border-border text-muted-foreground flex h-32 items-center justify-center rounded-lg border-2 border-dashed text-sm">
                         Drop subjects here to assign to {program.name}
                     </div>
                 )}
@@ -313,22 +167,22 @@ function ProgramDropZone({ program, assignments, onDrop, onRemoveAssignment }) {
 }
 
 // Drag and drop assignment dialog
-function DropAssignmentDialog({ isOpen, onClose, onSave, subject, program }) {
+function DropAssignmentDialog({ isOpen, onClose, onSave, subject, program, terms }) {
     const [formData, setFormData] = useState({
         year_level: '',
-        term: '',
+        term_id: '',
     });
 
     const handleSave = () => {
-        if (formData.year_level && formData.term) {
+        if (formData.year_level && formData.term_id) {
             onSave(formData);
-            setFormData({ year_level: '', term: '' });
+            setFormData({ year_level: '', term_id: '' });
             onClose();
         }
     };
 
     const handleCancel = () => {
-        setFormData({ year_level: '', term: '' });
+        setFormData({ year_level: '', term_id: '' });
         onClose();
     };
 
@@ -355,8 +209,8 @@ function DropAssignmentDialog({ isOpen, onClose, onSave, subject, program }) {
                                 <SelectValue placeholder="Select year level" />
                             </SelectTrigger>
                             <SelectContent>
-                                {getAvailableYearLevels(program?.year_length).map((year) => (
-                                    <SelectItem key={year.id} value={year.name}>
+                                {getAvailableYearLevels(program?.number_of_year).map((year) => (
+                                    <SelectItem key={year.id} value={year.id}>
                                         {year.name}
                                     </SelectItem>
                                 ))}
@@ -367,13 +221,13 @@ function DropAssignmentDialog({ isOpen, onClose, onSave, subject, program }) {
                         <Label htmlFor="term" className="text-right text-sm font-medium">
                             Term
                         </Label>
-                        <Select value={formData.term} onValueChange={(value) => setFormData({ ...formData, term: value })}>
+                        <Select value={formData.term_id} onValueChange={(value) => setFormData({ ...formData, term_id: value })}>
                             <SelectTrigger className="col-span-3">
                                 <SelectValue placeholder="Select term" />
                             </SelectTrigger>
                             <SelectContent>
-                                {sampleTerms.map((term) => (
-                                    <SelectItem key={term.id} value={term.name}>
+                                {terms.map((term) => (
+                                    <SelectItem key={term.id} value={term.id}>
                                         {term.name}
                                     </SelectItem>
                                 ))}
@@ -385,7 +239,7 @@ function DropAssignmentDialog({ isOpen, onClose, onSave, subject, program }) {
                     <Button variant="outline" onClick={handleCancel}>
                         Cancel
                     </Button>
-                    <Button onClick={handleSave} disabled={!formData.year_level || !formData.term}>
+                    <Button onClick={handleSave} disabled={!formData.year_level || !formData.term_id}>
                         Assign Subject
                     </Button>
                 </DialogFooter>
@@ -395,27 +249,27 @@ function DropAssignmentDialog({ isOpen, onClose, onSave, subject, program }) {
 }
 
 // Assignment dialog for manual entry
-function AssignmentDialog({ isOpen, onClose, onSave }) {
+function AssignmentDialog({ isOpen, onClose, onSave, programs, subjects, terms }) {
     const [formData, setFormData] = useState({
-        program_code: '',
-        subject_code: '',
+        program_id: '',
+        subject_id: '',
         year_level: '',
-        term: '',
+        term_id: '',
     });
 
     // Get selected program to determine available year levels
-    const selectedProgram = samplePrograms.find(p => p.code === formData.program_code);
-    const availableYearLevels = getAvailableYearLevels(selectedProgram?.year_length);
+    const selectedProgram = programs.find((p) => p.id == formData.program_id);
+    const availableYearLevels = getAvailableYearLevels(selectedProgram?.number_of_year);
 
     // Reset year level when program changes
     const handleProgramChange = (value) => {
-        setFormData({ ...formData, program_code: value, year_level: '' });
+        setFormData({ ...formData, program_id: value, year_level: '' });
     };
 
     const handleSave = () => {
-        if (formData.program_code && formData.subject_code && formData.year_level && formData.term) {
+        if (formData.program_id && formData.subject_id && formData.year_level && formData.term_id) {
             onSave(formData);
-            setFormData({ program_code: '', subject_code: '', year_level: '', term: '' });
+            setFormData({ program_id: '', subject_id: '', year_level: '', term_id: '' });
             onClose();
         }
     };
@@ -432,13 +286,13 @@ function AssignmentDialog({ isOpen, onClose, onSave }) {
                         <Label htmlFor="program" className="text-right text-sm font-medium">
                             Program
                         </Label>
-                        <Select value={formData.program_code} onValueChange={handleProgramChange}>
+                        <Select value={formData.program_id} onValueChange={handleProgramChange}>
                             <SelectTrigger className="col-span-3">
                                 <SelectValue placeholder="Select program" />
                             </SelectTrigger>
                             <SelectContent>
-                                {samplePrograms.map((program) => (
-                                    <SelectItem key={program.id} value={program.code}>
+                                {programs.map((program) => (
+                                    <SelectItem key={program.id} value={program.id}>
                                         {program.code} - {program.name}
                                     </SelectItem>
                                 ))}
@@ -449,13 +303,13 @@ function AssignmentDialog({ isOpen, onClose, onSave }) {
                         <Label htmlFor="subject" className="text-right text-sm font-medium">
                             Subject
                         </Label>
-                        <Select value={formData.subject_code} onValueChange={(value) => setFormData({ ...formData, subject_code: value })}>
+                        <Select value={formData.subject_id} onValueChange={(value) => setFormData({ ...formData, subject_id: value })}>
                             <SelectTrigger className="col-span-3">
                                 <SelectValue placeholder="Select subject" />
                             </SelectTrigger>
                             <SelectContent>
-                                {sampleSubjects.map((subject) => (
-                                    <SelectItem key={subject.id} value={subject.code}>
+                                {subjects.map((subject) => (
+                                    <SelectItem key={subject.id} value={subject.id}>
                                         {subject.code} - {subject.name}
                                     </SelectItem>
                                 ))}
@@ -472,7 +326,7 @@ function AssignmentDialog({ isOpen, onClose, onSave }) {
                             </SelectTrigger>
                             <SelectContent>
                                 {availableYearLevels.map((year) => (
-                                    <SelectItem key={year.id} value={year.name}>
+                                    <SelectItem key={year.id} value={year.id}>
                                         {year.name}
                                     </SelectItem>
                                 ))}
@@ -483,13 +337,13 @@ function AssignmentDialog({ isOpen, onClose, onSave }) {
                         <Label htmlFor="term" className="text-right text-sm font-medium">
                             Term
                         </Label>
-                        <Select value={formData.term} onValueChange={(value) => setFormData({ ...formData, term: value })}>
+                        <Select value={formData.term_id} onValueChange={(value) => setFormData({ ...formData, term_id: value })}>
                             <SelectTrigger className="col-span-3">
                                 <SelectValue placeholder="Select term" />
                             </SelectTrigger>
                             <SelectContent>
-                                {sampleTerms.map((term) => (
-                                    <SelectItem key={term.id} value={term.name}>
+                                {terms.map((term) => (
+                                    <SelectItem key={term.id} value={term.id}>
                                         {term.name}
                                     </SelectItem>
                                 ))}
@@ -501,10 +355,7 @@ function AssignmentDialog({ isOpen, onClose, onSave }) {
                     <Button variant="outline" onClick={onClose}>
                         Cancel
                     </Button>
-                    <Button
-                        onClick={handleSave}
-                        disabled={!formData.program_code || !formData.subject_code || !formData.year_level || !formData.term}
-                    >
+                    <Button onClick={handleSave} disabled={!formData.program_id || !formData.subject_id || !formData.year_level || !formData.term_id}>
                         Add Assignment
                     </Button>
                 </DialogFooter>
@@ -514,18 +365,10 @@ function AssignmentDialog({ isOpen, onClose, onSave }) {
 }
 
 export default function CourseAssignment() {
-    // TODO: ROUTE - GET request to fetch course assignments
-    // GET /api/course-assignments
-    // This should replace sampleCourseAssignments with actual data from backend
-    //
-    // TODO: ROUTE - GET request to fetch terms
-    // GET /api/terms
-    // This should replace sampleTerms with actual data from backend
-    //
-    // TODO: ROUTE - GET request to fetch year levels
-    // GET /api/year-levels
-    // This should replace sampleYearLevels with actual data from backend
-    const [assignments, setAssignments] = useState(sampleCourseAssignments);
+    const { data } = usePage().props;
+    const { programSubjects: assignments = [], programs = [], subjects = [], terms = [], totalAssignment, totalProgramWithSubject, totalSubjectAssigned } = data;
+
+    console.log(data);
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedProgram, setSelectedProgram] = useState('all');
     const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -555,12 +398,12 @@ export default function CourseAssignment() {
     };
 
     // Filter subjects based on search
-    const filteredSubjects = sampleSubjects.filter(
+    const filteredSubjects = subjects.filter(
         (subject) => subject.code.toLowerCase().includes(searchTerm.toLowerCase()) || subject.name.toLowerCase().includes(searchTerm.toLowerCase()),
     );
 
     // Filter programs based on selection
-    const filteredPrograms = selectedProgram === 'all' ? samplePrograms : samplePrograms.filter((p) => p.code === selectedProgram);
+    const filteredPrograms = selectedProgram === 'all' ? programs : programs.filter((p) => p.id == selectedProgram);
 
     const handleDragStart = (e, subject) => {
         setDraggedSubject(subject);
@@ -579,36 +422,39 @@ export default function CourseAssignment() {
         if (!draggedSubject || !dropTarget) return;
 
         const newAssignment = {
-            id: Math.max(...assignments.map((a) => a.id), 0) + 1,
-            program_code: dropTarget.code,
-            subject_code: draggedSubject.code,
-            year_level: yearTerm.year_level,
-            term: yearTerm.term,
-            created_at: new Date().toISOString().slice(0, 19).replace('T', ' '),
-            updated_at: new Date().toISOString().slice(0, 19).replace('T', ' '),
+            program_id: dropTarget.id,
+            subject_id: draggedSubject.id,
+            year_level: parseInt(yearTerm.year_level),
+            term_id: parseInt(yearTerm.term_id),
         };
 
         // Check if assignment already exists
         const existingAssignment = assignments.find(
             (a) =>
-                a.program_code === dropTarget.code &&
-                a.subject_code === draggedSubject.code &&
-                a.year_level === yearTerm.year_level &&
-                a.term === yearTerm.term,
+                a.prog_code === dropTarget.code &&
+                a.subj_code === draggedSubject.code &&
+                a.year_level === parseInt(yearTerm.year_level) &&
+                a.term_id === parseInt(yearTerm.term_id),
         );
 
         if (!existingAssignment) {
-            setAssignments([...assignments, newAssignment]);
-
-            // TODO: ROUTE - POST request to create course assignment
-            // POST /api/course-assignments
-            // Body: {
-            //   program_code: dropTarget.code,
-            //   subject_code: draggedSubject.code,
-            //   year_level: yearTerm.year_level,
-            //   term: yearTerm.term
-            // }
-            // console.log('Creating assignment:', newAssignment);
+            // Create new assignment using Inertia router
+            router.post('/course-assignment', {
+                prog_code: dropTarget.code,
+                subj_code: draggedSubject.code,
+                year_level: parseInt(yearTerm.year_level),
+                term_id: parseInt(yearTerm.term_id)
+            }, {
+                preserveScroll: true,
+                onSuccess: () => {
+                    console.log('Assignment created successfully');
+                },
+                onError: (errors) => {
+                    console.error('Error creating assignment:', errors);
+                }
+            });
+        } else {
+            console.log('Assignment already exists');
         }
 
         // Reset state
@@ -624,55 +470,71 @@ export default function CourseAssignment() {
 
     const confirmDeleteAssignment = () => {
         if (assignmentToDelete) {
-            setAssignments(assignments.filter((a) => a.id !== assignmentToDelete.id));
-
-            // TODO: ROUTE - DELETE request to remove course assignment
-            // DELETE /api/course-assignments/{id}
-            // console.log('Deleting assignment:', assignmentToDelete.id);
+            // Delete assignment using Inertia router
+            router.delete(`/course-assignment/${assignmentToDelete.id}`, {
+                preserveScroll: true,
+                onSuccess: () => {
+                    console.log('Assignment deleted successfully');
+                    setDeleteDialogOpen(false);
+                    setAssignmentToDelete(null);
+                },
+                onError: (errors) => {
+                    console.error('Error deleting assignment:', errors);
+                    setDeleteDialogOpen(false);
+                    setAssignmentToDelete(null);
+                }
+            });
+        } else {
+            setDeleteDialogOpen(false);
+            setAssignmentToDelete(null);
         }
-        setDeleteDialogOpen(false);
-        setAssignmentToDelete(null);
     };
 
     const handleAddAssignment = (formData) => {
         const newAssignment = {
-            id: Math.max(...assignments.map((a) => a.id), 0) + 1,
-            program_code: formData.program_code,
-            subject_code: formData.subject_code,
-            year_level: formData.year_level,
-            term: formData.term,
-            created_at: new Date().toISOString().slice(0, 19).replace('T', ' '),
-            updated_at: new Date().toISOString().slice(0, 19).replace('T', ' '),
+            program_id: parseInt(formData.program_id),
+            subject_id: parseInt(formData.subject_id),
+            year_level: parseInt(formData.year_level),
+            term_id: parseInt(formData.term_id),
         };
 
+        // Get the selected program and subject to check by codes
+        const selectedProgram = programs.find(p => p.id == formData.program_id);
+        const selectedSubject = subjects.find(s => s.id == formData.subject_id);
+        
         // Check if assignment already exists
         const existingAssignment = assignments.find(
             (a) =>
-                a.program_code === formData.program_code &&
-                a.subject_code === formData.subject_code &&
-                a.year_level === formData.year_level &&
-                a.term === formData.term,
+                a.prog_code === selectedProgram.code &&
+                a.subj_code === selectedSubject.code &&
+                a.year_level === parseInt(formData.year_level) &&
+                a.term_id === parseInt(formData.term_id),
         );
 
         if (!existingAssignment) {
-            setAssignments([...assignments, newAssignment]);
-
-            // TODO: ROUTE - POST request to create course assignment
-            // POST /api/course-assignments
-            // Body: {
-            //   program_code: formData.program_code,
-            //   subject_code: formData.subject_code,
-            //   year_level: formData.year_level,
-            //   term: formData.term
-            // }
-            // console.log('Creating assignment:', newAssignment);
+            // Get the selected program and subject to send codes instead of IDs
+            const selectedProgram = programs.find(p => p.id == formData.program_id);
+            const selectedSubject = subjects.find(s => s.id == formData.subject_id);
+            
+            // Create new assignment using Inertia router
+            router.post('/course-assignment', {
+                prog_code: selectedProgram.code,
+                subj_code: selectedSubject.code,
+                year_level: parseInt(formData.year_level),
+                term_id: parseInt(formData.term_id)
+            }, {
+                preserveScroll: true,
+                onSuccess: () => {
+                    console.log('Manual assignment created successfully');
+                },
+                onError: (errors) => {
+                    console.error('Error creating manual assignment:', errors);
+                }
+            });
+        } else {
+            console.log('Assignment already exists');
         }
     };
-
-    // Get statistics
-    const totalAssignments = assignments.length;
-    const programsWithAssignments = new Set(assignments.map((a) => a.program_code)).size;
-    const subjectsAssigned = new Set(assignments.map((a) => a.subject_code)).size;
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
@@ -704,7 +566,7 @@ export default function CourseAssignment() {
                             <BookOpen className="text-muted-foreground h-4 w-4" />
                         </CardHeader>
                         <CardContent>
-                            <div className="text-2xl font-bold">{totalAssignments}</div>
+                            <div className="text-2xl font-bold">{totalAssignment}</div>
                             <p className="text-muted-foreground text-xs">Active course assignments</p>
                         </CardContent>
                     </Card>
@@ -714,8 +576,8 @@ export default function CourseAssignment() {
                             <Users className="text-muted-foreground h-4 w-4" />
                         </CardHeader>
                         <CardContent>
-                            <div className="text-2xl font-bold">{programsWithAssignments}</div>
-                            <p className="text-muted-foreground text-xs">Out of {samplePrograms.length} total programs</p>
+                            <div className="text-2xl font-bold">{totalProgramWithSubject}</div>
+                            <p className="text-muted-foreground text-xs">Out of {programs.length} total programs</p>
                         </CardContent>
                     </Card>
                     <Card>
@@ -724,8 +586,8 @@ export default function CourseAssignment() {
                             <Code className="text-muted-foreground h-4 w-4" />
                         </CardHeader>
                         <CardContent>
-                            <div className="text-2xl font-bold">{subjectsAssigned}</div>
-                            <p className="text-muted-foreground text-xs">Out of {sampleSubjects.length} total subjects</p>
+                            <div className="text-2xl font-bold">{totalSubjectAssigned}</div>
+                            <p className="text-muted-foreground text-xs">Out of {subjects.length} total subjects</p>
                         </CardContent>
                     </Card>
                 </div>
@@ -742,7 +604,7 @@ export default function CourseAssignment() {
                                 </CardTitle>
                                 <div className="space-y-2">
                                     <div className="relative">
-                                        <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                                        <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
                                         <Input
                                             placeholder="Search subjects..."
                                             value={searchTerm}
@@ -759,7 +621,7 @@ export default function CourseAssignment() {
                                             <SubjectItem key={subject.id} subject={subject} onDragStart={handleDragStart} />
                                         ))
                                     ) : (
-                                        <div className="py-8 text-center text-muted-foreground">No subjects found</div>
+                                        <div className="text-muted-foreground py-8 text-center">No subjects found</div>
                                     )}
                                 </div>
                             </CardContent>
@@ -777,8 +639,8 @@ export default function CourseAssignment() {
                                     </SelectTrigger>
                                     <SelectContent>
                                         <SelectItem value="all">All Programs</SelectItem>
-                                        {samplePrograms.map((program) => (
-                                            <SelectItem key={program.id} value={program.code}>
+                                        {programs.map((program) => (
+                                            <SelectItem key={program.id} value={program.id}>
                                                 {program.code} - {program.name}
                                             </SelectItem>
                                         ))}
@@ -794,6 +656,7 @@ export default function CourseAssignment() {
                                         assignments={assignments}
                                         onDrop={handleDrop}
                                         onRemoveAssignment={handleRemoveAssignment}
+                                        terms={terms}
                                     />
                                 ))}
                             </div>
@@ -823,30 +686,34 @@ export default function CourseAssignment() {
                                 <TableBody>
                                     {paginatedAssignments.length > 0 ? (
                                         paginatedAssignments.map((assignment) => {
-                                            const program = samplePrograms.find((p) => p.code === assignment.program_code);
-                                            const subject = sampleSubjects.find((s) => s.code === assignment.subject_code);
+                                            const program = assignment.program; // Use relationship data
+                                            const subject = assignment.subject; // Use relationship data
+                                            const yearName = `${assignment.year_level}${assignment.year_level === 1 ? 'st' : assignment.year_level === 2 ? 'nd' : assignment.year_level === 3 ? 'rd' : 'th'} Year`;
+                                            const term = terms.find(t => t.id === assignment.term_id);
+                                            const termName = term ? term.name : `Term ${assignment.term_id}`;
+
                                             return (
                                                 <TableRow key={assignment.id}>
                                                     <TableCell>
                                                         <div>
-                                                            <div className="font-medium">{program?.name || assignment.program_code}</div>
-                                                            <div className="text-sm text-muted-foreground">{assignment.program_code}</div>
+                                                            <div className="font-medium">{program?.name}</div>
+                                                            <div className="text-muted-foreground text-sm">{program?.code}</div>
                                                         </div>
                                                     </TableCell>
                                                     <TableCell>
                                                         <div>
-                                                            <div className="font-medium">{subject?.name || assignment.subject_code}</div>
-                                                            <div className="text-sm text-muted-foreground">{assignment.subject_code}</div>
+                                                            <div className="font-medium">{subject?.name}</div>
+                                                            <div className="text-muted-foreground text-sm">{subject?.code}</div>
                                                         </div>
                                                     </TableCell>
                                                     <TableCell className="text-center">
-                                                        <Badge variant="outline">{assignment.year_level}</Badge>
+                                                        <Badge variant="outline">{yearName}</Badge>
                                                     </TableCell>
                                                     <TableCell className="text-center">
-                                                        <Badge variant="outline">{assignment.term}</Badge>
+                                                        <Badge variant="outline">{termName}</Badge>
                                                     </TableCell>
                                                     <TableCell className="text-center">
-                                                        <div className="text-sm text-muted-foreground">
+                                                        <div className="text-muted-foreground text-sm">
                                                             {new Date(assignment.created_at).toLocaleDateString()}
                                                         </div>
                                                     </TableCell>
@@ -865,7 +732,7 @@ export default function CourseAssignment() {
                                         })
                                     ) : (
                                         <TableRow>
-                                            <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                                            <TableCell colSpan={6} className="text-muted-foreground py-8 text-center">
                                                 No course assignments found.
                                             </TableCell>
                                         </TableRow>
@@ -876,9 +743,10 @@ export default function CourseAssignment() {
 
                         {/* Pagination Controls */}
                         {assignments.length > itemsPerPage && (
-                            <div className="flex items-center justify-between px-6 py-4 border-t">
-                                <div className="text-sm text-muted-foreground">
-                                    Showing {((currentPage - 1) * itemsPerPage) + 1} to {Math.min(currentPage * itemsPerPage, assignments.length)} of {assignments.length} assignments
+                            <div className="flex items-center justify-between border-t px-6 py-4">
+                                <div className="text-muted-foreground text-sm">
+                                    Showing {(currentPage - 1) * itemsPerPage + 1} to {Math.min(currentPage * itemsPerPage, assignments.length)} of{' '}
+                                    {assignments.length} assignments
                                 </div>
                                 <div className="flex items-center space-x-2">
                                     <Button
@@ -909,7 +777,14 @@ export default function CourseAssignment() {
                 </Dialog>
 
                 {/* Manual Assignment Dialog */}
-                <AssignmentDialog isOpen={showAssignmentForm} onClose={() => setShowAssignmentForm(false)} onSave={handleAddAssignment} />
+                <AssignmentDialog
+                    isOpen={showAssignmentForm}
+                    onClose={() => setShowAssignmentForm(false)}
+                    onSave={handleAddAssignment}
+                    programs={programs}
+                    subjects={subjects}
+                    terms={terms}
+                />
 
                 {/* Drag and Drop Assignment Dialog */}
                 <DropAssignmentDialog
@@ -922,6 +797,7 @@ export default function CourseAssignment() {
                     onSave={handleDropAssignment}
                     subject={draggedSubject}
                     program={dropTarget}
+                    terms={terms}
                 />
 
                 {/* Delete Confirmation Dialog */}
@@ -932,18 +808,20 @@ export default function CourseAssignment() {
                             <DialogDescription>
                                 Are you sure you want to delete this assignment? This action cannot be undone.
                                 {assignmentToDelete && (
-                                    <div className="mt-2 rounded border bg-muted p-2">
+                                    <div className="bg-muted mt-2 rounded border p-2">
                                         <strong>Assignment Details:</strong>
                                         <br />
-                                        <strong>Program:</strong>{' '}
-                                        {samplePrograms.find((p) => p.code === assignmentToDelete.program_code)?.name ||
-                                            assignmentToDelete.program_code}
+                                        <strong>Program:</strong> {assignmentToDelete.program?.name}
                                         <br />
-                                        <strong>Subject:</strong>{' '}
-                                        {sampleSubjects.find((s) => s.code === assignmentToDelete.subject_code)?.name ||
-                                            assignmentToDelete.subject_code}
+                                        <strong>Subject:</strong> {assignmentToDelete.subject?.name}
                                         <br />
-                                        <strong>Assignment:</strong> {assignmentToDelete.year_level}, {assignmentToDelete.term}
+                                        <strong>Assignment:</strong>{' '}
+                                        {(() => {
+                                            const yearName = `${assignmentToDelete.year_level}${assignmentToDelete.year_level === 1 ? 'st' : assignmentToDelete.year_level === 2 ? 'nd' : assignmentToDelete.year_level === 3 ? 'rd' : 'th'} Year`;
+                                            const term = terms.find(t => t.id === assignmentToDelete.term_id);
+                                            const termName = term ? term.name : `Term ${assignmentToDelete.term_id}`;
+                                            return `${yearName}, ${termName}`;
+                                        })()}
                                     </div>
                                 )}
                             </DialogDescription>
