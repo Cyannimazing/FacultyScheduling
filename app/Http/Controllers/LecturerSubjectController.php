@@ -2,9 +2,14 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\AcademicCalendar;
+use App\Models\Lecturer;
 use App\Models\LecturerSubject;
 use App\Http\Requests\StoreLecturerSubjectRequest;
 use App\Http\Requests\UpdateLecturerSubjectRequest;
+use App\Models\Program;
+use App\Models\ProgramSubject;
+use App\Models\Term;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -15,22 +20,114 @@ class LecturerSubjectController extends Controller
      */
     public function index(Request $request)
     {
-        $search = $request->input('search');
+        $search = $request->input('search', '');
+        $schoolyearFilter = $request->input('syFilter', '');
+        $termFilter = $request->input('termFilter', '');
+        $progCodeFilter = $request->input('progCodeFilter', '');
+        $lecturerFilter = $request->input('lecturerFilter', '');
+        $programChoice = $request->input('programChoice'); //sa add allocation
         $page = $request->input('page', 1);
         $perPage = 5;
 
-        $lecturerSubjects = LecturerSubject::with(['lecturer', 'programSubject'])
-                                          ->whereHas('lecturer', function($query) use ($search) {
-                                              $query->where('name', 'LIKE', "%$search%");
-                                          })
-                                          ->orWhereHas('programSubject', function($query) use ($search) {
-                                              $query->where('name', 'LIKE', "%$search%");
-                                          })
-                                          ->paginate($perPage, ['*'], 'page', $page);
+        $lecturers = Lecturer::all(); //Add Alocation dropdown
+        $programs = Program::with(['subjects']) //Add allocation dropdown
+                        ->get();
+        $academicCalendar = AcademicCalendar::with('term')//Add allocation dropdown
+                    ->get();
 
+        //MAIN Table data
+        $lecturerSubjectsQuery = LecturerSubject::with([
+                'lecturer',
+                'programSubject.program',
+                'programSubject.subject',
+                'academicCalendar.term',
+            ]);
+
+        // Apply search filter only if search term is provided
+        if (!empty($search)) {
+            $lecturerSubjectsQuery->where(function ($query) use ($search) {
+                $query->whereHas('programSubject.subject', function ($subQuery) use ($search) {
+                    $subQuery->where('code', 'like', "%{$search}%")
+                        ->orWhere('name', 'like', "%{$search}%");
+                })
+                ->orWhereHas('lecturer', function ($subQuery) use ($search) {
+                    $subQuery->where('fname', 'like', "%{$search}%")
+                        ->orWhere('lname', 'like', "%{$search}%")
+                        ->orWhere('title', 'like', "%{$search}%")
+                        ->orWhereRaw("(title || ' ' || fname || ' ' || lname) LIKE ?", ["%{$search}%"]);
+                })
+                ->orWhereHas('programSubject.program', function ($subQuery) use ($search) {
+                    $subQuery->where('code', 'like', "%{$search}%")
+                        ->orWhere('name', 'like', "%{$search}%");
+                })
+                ->orWhereHas('academicCalendar', function ($subQuery) use ($search) {
+                    $subQuery->where('school_year', 'like', "%{$search}%");
+                })
+                ->orWhereHas('academicCalendar.term', function ($subQuery) use ($search) {
+                    $subQuery->where('name', 'like', "%{$search}%");
+                });
+            });
+        }
+
+        // Apply school year filter only if provided
+        if (!empty($schoolyearFilter)) {
+            $lecturerSubjectsQuery->whereHas('academicCalendar', function ($query) use ($schoolyearFilter) {
+                $query->where('school_year', $schoolyearFilter);
+            });
+        }
+
+        // Apply term filter only if provided and not 'all'
+        if (!empty($termFilter) && $termFilter !== 'all') {
+            $lecturerSubjectsQuery->whereHas('academicCalendar', function ($query) use ($termFilter) {
+                $query->where('term_id', $termFilter);
+            });
+        }
+
+        // Apply program filter only if provided and not 'all'
+        if (!empty($progCodeFilter) && $progCodeFilter !== 'all') {
+            $lecturerSubjectsQuery->whereHas('programSubject.program', function ($query) use ($progCodeFilter) {
+                $query->where('code', $progCodeFilter);
+            });
+        }
+
+        // Apply lecturer filter only if provided and not 'all'
+        if (!empty($lecturerFilter) && $lecturerFilter !== 'all') {
+            $lecturerSubjectsQuery->where('lecturer_id', $lecturerFilter);
+        }
+
+        $lecturerSubjects = $lecturerSubjectsQuery->paginate($perPage, ['*'], 'page', $page);
+
+
+        //Main Filters
+        $academicCalendarFilterOption = LecturerSubject::with('academicCalendar.term')
+                    ->groupBy('term_id')
+                    ->get();
+
+        $programFilterOption = Program::join('program_subjects', 'program_subjects.prog_code', '=', 'programs.code')
+                    ->join('lecturer_subjects', 'lecturer_subjects.prog_subj_id', '=', 'program_subjects.id')
+                    ->select('programs.code', 'programs.name')
+                    ->distinct()
+                    ->get();
+        $lecturerFilterOption = LecturerSubject::with('lecturer')
+                    ->groupBy('lecturer_id')
+                    ->get();
+
+
+
+
+        // return response()->json($programFilterOption);
         return Inertia::render('application/subject-allocation', [
-            'lecturerSubjects' => $lecturerSubjects,
+                'data' => [
+                    'programs' => $programs, //Kani with subjects nani. katung combobox nimo na pag mo pili kag program makita ang subjects na naa atu na program
+                    'academicCalendars' => $academicCalendar, //sa add
+                    'lecturers' => $lecturers,//sa add
+                    'lecturerSubjects' => $lecturerSubjects, //Main table data
+                    'academicCalendarFilterOption' => $academicCalendarFilterOption, //Filter option
+                    'programFilterOption' => $programFilterOption, // Main Filter
+                    'lecturerFilterOption' => $lecturerFilterOption
+            ]
         ]);
+
     }
 
     /**
@@ -65,7 +162,8 @@ class LecturerSubjectController extends Controller
         if($lecturerSubject){
             $lecturerSubject->update([
                 'lecturer_id' => $request->lecturer_id,
-                'subject_id' => $request->subject_id
+                'prog_subj_id' => $request->prog_subj_id,
+                'sy_term_id' => $request->sy_term_id
             ]);
         }
         return redirect()->route('subject-allocation')->with('success', 'Lecturer Subject updated successfully.');
@@ -79,5 +177,29 @@ class LecturerSubjectController extends Controller
         $lecturerSubject->delete();
 
         return redirect()->route('subject-allocation')->with('success', 'Lecturer Subject deleted successfully.');
+    }
+
+    /**
+     * Get subjects for a specific program
+     */
+    public function getSubjectsByProgram(Request $request, $programCode)
+    {
+        $programSubjects = ProgramSubject::with(['subject', 'term'])
+            ->where('prog_code', $programCode)
+            ->get();
+
+        return response()->json($programSubjects);
+    }
+
+    /**
+     * Get academic calendars filtered by term_id from selected subject
+     */
+    public function getAcademicCalendarsByTermId(Request $request, $termId)
+    {
+        $academicCalendars = AcademicCalendar::with('term')
+            ->where('term_id', $termId)
+            ->get();
+
+        return response()->json($academicCalendars);
     }
 }

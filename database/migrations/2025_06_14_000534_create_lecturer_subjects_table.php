@@ -12,13 +12,14 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('lecturer_subjects', function (Blueprint $table) {
+            $table->id();
             $table->unsignedBigInteger('lecturer_id');
             $table->unsignedBigInteger('prog_subj_id');
             $table->unsignedBigInteger('sy_term_id');
             $table->timestamps();
 
             // Compound primary key
-            $table->primary(['lecturer_id', 'prog_subj_id', 'sy_term_id']);
+            $table->unique(['lecturer_id', 'prog_subj_id', 'sy_term_id']);
 
             // Foreign keys
             $table->foreign('lecturer_id')->references('id')->on('lecturers')->onDelete('cascade');

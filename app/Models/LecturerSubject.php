@@ -17,24 +17,19 @@ class LecturerSubject extends Model
     /**
      * Get the lecturer that owns the lecturer subject.
      */
-    public function lecturer(): BelongsTo
+    public function lecturer()
     {
         return $this->belongsTo(Lecturer::class);
     }
 
-    /**
-     * Get the subject that owns the lecturer subject.
-     */
-    public function programSubject(): BelongsTo
+    public function programSubject()
     {
-        return $this->belongsTo(ProgramSubject::class, 'prog_subj_id', 'id');
+        return $this->belongsTo(ProgramSubject::class, 'prog_subj_id');
     }
 
-    /**
-     * Get the academic calendar that owns the lecturer subject.
-     */
-    public function academicCalendar(): BelongsTo
+    public function academicCalendar()
     {
-        return $this->belongsTo(AcademicCalendar::class, 'sy_term_id', 'id');
+        return $this->belongsTo(AcademicCalendar::class, 'sy_term_id');
     }
+
 }
