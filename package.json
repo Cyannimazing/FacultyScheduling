@@ -1,23 +1,58 @@
 {
+<<<<<<< HEAD
     "private": true,
     "type": "module",
+=======
+    "name": "desktop-schedule",
+    "version": "1.0.0",
+    "description": "Desktop Schedule Application - Laravel Inertia React Desktop App",
+    "author": "Your Company",
+    "private": true,
+    "type": "module",
+    "main": "electron-main.cjs",
+    "homepage": "./",
+>>>>>>> f9d78de (DESKTOP CONVERT)
     "scripts": {
         "build": "vite build",
         "build:ssr": "vite build && vite build --ssr",
         "dev": "vite",
+<<<<<<< HEAD
         "format": "prettier --write resources/",
         "format:check": "prettier --check resources/",
         "lint": "eslint . --fix"
     },
     "devDependencies": {
         "@eslint/js": "^9.19.0",
+=======
+        "dev-full": "concurrently \"php artisan serve\" \"npm run dev\"",
+        "format": "prettier --write resources/",
+        "format:check": "prettier --check resources/",
+        "lint": "eslint . --fix",
+        "electron": "electron .",
+        "electron:dev": "cross-env NODE_ENV=development electron .",
+        "electron:pack": "npm run build && electron-builder",
+        "electron:dist": "cross-env CSC_IDENTITY_AUTO_DISCOVERY=false npm run build && electron-builder --publish=never",
+        "electron:build": "npm run build && cross-env CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder --dir",
+        "postinstall": "electron-builder install-app-deps"
+    },
+    "devDependencies": {
+        "@eslint/js": "^9.19.0",
+        "cross-env": "^7.0.3",
+        "electron": "^36.4.0",
+        "electron-builder": "^26.0.12",
+>>>>>>> f9d78de (DESKTOP CONVERT)
         "eslint": "^9.17.0",
         "eslint-config-prettier": "^10.0.1",
         "eslint-plugin-react": "^7.37.3",
         "eslint-plugin-react-hooks": "^5.1.0",
         "prettier": "^3.4.2",
         "prettier-plugin-organize-imports": "^4.1.0",
+<<<<<<< HEAD
         "prettier-plugin-tailwindcss": "^0.6.11"
+=======
+        "prettier-plugin-tailwindcss": "^0.6.11",
+        "wait-on": "^8.0.3"
+>>>>>>> f9d78de (DESKTOP CONVERT)
     },
     "dependencies": {
         "@headlessui/react": "^2.2.0",
@@ -54,5 +89,56 @@
         "@rollup/rollup-linux-x64-gnu": "4.9.5",
         "@tailwindcss/oxide-linux-x64-gnu": "^4.0.1",
         "lightningcss-linux-x64-gnu": "^1.29.1"
+<<<<<<< HEAD
+=======
+    },
+    "build": {
+        "appId": "com.yourcompany.desktopschedule",
+        "productName": "Desktop Schedule",
+        "directories": {
+            "output": "dist-final"
+        },
+        "files": [
+            "electron-main.cjs",
+            "public/**/*",
+            "bootstrap/**/*",
+            "config/**/*",
+            "database/**/*",
+            "resources/**/*",
+            "routes/**/*",
+            "storage/**/*",
+            "app/**/*",
+            "vendor/**/*",
+            "artisan",
+            "composer.json",
+            "composer.lock",
+            ".env.desktop",
+            "php-portable/**/*",
+            "node_modules/**/*"
+        ],
+        "asar": false,
+        "extraResources": [
+            {
+                "from": "database/database.sqlite",
+                "to": "database.sqlite"
+            }
+        ],
+        "win": {
+            "target": "portable",
+            "forceCodeSigning": false
+        },
+        "nsis": {
+            "oneClick": false,
+            "perMachine": false,
+            "allowToChangeInstallationDirectory": true,
+            "deleteAppDataOnUninstall": true
+        },
+        "mac": {
+            "target": "dmg"
+        },
+        "linux": {
+            "target": "AppImage"
+        }
+>>>>>>> f9d78de (DESKTOP CONVERT)
     }
 }
