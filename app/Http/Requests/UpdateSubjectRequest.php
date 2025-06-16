@@ -22,9 +22,9 @@ class UpdateSubjectRequest extends FormRequest
     public function rules(): array
     {
         $subjectId = $this->route('subject'); // Get the subject ID from route
-        
+
         return [
-            'code' => 'required|string|max:255|unique:subjects,code,' . $subjectId . ',code',
+            'code' => 'required|string|max:255|',
             'name' => 'required|string|max:255',
             'unit' => 'required|integer|min:1|max:10',
             'is_gen_ed' => 'nullable|boolean',

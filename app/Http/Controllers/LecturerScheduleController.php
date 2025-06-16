@@ -29,7 +29,7 @@ class LecturerScheduleController extends Controller
                                             ->orderBy('day_of_week')
                                             ->paginate($perPage, ['*'], 'page', $page);
 
-        return Inertia::render('application/lecturer-schedule', [
+        return Inertia::render('application/faculty-schedule', [
             'lecturerSchedules' => $lecturerSchedules,
         ]);
     }
@@ -43,7 +43,7 @@ class LecturerScheduleController extends Controller
 
         LecturerSchedule::create($validated);
 
-        return redirect()->route('lecturer-schedule')->with('success', 'Lecturer Schedule created successfully.');
+        return redirect()->route('faculty-schedule')->with('success', 'Lecturer Schedule created successfully.');
     }
 
     /**
@@ -52,7 +52,7 @@ class LecturerScheduleController extends Controller
     public function show(int $id)
     {
         $lecturerSchedule = LecturerSchedule::findOrFail($id);
-        return Inertia::render('application/lecturer-schedule', [
+        return Inertia::render('application/faculty-schedule', [
             'lecturerSchedule' => $lecturerSchedule
         ]);
     }
@@ -73,7 +73,7 @@ class LecturerScheduleController extends Controller
                 'sy_term_id' => $request->sy_term_id
             ]);
         }
-        return redirect()->route('lecturer-schedule')->with('success', 'Lecturer Schedule updated successfully.');
+        return redirect()->route('faculty-schedule')->with('success', 'Lecturer Schedule updated successfully.');
     }
 
     /**
@@ -83,6 +83,6 @@ class LecturerScheduleController extends Controller
     {
         $lecturerSchedule->delete();
 
-        return redirect()->route('lecturer-schedule')->with('success', 'Lecturer Schedule deleted successfully.');
+        return redirect()->route('faculty-schedule')->with('success', 'Lecturer Schedule deleted successfully.');
     }
 }

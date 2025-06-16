@@ -10,9 +10,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import AppLayout from '@/layouts/app-layout';
-import { Head } from '@inertiajs/react';
+import { Head, router, usePage } from '@inertiajs/react';
 import { BookOpen, Calendar, ChevronLeft, ChevronRight, Code, Edit, MoreHorizontal, Plus, Search, Trash2 } from 'lucide-react';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 
 const breadcrumbs = [
     {
@@ -21,63 +21,6 @@ const breadcrumbs = [
     },
 ];
 
-// Sample data for subjects
-const sampleData = [
-    {
-        id: 1,
-        code: 'CS101',
-        name: 'Introduction to Computer Science',
-        unit: 3,
-        isGeneralEducation: false,
-        created_at: '2025-06-10 09:00',
-        updated_at: '2025-06-11 14:30',
-    },
-    {
-        id: 2,
-        code: 'MATH101',
-        name: 'College Algebra',
-        unit: 3,
-        isGeneralEducation: true,
-        created_at: '2025-06-09 11:00',
-        updated_at: '2025-06-12 10:15',
-    },
-    {
-        id: 3,
-        code: 'ENG101',
-        name: 'English Composition',
-        unit: 3,
-        isGeneralEducation: true,
-        created_at: '2025-06-08 13:00',
-        updated_at: '2025-06-11 16:45',
-    },
-    {
-        id: 4,
-        code: 'CS201',
-        name: 'Data Structures and Algorithms',
-        unit: 4,
-        isGeneralEducation: false,
-        created_at: '2025-06-07 15:30',
-        updated_at: '2025-06-10 09:20',
-    },
-    {
-        id: 5,
-        code: 'PHIL101',
-        name: 'Introduction to Philosophy',
-        unit: 3,
-        isGeneralEducation: true,
-        created_at: '2025-06-06 10:45',
-        updated_at: '2025-06-09 16:15',
-    },
-    {
-        id: 6,
-        code: 'CS301',
-        name: 'Database Management Systems',
-        unit: 3,
-        isGeneralEducation: false,
-        created_at: '2025-06-05 14:20',
-        updated_at: '2025-06-08 11:30',
-    },
-];
 
 function LoadingSkeleton() {
     return (
@@ -100,7 +43,7 @@ function SubjectDialog({ isOpen, onClose, subjectData = null, onSave }) {
         code: '',
         name: '',
         unit: '',
-        isGeneralEducation: false,
+        is_gen_ed: false,
     });
 
     // Update form data when subjectData prop changes (for edit mode)
@@ -110,11 +53,11 @@ function SubjectDialog({ isOpen, onClose, subjectData = null, onSave }) {
                 code: subjectData.code || '',
                 name: subjectData.name || '',
                 unit: subjectData.unit || '',
-                isGeneralEducation: subjectData.isGeneralEducation || false,
+                is_gen_ed: subjectData.is_gen_ed || false,
             });
         } else {
             // Reset form for add mode
-            setFormData({ code: '', name: '', unit: '', isGeneralEducation: false });
+            setFormData({ code: '', name: '', unit: '', is_gen_ed: false });
         }
     }, [subjectData]);
 
@@ -179,16 +122,16 @@ function SubjectDialog({ isOpen, onClose, subjectData = null, onSave }) {
                         </Select>
                     </div>
                     <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="isGeneralEducation" className="text-right text-sm font-medium">
+                        <Label htmlFor="is_gen_ed" className="text-right text-sm font-medium">
                             General Education
                         </Label>
                         <div className="col-span-3 flex items-center space-x-2">
                             <Checkbox
-                                id="isGeneralEducation"
-                                checked={formData.isGeneralEducation}
-                                onCheckedChange={(checked) => setFormData({ ...formData, isGeneralEducation: checked })}
+                                id="is_gen_ed"
+                                checked={formData.is_gen_ed}
+                                onCheckedChange={(checked) => setFormData({ ...formData, is_gen_ed: checked })}
                             />
-                            <Label htmlFor="isGeneralEducation" className="text-sm font-normal">
+                            <Label htmlFor="is_gen_ed" className="text-sm font-normal">
                                 This is a General Education subject
                             </Label>
                         </div>
@@ -208,30 +151,19 @@ function SubjectDialog({ isOpen, onClose, subjectData = null, onSave }) {
 }
 
 export default function Subject() {
+    const { data } = usePage().props
     const [currentPage, setCurrentPage] = useState(1);
     const [isLoading, setIsLoading] = useState(false);
-    const [searchTerm, setSearchTerm] = useState('');
-    const [typeFilter, setTypeFilter] = useState('all');
+    const [searchSubject, setSearchSubject] = useState('');
+    const [typeFilter, setTypeFilter] = useState('');
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [editingSubject, setEditingSubject] = useState(null);
-    const [subjectsData, setSubjectsData] = useState(sampleData);
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [subjectToDelete, setSubjectToDelete] = useState(null);
     const [isDeleting, setIsDeleting] = useState(false); // Add state to prevent multiple delete clicks
 
-    const itemsPerPage = 5;
-
-    // Filter data based on search and type
-    const filteredData = subjectsData.filter((subject) => {
-        const matchesSearch =
-            subject.code.toLowerCase().includes(searchTerm.toLowerCase()) || subject.name.toLowerCase().includes(searchTerm.toLowerCase());
-        const matchesType =
-            typeFilter === 'all' || (typeFilter === 'ge' && subject.isGeneralEducation) || (typeFilter === 'major' && !subject.isGeneralEducation);
-        return matchesSearch && matchesType;
-    });
-
-    const totalPages = Math.ceil(filteredData.length / itemsPerPage);
-    const paginatedData = filteredData.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+    const itemsPerPage = data.subjects.per_page;
+    const totalPages = data.subjects.last_page;
 
     const handlePageChange = (page) => {
         if (page > 0 && page <= totalPages) {
@@ -241,6 +173,31 @@ export default function Subject() {
                 setIsLoading(false);
             }, 800);
         }
+    };
+
+    useEffect(() => {
+        if (typeFilter !== "") {
+            handleSearch('');
+        }
+    }, [typeFilter]);
+
+    const handleSearch = (search) => {
+        var s ;
+        if(search){
+            s = search?.target?.value
+            setSearchSubject(search.target.value)
+        }else{
+            s = searchSubject
+        }
+        setIsLoading(true);
+        router.get(
+            '/subject',
+            { search: s, isGenEdFilter: typeFilter, page: 1 },
+            {
+                preserveState: true,
+                onFinish: () => setIsLoading(false),
+            },
+        );
     };
 
     const handleAddSubject = () => {
@@ -255,39 +212,21 @@ export default function Subject() {
 
     const handleSaveSubject = (formData) => {
         if (editingSubject) {
-            // Update existing subject
-            setSubjectsData((prevData) =>
-                prevData.map((subject) =>
-                    subject.id === editingSubject.id
-                        ? {
-                              ...subject,
-                              ...formData,
-                              updated_at: new Date().toISOString().slice(0, 19).replace('T', ' '),
-                          }
-                        : subject,
-                ),
-            );
-            console.log('Subject updated:', formData);
+            router.put(`/subject/${editingSubject.id}`, formData, {
+                onSuccess: () => {
+                    setIsDialogOpen(false);
+                },
+            });
         } else {
-            // Add new subject
-            const newSubject = {
-                id: Math.max(...subjectsData.map((s) => s.id), 0) + 1,
-                ...formData,
-                created_at: new Date().toISOString().slice(0, 19).replace('T', ' '),
-                updated_at: new Date().toISOString().slice(0, 19).replace('T', ' '),
-            };
-            setSubjectsData((prevData) => [...prevData, newSubject]);
-            console.log('Subject added:', formData);
-        }
-
-        // Reset current page to 1 if adding new subject
-        if (!editingSubject) {
-            setCurrentPage(1);
+            router.post('/subject', formData, {
+                onSuccess: () => {
+                    setIsDialogOpen(false);
+                },
+            });
         }
     };
 
     const handleDeleteSubject = (subject) => {
-        // Prevent opening delete dialog if already deleting
         if (isDeleting) return;
 
         setSubjectToDelete(subject);
@@ -295,43 +234,18 @@ export default function Subject() {
     };
 
     const confirmDeleteSubject = () => {
-        // Prevent multiple delete operations
-        if (isDeleting || !subjectToDelete) return;
-
-        setIsDeleting(true);
-
-        // Simulate API call delay
-        setTimeout(() => {
-            setSubjectsData((prevData) => prevData.filter((subject) => subject.id !== subjectToDelete.id));
-
-            // Adjust current page if necessary
-            const newFilteredData = subjectsData
-                .filter((subject) => subject.id !== subjectToDelete.id)
-                .filter((subject) => {
-                    const matchesSearch =
-                        subject.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                        subject.name.toLowerCase().includes(searchTerm.toLowerCase());
-                    const matchesType =
-                        typeFilter === 'all' ||
-                        (typeFilter === 'ge' && subject.isGeneralEducation) ||
-                        (typeFilter === 'major' && !subject.isGeneralEducation);
-                    return matchesSearch && matchesType;
-                });
-            const newTotalPages = Math.ceil(newFilteredData.length / itemsPerPage);
-
-            if (currentPage > newTotalPages && newTotalPages > 0) {
-                setCurrentPage(newTotalPages);
-            } else if (newFilteredData.length === 0) {
-                setCurrentPage(1);
-            }
-
-            console.log('Subject deleted:', subjectToDelete.name);
-
-            // Reset delete states
-            setDeleteDialogOpen(false);
-            setSubjectToDelete(null);
-            setIsDeleting(false);
-        }, 1000); // Simulate 1 second delay
+        if (subjectToDelete) {
+            setIsDeleting(true);
+            router.delete(`/subject/${subjectToDelete.id}`, {
+                onSuccess: () => {
+                    setDeleteDialogOpen(false);
+                    setIsDeleting(false);
+                },
+                onError: () => {
+                    setIsDeleting(false);
+                },
+            });
+        }
     };
 
     const cancelDelete = () => {
@@ -377,31 +291,35 @@ export default function Subject() {
                                     <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
                                     <Input
                                         placeholder="Search subjects..."
-                                        value={searchTerm}
-                                        onChange={(e) => setSearchTerm(e.target.value)}
+                                        value={searchSubject}
+                                        onChange={(e) => {
+                                            setSearchSubject(e.target.value)
+                                            handleSearch(e, typeFilter)
+                                        }}
                                         className="pl-9"
                                     />
                                 </div>
-                                <Select value={typeFilter} onValueChange={setTypeFilter}>
+                                <Select value={typeFilter}
+                                onValueChange={setTypeFilter}>
                                     <SelectTrigger className="w-full md:w-[200px]">
                                         <SelectValue placeholder="Filter by type" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="all">All Subjects</SelectItem>
-                                        <SelectItem value="ge">General Education</SelectItem>
-                                        <SelectItem value="major">Major Subjects</SelectItem>
+                                        <SelectItem value=" ">All Subjects</SelectItem>
+                                        <SelectItem value="1">General Education</SelectItem>
+                                        <SelectItem value="0">Major Subjects</SelectItem>
                                     </SelectContent>
                                 </Select>
                             </div>
                             <div className="text-muted-foreground text-sm">
-                                Showing {paginatedData.length} of {filteredData.length} subjects
+                                Showing {data.subjects.data.length} of {data.subjects.total} subjects
                             </div>
                         </div>
                     </CardHeader>
                     <CardContent>
                         {isLoading ? (
                             <LoadingSkeleton />
-                        ) : paginatedData.length > 0 ? (
+                        ) : data.subjects.data.length > 0 ? (
                             <div className="overflow-x-auto">
                                 <Table>
                                     <TableHeader>
@@ -415,7 +333,7 @@ export default function Subject() {
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
-                                        {paginatedData.map((subject) => (
+                                        {data.subjects.data.map((subject) => (
                                             <TableRow key={subject.id} className="hover:bg-muted/50">
                                                 <TableCell>
                                                     <div className="flex items-center gap-2">
@@ -433,14 +351,14 @@ export default function Subject() {
                                                 </TableCell>
                                                 <TableCell className="text-center">
                                                     <Badge
-                                                        variant={subject.isGeneralEducation ? 'default' : 'secondary'}
+                                                        variant={subject.is_gen_ed ? 'default' : 'secondary'}
                                                         className={
-                                                            subject.isGeneralEducation
+                                                            subject.is_gen_ed
                                                                 ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
                                                                 : ''
                                                         }
                                                     >
-                                                        {subject.isGeneralEducation ? 'General Education' : 'Major Subject'}
+                                                        {subject.is_gen_ed ? 'General Education' : 'Major Subject'}
                                                     </Badge>
                                                 </TableCell>
                                                 <TableCell className="text-center">
@@ -483,11 +401,11 @@ export default function Subject() {
                                 <BookOpen className="text-muted-foreground mb-4 h-12 w-12" />
                                 <h3 className="mb-2 text-lg font-semibold">No subjects found</h3>
                                 <p className="text-muted-foreground mb-4">
-                                    {searchTerm || typeFilter !== 'all'
+                                    {searchSubject || typeFilter !== 'all'
                                         ? 'Try adjusting your search or filter criteria.'
                                         : 'Get started by creating your first academic subject.'}
                                 </p>
-                                {!searchTerm && typeFilter === 'all' && (
+                                {!searchSubject && typeFilter === 'all' && (
                                     <Button onClick={handleAddSubject}>
                                         <Plus className="mr-2 h-4 w-4" />
                                         Add Your First Subject
@@ -499,7 +417,7 @@ export default function Subject() {
                 </Card>
 
                 {/* Pagination */}
-                {!isLoading && filteredData.length > itemsPerPage && (
+                {!isLoading && data.subjects.total > itemsPerPage && (
                     <div className="flex items-center justify-between">
                         <div className="text-muted-foreground text-sm">
                             Page {currentPage} of {totalPages}

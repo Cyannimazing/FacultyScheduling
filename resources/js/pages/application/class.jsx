@@ -9,9 +9,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import AppLayout from '@/layouts/app-layout';
-import { Head } from '@inertiajs/react';
+import { Head, router, usePage } from '@inertiajs/react';
 import { Calendar, ChevronLeft, ChevronRight, Edit, GraduationCap, MoreHorizontal, Plus, Search, Trash2 } from 'lucide-react';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 
 const breadcrumbs = [
     {
@@ -20,71 +20,7 @@ const breadcrumbs = [
     },
 ];
 
-const availablePrograms = [
-    {
-        name: 'Computer Science',
-        description: 'Bachelor of Science in Computer Science',
-    },
-    {
-        name: 'Information Technology',
-        description: 'Bachelor of Science in Information Technology',
-    },
-    {
-        name: 'Data Science',
-        description: 'Master of Science in Data Science',
-    },
-    {
-        name: 'Cybersecurity',
-        description: 'Bachelor of Science in Cybersecurity',
-    },
-    {
-        name: 'Software Engineering',
-        description: 'Bachelor of Engineering in Software Engineering',
-    },
-];
-
-const sampleData = [
-    {
-        id: 1,
-        name: 'Computer Science - Year 1A',
-        program: 'Computer Science',
-        program_details: 'Bachelor of Science in Computer Science',
-        created_at: '2025-06-10 09:00',
-        updated_at: '2025-06-11 14:30',
-    },
-    {
-        id: 2,
-        name: 'Information Technology - Advanced',
-        program: 'Information Technology',
-        program_details: 'Bachelor of Science in Information Technology',
-        created_at: '2025-06-09 11:00',
-        updated_at: '2025-06-12 10:15',
-    },
-    {
-        id: 3,
-        name: 'Data Science - Graduate Level',
-        program: 'Data Science',
-        program_details: 'Master of Science in Data Science',
-        created_at: '2025-06-08 13:00',
-        updated_at: '2025-06-11 16:45',
-    },
-    {
-        id: 4,
-        name: 'Cybersecurity - Year 2B',
-        program: 'Cybersecurity',
-        program_details: 'Bachelor of Science in Cybersecurity',
-        created_at: '2025-06-07 15:30',
-        updated_at: '2025-06-10 09:20',
-    },
-    {
-        id: 5,
-        name: 'Software Engineering - Foundation',
-        program: 'Software Engineering',
-        program_details: 'Bachelor of Engineering in Software Engineering',
-        created_at: '2025-06-06 10:45',
-        updated_at: '2025-06-09 16:15',
-    },
-];
+var availablePrograms = []
 
 function LoadingSkeleton() {
     return (
@@ -105,33 +41,35 @@ function LoadingSkeleton() {
 function ClassDialog({ isOpen, onClose, classData = null, onSave }) {
     const [formData, setFormData] = useState({
         name: '',
-        program: '',
-        program_details: '',
+        prog_code: '',
+        description: '',
+        prog_name: ''
     });
 
     const handleProgramChange = (value) => {
-        const selectedProgram = availablePrograms.find((p) => p.name === value);
-        setFormData({
-            ...formData,
-            program: value,
-            program_details: selectedProgram ? selectedProgram.description : '',
-        });
+        setFormData(prevState =>({
+            ...prevState,
+            prog_code: value.code,
+            description: value.description,
+            prog_name: value.name
+        }));
+        console.log(formData)
     };
-
     React.useEffect(() => {
         if (classData) {
             setFormData({
                 name: classData.name || '',
-                program: classData.program || '',
-                program_details: classData.program_details || '',
+                prog_code: classData.program.name || '',
+                description: classData.program.description || '',
+                prog_name: classData.program.name || ''
             });
         } else {
-            setFormData({ name: '', program: '', program_details: '' });
+            setFormData({ name: '', prog_code: '', description: '' });
         }
     }, [classData]);
 
     const handleSave = () => {
-        if (formData.name && formData.program && formData.program_details) {
+        if (formData.name && formData.prog_code && formData.description) {
             onSave(formData);
             onClose();
         }
@@ -161,13 +99,13 @@ function ClassDialog({ isOpen, onClose, classData = null, onSave }) {
                         <Label htmlFor="program" className="text-right text-sm font-medium">
                             Program
                         </Label>
-                        <Select value={formData.program} onValueChange={handleProgramChange}>
+                        <Select value={formData?.prog_name} onValueChange={handleProgramChange}>
                             <SelectTrigger className="col-span-3">
                                 <SelectValue placeholder="Select a program" />
                             </SelectTrigger>
                             <SelectContent>
                                 {availablePrograms.map((program) => (
-                                    <SelectItem key={program.name} value={program.name}>
+                                    <SelectItem key={program.id} value={program}>
                                         {program.name}
                                     </SelectItem>
                                 ))}
@@ -175,12 +113,12 @@ function ClassDialog({ isOpen, onClose, classData = null, onSave }) {
                         </Select>
                     </div>
                     <div className="grid grid-cols-4 items-start gap-4">
-                        <Label htmlFor="program_details" className="pt-3 text-right text-sm font-medium">
+                        <Label htmlFor="program_description" className="pt-3 text-right text-sm font-medium">
                             Program Details
                         </Label>
                         <Input
                             id="program_details"
-                            value={formData.program_details}
+                            value={formData.description}
                             readOnly
                             className="bg-muted col-span-3"
                             placeholder="Program details will auto-populate when you select a program"
@@ -191,7 +129,7 @@ function ClassDialog({ isOpen, onClose, classData = null, onSave }) {
                     <Button variant="outline" onClick={onClose}>
                         Cancel
                     </Button>
-                    <Button onClick={handleSave} disabled={!formData.name || !formData.program || !formData.program_details}>
+                    <Button onClick={handleSave} disabled={!formData.name || !formData.prog_code || !formData.description}>
                         {classData ? 'Update' : 'Create'} Class
                     </Button>
                 </DialogFooter>
@@ -201,40 +139,55 @@ function ClassDialog({ isOpen, onClose, classData = null, onSave }) {
 }
 
 export default function Class() {
-    const [currentPage, setCurrentPage] = useState(1);
+    const { data } = usePage().props
     const [isLoading, setIsLoading] = useState(false);
-    const [searchTerm, setSearchTerm] = useState('');
-    const [programFilter, setProgramFilter] = useState('all');
+    const [searchClass, setSearchClass] = useState('');
+    const [programFilter, setProgramFilter] = useState('');
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [editingClass, setEditingClass] = useState(null);
-    const [classesData, setClassesData] = useState(sampleData);
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [classToDelete, setClassToDelete] = useState(null);
     const [isDeleting, setIsDeleting] = useState(false);
+    const itemsPerPage = data.groups.per_page;
+    const uniquePrograms = data.programs
+    availablePrograms = data.programs
 
-    const itemsPerPage = 5;
-    const uniquePrograms = [...new Set(classesData.map((c) => c.program))];
+    const filteredData = data.groups.total
 
-    const filteredData = classesData.filter((classItem) => {
-        const matchesSearch =
-            classItem.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            classItem.program.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            classItem.program_details.toLowerCase().includes(searchTerm.toLowerCase());
-        const matchesProgram = programFilter === 'all' || classItem.program === programFilter;
-        return matchesSearch && matchesProgram;
-    });
-
-    const totalPages = Math.ceil(filteredData.length / itemsPerPage);
-    const paginatedData = filteredData.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+    const totalPages = data.groups.last_page
+    const paginatedData = data.groups.data
 
     const handlePageChange = (page) => {
-        if (page > 0 && page <= totalPages) {
-            setIsLoading(true);
-            setTimeout(() => {
-                setCurrentPage(page);
-                setIsLoading(false);
-            }, 800);
+        setIsLoading(true);
+        router.get(
+            '/class',
+            { search: searchClass, page: page },
+            {
+                preserveState: true,
+                onFinish: () => setIsLoading(false),
+            },
+        );
+    };
+
+    useEffect(()=>{
+        if(programFilter || searchClass){
+            handleSearch()
+        }else{
+            setSearchClass('')
+            handleSearch()
         }
+    }, [searchClass, programFilter])
+
+    const handleSearch = () => {
+        setIsLoading(true);
+        router.get(
+            '/class?page=1',
+            { search: searchClass, prog_code: programFilter, page: 1 },
+            {
+                preserveState: true,
+                onFinish: () => setIsLoading(false),
+            },
+        );
     };
 
     const handleAddClass = () => {
@@ -249,29 +202,17 @@ export default function Class() {
 
     const handleSaveClass = (formData) => {
         if (editingClass) {
-            setClassesData((prevData) =>
-                prevData.map((classItem) =>
-                    classItem.id === editingClass.id
-                        ? {
-                              ...classItem,
-                              ...formData,
-                              updated_at: new Date().toISOString().slice(0, 19).replace('T', ' '),
-                          }
-                        : classItem,
-                ),
-            );
+            router.put(`/class/${editingClass.id}`, formData, {
+                onSuccess: () => {
+                    setIsDialogOpen(false);
+                },
+            });
         } else {
-            const newClass = {
-                id: Math.max(...classesData.map((c) => c.id), 0) + 1,
-                ...formData,
-                created_at: new Date().toISOString().slice(0, 19).replace('T', ' '),
-                updated_at: new Date().toISOString().slice(0, 19).replace('T', ' '),
-            };
-            setClassesData((prevData) => [...prevData, newClass]);
-        }
-
-        if (!editingClass) {
-            setCurrentPage(1);
+            router.post('/class', formData, {
+                onSuccess: () => {
+                    setIsDialogOpen(false);
+                },
+            });
         }
     };
 
@@ -283,32 +224,15 @@ export default function Class() {
     const confirmDeleteClass = () => {
         if (classToDelete) {
             setIsDeleting(true);
-            // Simulate API call delay
-            setTimeout(() => {
-                setClassesData((prevData) => prevData.filter((classItem) => classItem.id !== classToDelete.id));
-
-                // Adjust pagination if needed
-                const newFilteredData = classesData
-                    .filter((classItem) => classItem.id !== classToDelete.id)
-                    .filter((classItem) => {
-                        const matchesSearch =
-                            classItem.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                            classItem.program.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                            classItem.program_details.toLowerCase().includes(searchTerm.toLowerCase());
-                        const matchesProgram = programFilter === 'all' || classItem.program === programFilter;
-                        return matchesSearch && matchesProgram;
-                    });
-                const newTotalPages = Math.ceil(newFilteredData.length / itemsPerPage);
-
-                if (currentPage > newTotalPages && newTotalPages > 0) {
-                    setCurrentPage(newTotalPages);
-                } else if (newFilteredData.length === 0) {
-                    setCurrentPage(1);
-                }
-
-                setDeleteDialogOpen(false);
-                setIsDeleting(false);
-            }, 800);
+            router.delete(`/class/${classToDelete.id}`, {
+                onSuccess: () => {
+                    setDeleteDialogOpen(false);
+                    setIsDeleting(false);
+                },
+                onError: () => {
+                    setIsDeleting(false);
+                },
+            });
         }
     };
 
@@ -345,8 +269,8 @@ export default function Class() {
                                     <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
                                     <Input
                                         placeholder="Search classes, programs..."
-                                        value={searchTerm}
-                                        onChange={(e) => setSearchTerm(e.target.value)}
+                                        value={searchClass}
+                                        onChange={(e) => setSearchClass(e.target.value)}
                                         className="pl-9"
                                     />
                                 </div>
@@ -355,17 +279,17 @@ export default function Class() {
                                         <SelectValue placeholder="Filter by program" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="all">All Programs</SelectItem>
+                                        <SelectItem value=" ">All Programs</SelectItem>
                                         {uniquePrograms.map((program) => (
-                                            <SelectItem key={program} value={program}>
-                                                {program}
+                                            <SelectItem key={program.code} value={program.code}>
+                                                {program.description}
                                             </SelectItem>
                                         ))}
                                     </SelectContent>
                                 </Select>
                             </div>
                             <div className="text-muted-foreground text-sm">
-                                Showing {paginatedData.length} of {filteredData.length} classes
+                                Showing {paginatedData.length} of {filteredData} classes
                             </div>
                         </div>
                     </CardHeader>
@@ -394,8 +318,8 @@ export default function Class() {
                                                 </TableCell>
                                                 <TableCell>
                                                     <div className="space-y-1">
-                                                        <Badge variant="secondary">{classItem.program}</Badge>
-                                                        <div className="text-muted-foreground text-sm">{classItem.program_details}</div>
+                                                        <Badge variant="secondary">{classItem.program.name}</Badge>
+                                                        <div className="text-muted-foreground text-sm">{classItem.program.description}</div>
                                                     </div>
                                                 </TableCell>
                                                 <TableCell className="text-center">
@@ -437,11 +361,11 @@ export default function Class() {
                                 <GraduationCap className="text-muted-foreground mb-4 h-12 w-12" />
                                 <h3 className="mb-2 text-lg font-semibold">No classes found</h3>
                                 <p className="text-muted-foreground mb-4">
-                                    {searchTerm || programFilter !== 'all'
+                                    {searchClass || programFilter !== 'all'
                                         ? 'Try adjusting your search or filter criteria.'
                                         : 'Get started by creating your first academic class.'}
                                 </p>
-                                {!searchTerm && programFilter === 'all' && (
+                                {!searchClass && programFilter === 'all' && (
                                     <Button onClick={handleAddClass}>
                                         <Plus className="mr-2 h-4 w-4" />
                                         Add Your First Class
@@ -452,21 +376,21 @@ export default function Class() {
                     </CardContent>
                 </Card>
 
-                {!isLoading && filteredData.length > itemsPerPage && (
+                {!isLoading && filteredData > itemsPerPage && (
                     <div className="flex items-center justify-between">
                         <div className="text-muted-foreground text-sm">
-                            Page {currentPage} of {totalPages}
+                            Page {data.groups.current_page} of {totalPages}
                         </div>
                         <div className="flex items-center space-x-2">
-                            <Button variant="outline" size="sm" onClick={() => handlePageChange(currentPage - 1)} disabled={currentPage === 1}>
+                            <Button variant="outline" size="sm" onClick={() => handlePageChange(data.groups.current_page - 1)} disabled={data.groups.current_page === 1}>
                                 <ChevronLeft className="h-4 w-4" />
                                 Previous
                             </Button>
                             <Button
                                 variant="outline"
                                 size="sm"
-                                onClick={() => handlePageChange(currentPage + 1)}
-                                disabled={currentPage === totalPages}
+                                onClick={() => handlePageChange(data.groups.current_page + 1)}
+                                disabled={data.groups.current_page === totalPages}
                             >
                                 Next
                                 <ChevronRight className="h-4 w-4" />

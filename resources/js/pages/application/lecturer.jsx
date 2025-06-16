@@ -7,41 +7,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import AppLayout from '@/layouts/app-layout';
-import { Head } from '@inertiajs/react';
+import { Head, router, usePage } from '@inertiajs/react';
 import { Calendar, ChevronLeft, ChevronRight, Clock, Edit, GraduationCap, MoreHorizontal, Plus, Search, Trash2, User } from 'lucide-react';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 
 const breadcrumbs = [
     {
         title: 'Lecturer',
         href: '/lecturer',
-    },
-];
-
-const initialData = [
-    {
-        id: 1,
-        title: 'Dr.',
-        fname: 'John',
-        lname: 'Smith',
-        created_at: '2025-06-01 09:00',
-        updated_at: '2025-06-02 14:30',
-    },
-    {
-        id: 2,
-        title: 'Prof.',
-        fname: 'Jane',
-        lname: 'Johnson',
-        created_at: '2025-06-03 11:00',
-        updated_at: '2025-06-04 10:15',
-    },
-    {
-        id: 3,
-        title: 'Ms.',
-        fname: 'Emily',
-        lname: 'Davis',
-        created_at: '2025-06-05 13:00',
-        updated_at: '2025-06-06 16:45',
     },
 ];
 
@@ -189,35 +162,51 @@ function LecturerDialog({ isOpen, onClose, lecturer = null, onSave }) {
 }
 
 export default function Lecturer() {
-    const [currentPage, setCurrentPage] = useState(1);
+    const { data } = usePage().props
     const [isLoading, setIsLoading] = useState(false);
-    const [searchTerm, setSearchTerm] = useState('');
+    const [searchLecturer, setSearchLecturer] = useState("");
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [editingLecturer, setEditingLecturer] = useState(null);
-    const [lecturersData, setLecturersData] = useState(initialData);
+    const [lecturersData, setLecturersData] = useState(data.lecturers.data);
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [lecturerToDelete, setLecturerToDelete] = useState(null);
     const [isDeleting, setIsDeleting] = useState(false);
 
-    const itemsPerPage = 5;
+    const itemsPerPage = data.lecturers.per_page;
+    const totalPages = data.lecturers.last_page;
+    const paginatedData = data.lecturers.data;
 
-    const filteredData = lecturersData.filter((lecturer) => {
-        const fullName = `${lecturer.fname} ${lecturer.lname}`.toLowerCase();
-        const titleName = `${lecturer.title} ${lecturer.fname} ${lecturer.lname}`.toLowerCase();
-        return fullName.includes(searchTerm.toLowerCase()) || titleName.includes(searchTerm.toLowerCase());
-    });
-
-    const totalPages = Math.ceil(filteredData.length / itemsPerPage);
-    const paginatedData = filteredData.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+    useEffect(()=>{
+        if(searchLecturer){
+            handleSearch()
+        }else{
+            setSearchLecturer('')
+            handleSearch()
+        }
+    }, [searchLecturer])
 
     const handlePageChange = (page) => {
-        if (page > 0 && page <= totalPages) {
-            setIsLoading(true);
-            setTimeout(() => {
-                setCurrentPage(page);
-                setIsLoading(false);
-            }, 800);
-        }
+        setIsLoading(true);
+        router.get(
+            '/lecturer',
+            { search: searchLecturer, page: page },
+            {
+                preserveState: true,
+                onFinish: () => setIsLoading(false),
+            },
+        );
+    };
+
+    const handleSearch = () => {
+        setIsLoading(true);
+        router.get(
+            '/lecturer?page=1',
+            { search: searchLecturer, page: 1 },
+            {
+                preserveState: true,
+                onFinish: () => setIsLoading(false),
+            },
+        );
     };
 
     const handleAddLecturer = () => {
@@ -232,29 +221,17 @@ export default function Lecturer() {
 
     const handleSaveLecturer = (formData) => {
         if (editingLecturer) {
-            setLecturersData((prevData) =>
-                prevData.map((lecturer) =>
-                    lecturer.id === editingLecturer.id
-                        ? {
-                              ...lecturer,
-                              ...formData,
-                              updated_at: new Date().toISOString().slice(0, 19).replace('T', ' '),
-                          }
-                        : lecturer,
-                ),
-            );
+            router.put(`/lecturer/${editingLecturer.id}`, formData, {
+                onSuccess: () => {
+                    setIsDialogOpen(false);
+                },
+            });
         } else {
-            const newLecturer = {
-                id: Math.max(...lecturersData.map((l) => l.id), 0) + 1,
-                ...formData,
-                created_at: new Date().toISOString().slice(0, 19).replace('T', ' '),
-                updated_at: new Date().toISOString().slice(0, 19).replace('T', ' '),
-            };
-            setLecturersData((prevData) => [...prevData, newLecturer]);
-        }
-
-        if (!editingLecturer) {
-            setCurrentPage(1);
+            router.post('/lecturer', formData, {
+                onSuccess: () => {
+                    setIsDialogOpen(false);
+                },
+            });
         }
     };
 
@@ -266,29 +243,15 @@ export default function Lecturer() {
     const confirmDeleteLecturer = () => {
         if (lecturerToDelete) {
             setIsDeleting(true);
-            // Simulate API call delay
-            setTimeout(() => {
-                setLecturersData((prevData) => prevData.filter((lecturer) => lecturer.id !== lecturerToDelete.id));
-
-                // Adjust pagination if needed
-                const newFilteredData = lecturersData
-                    .filter((lecturer) => lecturer.id !== lecturerToDelete.id)
-                    .filter((lecturer) => {
-                        const fullName = `${lecturer.fname} ${lecturer.lname}`.toLowerCase();
-                        const titleName = `${lecturer.title} ${lecturer.fname} ${lecturer.lname}`.toLowerCase();
-                        return fullName.includes(searchTerm.toLowerCase()) || titleName.includes(searchTerm.toLowerCase());
-                    });
-                const newTotalPages = Math.ceil(newFilteredData.length / itemsPerPage);
-
-                if (currentPage > newTotalPages && newTotalPages > 0) {
-                    setCurrentPage(newTotalPages);
-                } else if (newFilteredData.length === 0) {
-                    setCurrentPage(1);
-                }
-
-                setDeleteDialogOpen(false);
-                setIsDeleting(false);
-            }, 800);
+            router.delete(`/lecturer/${lecturerToDelete.id}`, {
+                onSuccess: () => {
+                    setDeleteDialogOpen(false);
+                    setIsDeleting(false);
+                },
+                onError: () => {
+                    setIsDeleting(false);
+                },
+            });
         }
     };
 
@@ -324,13 +287,13 @@ export default function Lecturer() {
                                 <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
                                 <Input
                                     placeholder="Search lecturers..."
-                                    value={searchTerm}
-                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                    value={searchLecturer}
+                                    onChange={(e) => setSearchLecturer(e.target.value)}
                                     className="pl-9"
                                 />
                             </div>
                             <div className="text-muted-foreground text-sm">
-                                Showing {paginatedData.length} of {filteredData.length} lecturers
+                                Showing {paginatedData.length} of {data.lecturers.total} lecturers
                             </div>
                         </div>
                     </CardHeader>
@@ -410,9 +373,9 @@ export default function Lecturer() {
                                 <GraduationCap className="text-muted-foreground mb-4 h-12 w-12" />
                                 <h3 className="mb-2 text-lg font-semibold">No lecturers found</h3>
                                 <p className="text-muted-foreground mb-4">
-                                    {searchTerm ? 'Try adjusting your search criteria.' : 'Get started by adding your first lecturer.'}
+                                    {searchLecturer ? 'Try adjusting your search criteria.' : 'Get started by adding your first lecturer.'}
                                 </p>
-                                {!searchTerm && (
+                                {!searchLecturer && (
                                     <Button onClick={handleAddLecturer}>
                                         <Plus className="mr-2 h-4 w-4" />
                                         Add Your First Lecturer
@@ -423,21 +386,21 @@ export default function Lecturer() {
                     </CardContent>
                 </Card>
 
-                {!isLoading && paginatedData.length > 0 && totalPages > 1 && (
+                {!isLoading && data.lecturers.total > 0 && totalPages > 1 && (
                     <div className="flex items-center justify-between">
                         <div className="text-muted-foreground text-sm">
-                            Page {currentPage} of {totalPages}
+                            Page {data.lecturers.current_page} of {totalPages}
                         </div>
                         <div className="flex items-center space-x-2">
-                            <Button variant="outline" size="sm" onClick={() => handlePageChange(currentPage - 1)} disabled={currentPage === 1}>
+                            <Button variant="outline" size="sm" onClick={() => handlePageChange(data.lecturers.current_page - 1)} disabled={data.lecturers.current_page === 1}>
                                 <ChevronLeft className="h-4 w-4" />
                                 Previous
                             </Button>
                             <Button
                                 variant="outline"
                                 size="sm"
-                                onClick={() => handlePageChange(currentPage + 1)}
-                                disabled={currentPage === totalPages}
+                                onClick={() => handlePageChange(data.lecturers.current_page + 1)}
+                                disabled={data.lecturers.current_page === totalPages}
                             >
                                 Next
                                 <ChevronRight className="h-4 w-4" />

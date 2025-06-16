@@ -23,7 +23,7 @@ class SubjectController extends Controller
         $subjects = Subject::where(function ($query) use ($search) {
                             $query->where('name', 'LIKE', "%$search%")
                                 ->orWhere('code', 'LIKE', "%$search%");
-                        })->where('is_gen_ed', 'LIKE', "%$isGenEdFilter%")
+                        })->where('is_gen_ed', "LIKE", "%$isGenEdFilter%")
                         ->orderBy('name')
                         ->paginate($perPage, ['*'], 'page', $page);
 

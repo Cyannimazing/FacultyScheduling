@@ -8,62 +8,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import AppLayout from '@/layouts/app-layout';
-import { Head } from '@inertiajs/react';
+import { Head, router, usePage } from '@inertiajs/react';
 import { BookOpen, Calendar, ChevronLeft, ChevronRight, Code, Edit, MoreHorizontal, Plus, Search, Trash2 } from 'lucide-react';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 
 const breadcrumbs = [
     {
         title: 'Program',
         href: '/program',
-    },
-];
-
-const sampleData = [
-    {
-        id: 1,
-        unique_code: 'PROG001',
-        name: 'Computer Science',
-        description: 'Bachelor of Science in Computer Science',
-        year_length: 4,
-        created_at: '2025-06-10 09:00',
-        updated_at: '2025-06-11 14:30',
-    },
-    {
-        id: 2,
-        unique_code: 'PROG002',
-        name: 'Information Technology',
-        description: 'Bachelor of Science in Information Technology',
-        year_length: 4,
-        created_at: '2025-06-09 11:00',
-        updated_at: '2025-06-12 10:15',
-    },
-    {
-        id: 3,
-        unique_code: 'PROG003',
-        name: 'Data Science',
-        description: 'Master of Science in Data Science',
-        year_length: 2,
-        created_at: '2025-06-08 13:00',
-        updated_at: '2025-06-11 16:45',
-    },
-    {
-        id: 4,
-        unique_code: 'PROG004',
-        name: 'Cybersecurity',
-        description: 'Bachelor of Science in Cybersecurity',
-        year_length: 4,
-        created_at: '2025-06-07 15:30',
-        updated_at: '2025-06-10 09:20',
-    },
-    {
-        id: 5,
-        unique_code: 'PROG005',
-        name: 'Software Engineering',
-        description: 'Bachelor of Engineering in Software Engineering',
-        year_length: 4,
-        created_at: '2025-06-06 10:45',
-        updated_at: '2025-06-09 16:15',
     },
 ];
 
@@ -86,27 +38,27 @@ function LoadingSkeleton() {
 
 function ProgramDialog({ isOpen, onClose, program = null, onSave }) {
     const [formData, setFormData] = useState({
-        unique_code: '',
+        code: '',
         name: '',
         description: '',
-        year_length: '',
+        number_of_year: '',
     });
 
     React.useEffect(() => {
         if (program) {
             setFormData({
-                unique_code: program.unique_code || '',
+                code: program.code || '',
                 name: program.name || '',
                 description: program.description || '',
-                year_length: program.year_length || '',
+                number_of_year: program.number_of_year || '',
             });
         } else {
-            setFormData({ unique_code: '', name: '', description: '', year_length: '' });
+            setFormData({ code: '', name: '', description: '', number_of_year: '' });
         }
     }, [program]);
 
     const handleSave = () => {
-        if (formData.unique_code && formData.name && formData.description && formData.year_length) {
+        if (formData.code && formData.name && formData.description && formData.number_of_year) {
             onSave(formData);
             onClose();
         }
@@ -126,8 +78,8 @@ function ProgramDialog({ isOpen, onClose, program = null, onSave }) {
                         </label>
                         <Input
                             id="code"
-                            value={formData.unique_code}
-                            onChange={(e) => setFormData({ ...formData, unique_code: e.target.value })}
+                            value={formData.code}
+                            onChange={(e) => setFormData({ ...formData, code: e.target.value })}
                             className="col-span-3"
                             placeholder="PROG001"
                         />
@@ -157,12 +109,12 @@ function ProgramDialog({ isOpen, onClose, program = null, onSave }) {
                         />
                     </div>
                     <div className="grid grid-cols-4 items-center gap-4">
-                        <label htmlFor="year_length" className="text-right text-sm font-medium">
+                        <label htmlFor="number_of_year" className="text-right text-sm font-medium">
                             Program Length
                         </label>
                         <Select
-                            value={formData.year_length.toString()}
-                            onValueChange={(value) => setFormData({ ...formData, year_length: parseInt(value) })}
+                            value={formData.number_of_year.toString()}
+                            onValueChange={(value) => setFormData({ ...formData, number_of_year: parseInt(value) })}
                         >
                             <SelectTrigger className="col-span-3">
                                 <SelectValue placeholder="Select program length" />
@@ -180,7 +132,7 @@ function ProgramDialog({ isOpen, onClose, program = null, onSave }) {
                     <Button variant="outline" onClick={onClose}>
                         Cancel
                     </Button>
-                    <Button onClick={handleSave} disabled={!formData.unique_code || !formData.name || !formData.description || !formData.year_length}>
+                    <Button onClick={handleSave} disabled={!formData.code || !formData.name || !formData.description || !formData.number_of_year}>
                         {program ? 'Update' : 'Create'} Program
                     </Button>
                 </DialogFooter>
@@ -190,37 +142,53 @@ function ProgramDialog({ isOpen, onClose, program = null, onSave }) {
 }
 
 export default function Program() {
-    const [currentPage, setCurrentPage] = useState(1);
+    const { data } = usePage().props
     const [isLoading, setIsLoading] = useState(false);
-    const [searchTerm, setSearchTerm] = useState('');
-    const [statusFilter, setStatusFilter] = useState('all');
+    const [statusFilter] = useState('all')
+    const [searchProgram, setSearchProgram] = useState('');
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [editingProgram, setEditingProgram] = useState(null);
-    const [programsData, setProgramsData] = useState(sampleData);
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [programToDelete, setProgramToDelete] = useState(null);
     const [isDeleting, setIsDeleting] = useState(false);
 
-    const itemsPerPage = 5;
+    const itemsPerPage = data.programs.per_page;
 
-    const filteredData = programsData.filter((program) => {
-        const matchesSearch =
-            program.name.toLowerCase().includes(searchTerm.toLowerCase()) || program.unique_code.toLowerCase().includes(searchTerm.toLowerCase());
-        const matchesStatus = statusFilter === 'all' || program.status === statusFilter;
-        return matchesSearch && matchesStatus;
-    });
+    const totalPages = data.programs.last_page
+    const paginatedData = data.programs.data
+    console.log(paginatedData)
 
-    const totalPages = Math.ceil(filteredData.length / itemsPerPage);
-    const paginatedData = filteredData.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+    useEffect(()=>{
+        if(searchProgram){
+            handleSearch()
+        }else{
+            setSearchProgram('')
+            handleSearch()
+        }
+    }, [searchProgram])
 
     const handlePageChange = (page) => {
-        if (page > 0 && page <= totalPages) {
-            setIsLoading(true);
-            setTimeout(() => {
-                setCurrentPage(page);
-                setIsLoading(false);
-            }, 800);
-        }
+        setIsLoading(true);
+        router.get(
+            '/program',
+            { search: searchProgram, page: page },
+            {
+                preserveState: true,
+                onFinish: () => setIsLoading(false),
+            },
+        );
+    };
+
+    const handleSearch = () => {
+        setIsLoading(true);
+        router.get(
+            '/program?page=1',
+            { search: searchProgram, page: 1 },
+            {
+                preserveState: true,
+                onFinish: () => setIsLoading(false),
+            },
+        );
     };
 
     const handleAddProgram = () => {
@@ -235,29 +203,17 @@ export default function Program() {
 
     const handleSaveProgram = (formData) => {
         if (editingProgram) {
-            setProgramsData((prevData) =>
-                prevData.map((program) =>
-                    program.id === editingProgram.id
-                        ? {
-                              ...program,
-                              ...formData,
-                              updated_at: new Date().toISOString().slice(0, 19).replace('T', ' '),
-                          }
-                        : program,
-                ),
-            );
+            router.put(`/program/${editingProgram.id}`, formData, {
+                onSuccess: () => {
+                    setIsDialogOpen(false);
+                },
+            });
         } else {
-            const newProgram = {
-                id: Math.max(...programsData.map((p) => p.id), 0) + 1,
-                ...formData,
-                created_at: new Date().toISOString().slice(0, 19).replace('T', ' '),
-                updated_at: new Date().toISOString().slice(0, 19).replace('T', ' '),
-            };
-            setProgramsData((prevData) => [...prevData, newProgram]);
-        }
-
-        if (!editingProgram) {
-            setCurrentPage(1);
+            router.post('/program', formData, {
+                onSuccess: () => {
+                    setIsDialogOpen(false);
+                },
+            });
         }
     };
 
@@ -269,31 +225,15 @@ export default function Program() {
     const confirmDeleteProgram = () => {
         if (programToDelete) {
             setIsDeleting(true);
-            // Simulate API call delay
-            setTimeout(() => {
-                setProgramsData((prevData) => prevData.filter((program) => program.id !== programToDelete.id));
-
-                // Adjust pagination if needed
-                const newFilteredData = programsData
-                    .filter((program) => program.id !== programToDelete.id)
-                    .filter((program) => {
-                        const matchesSearch =
-                            program.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                            program.unique_code.toLowerCase().includes(searchTerm.toLowerCase());
-                        const matchesStatus = statusFilter === 'all' || program.status === statusFilter;
-                        return matchesSearch && matchesStatus;
-                    });
-                const newTotalPages = Math.ceil(newFilteredData.length / itemsPerPage);
-
-                if (currentPage > newTotalPages && newTotalPages > 0) {
-                    setCurrentPage(newTotalPages);
-                } else if (newFilteredData.length === 0) {
-                    setCurrentPage(1);
-                }
-
-                setDeleteDialogOpen(false);
-                setIsDeleting(false);
-            }, 800);
+            router.delete(`/program/${programToDelete.id}`, {
+                onSuccess: () => {
+                    setDeleteDialogOpen(false);
+                    setIsDeleting(false);
+                },
+                onError: () => {
+                    setIsDeleting(false);
+                },
+            });
         }
     };
 
@@ -329,13 +269,13 @@ export default function Program() {
                                 <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
                                 <Input
                                     placeholder="Search programs..."
-                                    value={searchTerm}
-                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                    value={searchProgram}
+                                    onChange={(e) => setSearchProgram(e.target.value)}
                                     className="pl-9"
                                 />
                             </div>
                             <div className="text-muted-foreground text-sm">
-                                Showing {paginatedData.length} of {filteredData.length} programs
+                                Showing {paginatedData.length} of {data.programs.total} programs
                             </div>
                         </div>
                     </CardHeader>
@@ -355,12 +295,12 @@ export default function Program() {
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
-                                        {paginatedData.map((program) => (
+                                        {data.programs.data.map((program) => (
                                             <TableRow key={program.id} className="hover:bg-muted/50">
                                                 <TableCell>
                                                     <div className="flex items-center gap-2">
                                                         <Code className="text-muted-foreground h-4 w-4" />
-                                                        <span className="font-mono text-sm font-medium">{program.unique_code}</span>
+                                                        <span className="font-mono text-sm font-medium">{program.code}</span>
                                                     </div>
                                                 </TableCell>
                                                 <TableCell>
@@ -374,7 +314,7 @@ export default function Program() {
                                                         variant="outline"
                                                         className="bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"
                                                     >
-                                                        {program.year_length} {program.year_length === 1 ? 'Year' : 'Years'}
+                                                        {program.number_of_year} {program.number_of_year === 1 ? 'Year' : 'Years'}
                                                     </Badge>
                                                 </TableCell>
                                                 <TableCell className="text-center">
@@ -413,11 +353,11 @@ export default function Program() {
                                 <BookOpen className="text-muted-foreground mb-4 h-12 w-12" />
                                 <h3 className="mb-2 text-lg font-semibold">No programs found</h3>
                                 <p className="text-muted-foreground mb-4">
-                                    {searchTerm || statusFilter !== 'all'
+                                    {searchProgram || statusFilter !== 'all'
                                         ? 'Try adjusting your search or filter criteria.'
                                         : 'Get started by creating your first academic program.'}
                                 </p>
-                                {!searchTerm && statusFilter === 'all' && (
+                                {!searchProgram && statusFilter === 'all' && (
                                     <Button onClick={handleAddProgram}>
                                         <Plus className="mr-2 h-4 w-4" />
                                         Add Your First Program
@@ -428,21 +368,21 @@ export default function Program() {
                     </CardContent>
                 </Card>
 
-                {!isLoading && filteredData.length > itemsPerPage && (
+                {!isLoading && data.programs.total > itemsPerPage && (
                     <div className="flex items-center justify-between">
                         <div className="text-muted-foreground text-sm">
-                            Page {currentPage} of {totalPages}
+                            Page {data.programs.current_page} of {totalPages}
                         </div>
                         <div className="flex items-center space-x-2">
-                            <Button variant="outline" size="sm" onClick={() => handlePageChange(currentPage - 1)} disabled={currentPage === 1}>
+                            <Button variant="outline" size="sm" onClick={() => handlePageChange(data.programs.current_page - 1)} disabled={data.programs.current_page === 1}>
                                 <ChevronLeft className="h-4 w-4" />
                                 Previous
                             </Button>
                             <Button
                                 variant="outline"
                                 size="sm"
-                                onClick={() => handlePageChange(currentPage + 1)}
-                                disabled={currentPage === totalPages}
+                                onClick={() => handlePageChange(data.programs.current_page + 1)}
+                                disabled={data.programs.current_page === totalPages}
                             >
                                 Next
                                 <ChevronRight className="h-4 w-4" />
@@ -459,7 +399,7 @@ export default function Program() {
                     <DialogHeader>
                         <DialogTitle>Delete Program</DialogTitle>
                         <DialogDescription>
-                            Are you sure you want to delete "{programToDelete?.name}" ({programToDelete?.unique_code})? This action cannot be undone.
+                            Are you sure you want to delete "{programToDelete?.name}" ({programToDelete?.code})? This action cannot be undone.
                         </DialogDescription>
                     </DialogHeader>
                     <DialogFooter>

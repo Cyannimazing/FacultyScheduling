@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import AppLayout from '@/layouts/app-layout';
-import { Head } from '@inertiajs/react';
+import { Head, router, usePage } from '@inertiajs/react';
 import {
     CalendarDays,
     Calendar as CalendarIcon,
@@ -22,7 +22,7 @@ import {
     Search,
     Trash2,
 } from 'lucide-react';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 
 const breadcrumbs = [
     {
@@ -31,37 +31,8 @@ const breadcrumbs = [
     },
 ];
 
-const initialData = [
-    {
-        id: 1,
-        term: '1st Term',
-        school_year: '2024-2025',
-        start_date: '2024-08-15',
-        end_date: '2024-12-15',
-        created_at: '2024-07-01 09:00',
-        updated_at: '2024-07-02 14:30',
-    },
-    {
-        id: 2,
-        term: '2nd Term',
-        school_year: '2024-2025',
-        start_date: '2025-01-08',
-        end_date: '2025-05-15',
-        created_at: '2024-07-01 09:30',
-        updated_at: '2024-07-03 10:15',
-    },
-    {
-        id: 3,
-        term: '1st Term',
-        school_year: '2025-2026',
-        start_date: '2025-08-20',
-        end_date: '2025-12-20',
-        created_at: '2025-06-01 11:00',
-        updated_at: '2025-06-02 16:45',
-    },
-];
 
-const termOptions = ['1st Term', '2nd Term', '3rd Term'];
+var termOptions = [];
 
 function LoadingSkeleton() {
     return (
@@ -81,8 +52,10 @@ function LoadingSkeleton() {
 }
 
 function CalendarDialog({ isOpen, onClose, calendar = null, onSave }) {
+
     const [formData, setFormData] = useState({
-        term: '',
+        term_id: '',
+        term_name: '',
         school_year: '',
         start_date: '',
         end_date: '',
@@ -91,18 +64,19 @@ function CalendarDialog({ isOpen, onClose, calendar = null, onSave }) {
     React.useEffect(() => {
         if (calendar) {
             setFormData({
-                term: calendar.term || '',
+                term_id: calendar.term_id || '',
+                term_name: calendar.term.name || '',
                 school_year: calendar.school_year || '',
                 start_date: calendar.start_date || '',
                 end_date: calendar.end_date || '',
             });
         } else {
-            setFormData({ term: '', school_year: '', start_date: '', end_date: '' });
+            setFormData({ term_id:'', term_name: '', school_year: '', start_date: '', end_date: '' });
         }
     }, [calendar]);
 
     const handleSave = () => {
-        if (formData.term && formData.school_year && formData.start_date && formData.end_date) {
+        if (formData.term_id && formData.school_year && formData.start_date && formData.end_date) {
             onSave(formData);
         }
     };
@@ -127,14 +101,14 @@ function CalendarDialog({ isOpen, onClose, calendar = null, onSave }) {
                         <label htmlFor="term" className="text-right text-sm font-medium">
                             Term
                         </label>
-                        <Select value={formData.term} onValueChange={(value) => setFormData({ ...formData, term: value })}>
+                        <Select value={formData.term} onValueChange={(value) => setFormData({ ...formData, term_id: value })}>
                             <SelectTrigger className="col-span-3">
                                 <SelectValue placeholder="Select a term" />
                             </SelectTrigger>
                             <SelectContent>
                                 {termOptions.map((term) => (
-                                    <SelectItem key={term} value={term}>
-                                        {term}
+                                    <SelectItem key={term.id} value={term.id}>
+                                        {term.name}
                                     </SelectItem>
                                 ))}
                             </SelectContent>
@@ -186,7 +160,7 @@ function CalendarDialog({ isOpen, onClose, calendar = null, onSave }) {
                     <Button variant="outline" onClick={onClose}>
                         Cancel
                     </Button>
-                    <Button onClick={handleSave} disabled={!formData.term || !formData.school_year || !formData.start_date || !formData.end_date}>
+                    <Button onClick={handleSave} disabled={!formData.term_id || !formData.school_year || !formData.start_date || !formData.end_date}>
                         {calendar ? 'Update' : 'Create'} Calendar
                     </Button>
                 </DialogFooter>
@@ -196,17 +170,16 @@ function CalendarDialog({ isOpen, onClose, calendar = null, onSave }) {
 }
 
 export default function Calendar() {
-    const [currentPage, setCurrentPage] = useState(1);
+    const { data } = usePage().props
     const [isLoading, setIsLoading] = useState(false);
-    const [searchTerm, setSearchTerm] = useState('');
+    const [seachCalendar, setSearchCalendar] = useState('');
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [editingCalendar, setEditingCalendar] = useState(null);
-    const [calendarsData, setCalendarsData] = useState(initialData);
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [calendarToDelete, setCalendarToDelete] = useState(null);
     const [isDeleting, setIsDeleting] = useState(false);
-
-    const itemsPerPage = 5;
+    termOptions = data.terms
+    const itemsPerPage = data.academicCalendars.per_page;
 
     const getDateRangeStatus = (startDate, endDate) => {
         const today = new Date();
@@ -222,48 +195,40 @@ export default function Calendar() {
         }
     };
 
-    const filteredData = calendarsData.filter((calendar) => {
-        return calendar.term.toLowerCase().includes(searchTerm.toLowerCase()) || calendar.school_year.includes(searchTerm);
-    });
-
-    const sortedData = filteredData.sort((a, b) => {
-        const statusA = getDateRangeStatus(a.start_date, a.end_date);
-        const statusB = getDateRangeStatus(b.start_date, b.end_date);
-
-        const statusPriority = {
-            active: 1,
-            upcoming: 2,
-            completed: 3,
-        };
-
-        const priorityA = statusPriority[statusA.status];
-        const priorityB = statusPriority[statusB.status];
-
-        if (priorityA !== priorityB) {
-            return priorityA - priorityB;
-        }
-
-        const dateA = new Date(a.start_date);
-        const dateB = new Date(b.start_date);
-
-        if (statusA.status === 'completed') {
-            return dateB - dateA;
-        } else {
-            return dateA - dateB;
-        }
-    });
-
-    const totalPages = Math.ceil(sortedData.length / itemsPerPage);
-    const paginatedData = sortedData.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+    const totalPages = data.academicCalendars.last_page;
+    const paginatedData = data.academicCalendars.data;
 
     const handlePageChange = (page) => {
-        if (page > 0 && page <= totalPages) {
-            setIsLoading(true);
-            setTimeout(() => {
-                setCurrentPage(page);
-                setIsLoading(false);
-            }, 800);
+        setIsLoading(true);
+        router.get(
+            '/calendar',
+            { search: seachCalendar, page: page },
+            {
+                preserveState: true,
+                onFinish: () => setIsLoading(false),
+            },
+        );
+    };
+
+    useEffect(()=>{
+        if(seachCalendar){
+            handleSearch()
+        }else{
+            setSearchCalendar('')
+            handleSearch()
         }
+    }, [seachCalendar])
+
+    const handleSearch = () => {
+        setIsLoading(true);
+        router.get(
+            '/calendar?page=1',
+            { search: seachCalendar, page: 1 },
+            {
+                preserveState: true,
+                onFinish: () => setIsLoading(false),
+            },
+        );
     };
 
     const handleAddCalendar = () => {
@@ -278,27 +243,18 @@ export default function Calendar() {
 
     const handleSaveCalendar = (formData) => {
         if (editingCalendar) {
-            setCalendarsData((prevData) =>
-                prevData.map((calendar) =>
-                    calendar.id === editingCalendar.id
-                        ? {
-                              ...calendar,
-                              ...formData,
-                              updated_at: new Date().toISOString().slice(0, 19).replace('T', ' '),
-                          }
-                        : calendar,
-                ),
-            );
+            router.put(`/calendar/${editingCalendar.id}`, formData, {
+                onSuccess: () => {
+                    setIsDialogOpen(false);
+                },
+            });
         } else {
-            const newCalendar = {
-                id: Math.max(...calendarsData.map((c) => c.id), 0) + 1,
-                ...formData,
-                created_at: new Date().toISOString().slice(0, 19).replace('T', ' '),
-                updated_at: new Date().toISOString().slice(0, 19).replace('T', ' '),
-            };
-            setCalendarsData((prevData) => [...prevData, newCalendar]);
+            router.post('/calendar', formData, {
+                onSuccess: () => {
+                    setIsDialogOpen(false);
+                },
+            });
         }
-        setIsDialogOpen(false);
     };
 
     const handleDeleteCalendar = (calendar) => {
@@ -309,27 +265,15 @@ export default function Calendar() {
     const confirmDeleteCalendar = () => {
         if (calendarToDelete) {
             setIsDeleting(true);
-            // Simulate API call delay
-            setTimeout(() => {
-                setCalendarsData((prevData) => prevData.filter((calendar) => calendar.id !== calendarToDelete.id));
-
-                // Adjust pagination if needed
-                const newFilteredData = calendarsData
-                    .filter((calendar) => calendar.id !== calendarToDelete.id)
-                    .filter(
-                        (calendar) => calendar.term.toLowerCase().includes(searchTerm.toLowerCase()) || calendar.school_year.includes(searchTerm),
-                    );
-                const newTotalPages = Math.ceil(newFilteredData.length / itemsPerPage);
-
-                if (currentPage > newTotalPages && newTotalPages > 0) {
-                    setCurrentPage(newTotalPages);
-                } else if (newFilteredData.length === 0) {
-                    setCurrentPage(1);
-                }
-
-                setDeleteDialogOpen(false);
-                setIsDeleting(false);
-            }, 800);
+            router.delete(`/calendar/${calendarToDelete.id}`, {
+                onSuccess: () => {
+                    setDeleteDialogOpen(false);
+                    setIsDeleting(false);
+                },
+                onError: () => {
+                    setIsDeleting(false);
+                },
+            });
         }
     };
 
@@ -373,13 +317,13 @@ export default function Calendar() {
                                 <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
                                 <Input
                                     placeholder="Search calendars..."
-                                    value={searchTerm}
-                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                    value={seachCalendar}
+                                    onChange={(e) => setSearchCalendar(e.target.value)}
                                     className="pl-9"
                                 />
                             </div>
                             <div className="text-muted-foreground text-sm">
-                                Showing {paginatedData.length} of {sortedData.length} calendars
+                                Showing {paginatedData.length} of {data.academicCalendars.total} calendars
                             </div>
                         </div>
                     </CardHeader>
@@ -411,7 +355,7 @@ export default function Calendar() {
                                                         <div className="space-y-1">
                                                             <div className="flex items-center gap-2">
                                                                 <GraduationCap className="text-muted-foreground h-4 w-4" />
-                                                                <span className="font-medium">{calendar.term}</span>
+                                                                <span className="font-medium">{calendar.term.name}</span>
                                                             </div>
                                                             <div className="text-muted-foreground text-sm">{calendar.school_year}</div>
                                                         </div>
@@ -479,9 +423,9 @@ export default function Calendar() {
                                 <CalendarIcon className="text-muted-foreground mb-4 h-12 w-12" />
                                 <h3 className="mb-2 text-lg font-semibold">No calendars found</h3>
                                 <p className="text-muted-foreground mb-4">
-                                    {searchTerm ? 'Try adjusting your search criteria.' : 'Get started by creating your first academic calendar.'}
+                                    {seachCalendar ? 'Try adjusting your search criteria.' : 'Get started by creating your first academic calendar.'}
                                 </p>
-                                {!searchTerm && (
+                                {!seachCalendar && (
                                     <Button onClick={handleAddCalendar}>
                                         <Plus className="mr-2 h-4 w-4" />
                                         Add Your First Calendar
@@ -495,18 +439,18 @@ export default function Calendar() {
                 {!isLoading && paginatedData.length > 0 && totalPages > 1 && (
                     <div className="flex items-center justify-between">
                         <div className="text-muted-foreground text-sm">
-                            Page {currentPage} of {totalPages}
+                            Page {data.academicCalendars.current_page} of {totalPages}
                         </div>
                         <div className="flex items-center space-x-2">
-                            <Button variant="outline" size="sm" onClick={() => handlePageChange(currentPage - 1)} disabled={currentPage === 1}>
+                            <Button variant="outline" size="sm" onClick={() => handlePageChange(data.academicCalendars.current_page - 1)} disabled={data.academicCalendars.current_page === 1}>
                                 <ChevronLeft className="h-4 w-4" />
                                 Previous
                             </Button>
                             <Button
                                 variant="outline"
                                 size="sm"
-                                onClick={() => handlePageChange(currentPage + 1)}
-                                disabled={currentPage === totalPages}
+                                onClick={() => handlePageChange(data.academicCalendars.current_page + 1)}
+                                disabled={data.academicCalendars.current_page === totalPages}
                             >
                                 Next
                                 <ChevronRight className="h-4 w-4" />
@@ -523,7 +467,7 @@ export default function Calendar() {
                     <DialogHeader>
                         <DialogTitle>Delete Calendar</DialogTitle>
                         <DialogDescription>
-                            Are you sure you want to delete "{calendarToDelete?.term} - {calendarToDelete?.school_year}"? This action cannot be
+                            Are you sure you want to delete "{calendarToDelete?.term.name} - {calendarToDelete?.school_year}"? This action cannot be
                             undone.
                         </DialogDescription>
                     </DialogHeader>

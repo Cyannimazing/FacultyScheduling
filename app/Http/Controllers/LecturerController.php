@@ -20,11 +20,13 @@ class LecturerController extends Controller
         $perPage = 5;
 
         $lecturers = Lecturer::whereRaw("CONCAT(title, ' ', fname, ' ', lname) LIKE ?", ["%$search%"])
-                        ->orderBy('name')
+                        ->orderBy('fname')
                         ->paginate($perPage, ['*'], 'page', $page);
 
         return Inertia::render('application/lecturer', [
-            'lecturers' => $lecturers,
+            'data' => [
+                'lecturers' => $lecturers,
+            ]
         ]);
     }
 

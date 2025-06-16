@@ -29,7 +29,7 @@ class GroupController extends Controller
                     ->orderBy('name')
                     ->paginate($perPage, ['*'], 'page', $page);
 
-        $programs = Program::select(['code', 'name'])->orderBy('name')->get();
+        $programs = Program::select(['*'])->orderBy('name')->get();
 
         return Inertia::render('application/class', [
             'data' => [

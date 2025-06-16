@@ -214,7 +214,7 @@ export default function Index() {
                                 <Input placeholder="Search terms..." value={searchTerm} onChange={handleSearch} className="pl-9" />
                             </div>
                             <div className="text-muted-foreground text-sm">
-                                Showing {data.terms.length} of {data.terms.total} terms
+                                Showing {data.terms.data.length} of {data.terms.total} terms
                             </div>
                         </div>
                     </CardHeader>

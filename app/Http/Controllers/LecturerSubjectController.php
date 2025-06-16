@@ -19,17 +19,16 @@ class LecturerSubjectController extends Controller
         $page = $request->input('page', 1);
         $perPage = 5;
 
-        $lecturerSubjects = LecturerSubject::with(['lecturer', 'subject'])
+        $lecturerSubjects = LecturerSubject::with(['lecturer', 'programSubject'])
                                           ->whereHas('lecturer', function($query) use ($search) {
                                               $query->where('name', 'LIKE', "%$search%");
                                           })
-                                          ->orWhereHas('subject', function($query) use ($search) {
+                                          ->orWhereHas('programSubject', function($query) use ($search) {
                                               $query->where('name', 'LIKE', "%$search%");
                                           })
-                                          ->orderBy('id')
                                           ->paginate($perPage, ['*'], 'page', $page);
 
-        return Inertia::render('application/lecturer-subject', [
+        return Inertia::render('application/subject-allocation', [
             'lecturerSubjects' => $lecturerSubjects,
         ]);
     }
@@ -43,7 +42,7 @@ class LecturerSubjectController extends Controller
 
         LecturerSubject::create($validated);
 
-        return redirect()->route('lecturer-subject')->with('success', 'Lecturer Subject created successfully.');
+        return redirect()->route('subject-allocation')->with('success', 'Lecturer Subject created successfully.');
     }
 
     /**
@@ -52,7 +51,7 @@ class LecturerSubjectController extends Controller
     public function show(int $id)
     {
         $lecturerSubject = LecturerSubject::findOrFail($id);
-        return Inertia::render('application/lecturer-subject', [
+        return Inertia::render('application/subject-allocation', [
             'lecturerSubject' => $lecturerSubject
         ]);
     }
@@ -69,7 +68,7 @@ class LecturerSubjectController extends Controller
                 'subject_id' => $request->subject_id
             ]);
         }
-        return redirect()->route('lecturer-subject')->with('success', 'Lecturer Subject updated successfully.');
+        return redirect()->route('subject-allocation')->with('success', 'Lecturer Subject updated successfully.');
     }
 
     /**
@@ -79,6 +78,6 @@ class LecturerSubjectController extends Controller
     {
         $lecturerSubject->delete();
 
-        return redirect()->route('lecturer-subject')->with('success', 'Lecturer Subject deleted successfully.');
+        return redirect()->route('subject-allocation')->with('success', 'Lecturer Subject deleted successfully.');
     }
 }

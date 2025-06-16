@@ -24,7 +24,7 @@ class StoreProgramRequest extends FormRequest
         return [
             'code' => 'required|string|max:255|unique:programs,code',
             'name' => 'required|string|max:255',
-            'description' => 'nullable|string',
+            'description' => 'required|string',
             'number_of_year' => 'required|integer|min:1|max:10',
         ];
     }

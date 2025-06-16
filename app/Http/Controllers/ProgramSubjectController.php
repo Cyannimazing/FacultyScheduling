@@ -29,7 +29,7 @@ class ProgramSubjectController extends Controller
                                          ->orderBy('id')
                                          ->paginate($perPage, ['*'], 'page', $page);
 
-        return Inertia::render('application/program-subject', [
+        return Inertia::render('application/course-assignment', [
             'programSubjects' => $programSubjects,
         ]);
     }
@@ -43,7 +43,7 @@ class ProgramSubjectController extends Controller
 
         ProgramSubject::create($validated);
 
-        return redirect()->route('program-subject')->with('success', 'Program Subject created successfully.');
+        return redirect()->route('course-assignment')->with('success', 'Program Subject created successfully.');
     }
 
     /**
@@ -52,7 +52,7 @@ class ProgramSubjectController extends Controller
     public function show(int $id)
     {
         $programSubject = ProgramSubject::findOrFail($id);
-        return Inertia::render('application/program-subject', [
+        return Inertia::render('application/course-assignment', [
             'programSubject' => $programSubject
         ]);
     }
@@ -69,7 +69,7 @@ class ProgramSubjectController extends Controller
                 'subject_id' => $request->subject_id
             ]);
         }
-        return redirect()->route('program-subject')->with('success', 'Program Subject updated successfully.');
+        return redirect()->route('course-assignment')->with('success', 'Program Subject updated successfully.');
     }
 
     /**
@@ -79,6 +79,6 @@ class ProgramSubjectController extends Controller
     {
         $programSubject->delete();
 
-        return redirect()->route('program-subject')->with('success', 'Program Subject deleted successfully.');
+        return redirect()->route('course-assignment')->with('success', 'Program Subject deleted successfully.');
     }
 }
