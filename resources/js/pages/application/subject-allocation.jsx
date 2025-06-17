@@ -48,13 +48,23 @@ function LoadingSkeleton() {
     );
 }
 
-function SubjectAllocationSheet({ isOpen, onClose, allocation = null, onSave, existingAllocations = [], lecturers = [], programs = [], academicCalendars = [] }) {
+function SubjectAllocationSheet({
+    isOpen,
+    onClose,
+    allocation = null,
+    onSave,
+    existingAllocations = [],
+    lecturers = [],
+    programs = [],
+    academicCalendars = [],
+}) {
     const [formData, setFormData] = useState({
         lecturer_id: '',
         prog_subj_id: '',
         sy_term_id: '',
         program_code: '',
-        class_id: '',
+        year_level: '',
+        term_id: '',
     });
     const [validationError, setValidationError] = useState('');
     const [availableSubjects, setAvailableSubjects] = useState([]);
@@ -62,7 +72,7 @@ function SubjectAllocationSheet({ isOpen, onClose, allocation = null, onSave, ex
     const [availableClasses, setAvailableClasses] = useState([]);
     const [isLoadingSubjects, setIsLoadingSubjects] = useState(false);
     const [isLoadingCalendars, setIsLoadingCalendars] = useState(false);
-    const [isLoadingClasses, setIsLoadingClasses] = useState(false);
+    const [availableTerms, setAvailableTerms] = useState([]);
 
     React.useEffect(() => {
         if (allocation) {
@@ -72,28 +82,30 @@ function SubjectAllocationSheet({ isOpen, onClose, allocation = null, onSave, ex
                 prog_subj_id: allocation.prog_subj_id?.toString() || '',
                 sy_term_id: allocation.sy_term_id?.toString() || '',
                 program_code: programCode,
+                year_level: allocation.program_subject?.year_level?.toString() || '',
+                term_id: allocation.program_subject?.term_id?.toString() || '',
             });
 
             // Load subjects for the program if editing
             if (programCode) {
                 setIsLoadingSubjects(true);
                 fetch(`/api/subjects-by-program/${programCode}`)
-                    .then(response => response.json())
-                    .then(programSubjects => {
+                    .then((response) => response.json())
+                    .then((programSubjects) => {
                         setAvailableSubjects(programSubjects);
 
                         // Load academic calendars if we have a selected subject
                         const currentProgSubjId = allocation.prog_subj_id?.toString();
                         if (currentProgSubjId) {
-                            const selectedSubject = programSubjects.find(ps => ps.id.toString() === currentProgSubjId);
+                            const selectedSubject = programSubjects.find((ps) => ps.id.toString() === currentProgSubjId);
                             if (selectedSubject && selectedSubject.term_id) {
                                 setIsLoadingCalendars(true);
                                 fetch(`/api/academic-calendars-by-term/${selectedSubject.term_id}`)
-                                    .then(response => response.json())
-                                    .then(filteredCalendars => {
+                                    .then((response) => response.json())
+                                    .then((filteredCalendars) => {
                                         setFilteredAcademicCalendars(filteredCalendars);
                                     })
-                                    .catch(error => {
+                                    .catch((error) => {
                                         console.error('Error fetching academic calendars:', error);
                                         setFilteredAcademicCalendars([]);
                                     })
@@ -101,7 +113,7 @@ function SubjectAllocationSheet({ isOpen, onClose, allocation = null, onSave, ex
                             }
                         }
                     })
-                    .catch(error => {
+                    .catch((error) => {
                         console.error('Error fetching subjects:', error);
                         setAvailableSubjects([]);
                     })
@@ -109,9 +121,11 @@ function SubjectAllocationSheet({ isOpen, onClose, allocation = null, onSave, ex
             }
         } else {
             setFormData({ lecturer_id: '', prog_subj_id: '', sy_term_id: '', program_code: '', class_id: '' });
+            setFormData({ lecturer_id: '', prog_subj_id: '', sy_term_id: '', program_code: '', year_level: '', term_id: '' });
             setAvailableSubjects([]);
             setAvailableClasses([]);
             setFilteredAcademicCalendars(academicCalendars);
+            setAvailableTerms([]);
         }
         setValidationError('');
     }, [allocation, academicCalendars]);
@@ -155,32 +169,47 @@ function SubjectAllocationSheet({ isOpen, onClose, allocation = null, onSave, ex
     };
 
     const handleProgramChange = async (value) => {
-        setFormData({ ...formData, program_code: value, prog_subj_id: '', sy_term_id: '' });
+        setFormData({ ...formData, program_code: value, prog_subj_id: '', sy_term_id: '', year_level: '', term_id: '' });
         setValidationError('');
         setAvailableSubjects([]);
         setFilteredAcademicCalendars(academicCalendars);
+        setAvailableTerms([]);
 
         if (value) {
             setIsLoadingSubjects(true);
-            router.get(`/api/subjects-by-program/${value}`, {}, {
-                preserveState: true,
-                preserveScroll: true,
-                only: [],
-                onSuccess: (page) => {
-                    // Inertia returns the data directly
-                    const programSubjects = page.props || [];
-                    console.log('Program Subjects loaded:', programSubjects);
-                    setAvailableSubjects(programSubjects);
-                },
-                onError: (errors) => {
-                    console.error('Error fetching subjects:', errors);
-                    setAvailableSubjects([]);
-                },
-                onFinish: () => {
-                    setIsLoadingSubjects(false);
-                }
-            });
+            try {
+                const response = await fetch(`/api/subjects-by-program/${value}`);
+                const programSubjects = await response.json();
+                setAvailableSubjects(programSubjects);
+
+                // Get unique terms from the program subjects
+                const uniqueTerms = programSubjects.reduce((acc, ps) => {
+                    if (ps.term && !acc.find((t) => t.id === ps.term.id)) {
+                        acc.push(ps.term);
+                    }
+                    return acc;
+                }, []);
+                setAvailableTerms(uniqueTerms);
+            } catch (error) {
+                console.error('Error fetching subjects:', error);
+                setAvailableSubjects([]);
+                setAvailableTerms([]);
+            } finally {
+                setIsLoadingSubjects(false);
+            }
         }
+    };
+
+    const handleYearLevelChange = async (value) => {
+        setFormData({ ...formData, year_level: value, prog_subj_id: '', sy_term_id: '' });
+        setValidationError('');
+        setFilteredAcademicCalendars([]);
+    };
+
+    const handleTermChange = async (value) => {
+        setFormData({ ...formData, term_id: value, prog_subj_id: '', sy_term_id: '' });
+        setValidationError('');
+        setFilteredAcademicCalendars([]);
     };
 
     const handleSubjectChange = async (value) => {
@@ -190,30 +219,34 @@ function SubjectAllocationSheet({ isOpen, onClose, allocation = null, onSave, ex
         setAvailableClasses([]);
 
         // Find the selected program subject to get its term_id and program code
-        const selectedSubject = availableSubjects.find(ps => ps.id === parseInt(value));
+        const selectedSubject = availableSubjects.find((ps) => ps.id === parseInt(value));
         console.log('Selected Subject:', selectedSubject);
         console.log('Current formData.program_code:', formData.program_code);
         if (selectedSubject) {
             // Load academic calendars based on term_id
             if (selectedSubject.term_id) {
                 setIsLoadingCalendars(true);
-                router.get(`/api/academic-calendars-by-term/${selectedSubject.term_id}`, {}, {
-                    preserveState: true,
-                    preserveScroll: true,
-                    only: [],
-                    onSuccess: (page) => {
-                        const filteredCalendars = page.props || [];
-                        console.log('Academic calendars loaded:', filteredCalendars);
-                        setFilteredAcademicCalendars(filteredCalendars);
+                router.get(
+                    `/api/academic-calendars-by-term/${selectedSubject.term_id}`,
+                    {},
+                    {
+                        preserveState: true,
+                        preserveScroll: true,
+                        only: [],
+                        onSuccess: (page) => {
+                            const filteredCalendars = page.props || [];
+                            console.log('Academic calendars loaded:', filteredCalendars);
+                            setFilteredAcademicCalendars(filteredCalendars);
+                        },
+                        onError: (errors) => {
+                            console.error('Error fetching academic calendars:', errors);
+                            setFilteredAcademicCalendars([]);
+                        },
+                        onFinish: () => {
+                            setIsLoadingCalendars(false);
+                        },
                     },
-                    onError: (errors) => {
-                        console.error('Error fetching academic calendars:', errors);
-                        setFilteredAcademicCalendars([]);
-                    },
-                    onFinish: () => {
-                        setIsLoadingCalendars(false);
-                    }
-                });
+                );
             }
 
             // Load classes based on program code from selected subject
@@ -221,23 +254,27 @@ function SubjectAllocationSheet({ isOpen, onClose, allocation = null, onSave, ex
             console.log('Trying to load classes for program code from subject:', programCodeFromSubject);
             if (programCodeFromSubject) {
                 setIsLoadingClasses(true);
-                router.get(`/api/classes-by-prog-code/${programCodeFromSubject}`, {}, {
-                    preserveState: true,
-                    preserveScroll: true,
-                    only: [],
-                    onSuccess: (page) => {
-                        const classes = page.props || [];
-                        console.log('Classes loaded:', classes);
-                        setAvailableClasses(classes);
+                router.get(
+                    `/api/classes-by-prog-code/${programCodeFromSubject}`,
+                    {},
+                    {
+                        preserveState: true,
+                        preserveScroll: true,
+                        only: [],
+                        onSuccess: (page) => {
+                            const classes = page.props || [];
+                            console.log('Classes loaded:', classes);
+                            setAvailableClasses(classes);
+                        },
+                        onError: (errors) => {
+                            console.error('Error fetching classes:', errors);
+                            setAvailableClasses([]);
+                        },
+                        onFinish: () => {
+                            setIsLoadingClasses(false);
+                        },
                     },
-                    onError: (errors) => {
-                        console.error('Error fetching classes:', errors);
-                        setAvailableClasses([]);
-                    },
-                    onFinish: () => {
-                        setIsLoadingClasses(false);
-                    }
-                });
+                );
             } else {
                 console.log('No program code found in selected subject');
             }
@@ -296,19 +333,87 @@ function SubjectAllocationSheet({ isOpen, onClose, allocation = null, onSave, ex
                                     <SelectValue placeholder="Select a program" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                        {programs.map((program) => (
-                                            <SelectItem key={program.code} value={program.code}>
-                                                <div className="flex items-center gap-2">
-                                                    <GraduationCap className="h-4 w-4" />
-                                                    <span>
-                                                        {program.code} - {program.name}
-                                                    </span>
-                                                </div>
-                                            </SelectItem>
-                                        ))}
+                                    {programs.map((program) => (
+                                        <SelectItem key={program.code} value={program.code}>
+                                            <div className="flex items-center gap-2">
+                                                <GraduationCap className="h-4 w-4" />
+                                                <span>
+                                                    {program.code} - {program.name}
+                                                </span>
+                                            </div>
+                                        </SelectItem>
+                                    ))}
                                 </SelectContent>
                             </Select>
                         </div>
+                        <div className="flex gap-4">
+                            <div className="w-full space-y-2">
+                                <label
+                                    htmlFor="year_level"
+                                    className="text-sm leading-none font-medium peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                                >
+                                    Year Level *
+                                </label>
+                                <Select value={formData.year_level} onValueChange={handleYearLevelChange} disabled={!formData.program_code}>
+                                    <SelectTrigger className="w-full">
+                                        <SelectValue placeholder={!formData.program_code ? 'Select a program first' : 'Select year level'} />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {formData.program_code &&
+                                            (() => {
+                                                const selectedProgram = programs.find((p) => p.code === formData.program_code);
+                                                const numberOfYears = selectedProgram?.number_of_year || 0;
+                                                return Array.from({ length: numberOfYears }, (_, i) => i + 1).map((year) => (
+                                                    <SelectItem key={year} value={year.toString()}>
+                                                        <div className="flex items-center gap-2">
+                                                            <span>
+                                                                {year}
+                                                                {year === 1 ? 'st' : year === 2 ? 'nd' : year === 3 ? 'rd' : 'th'} Year
+                                                            </span>
+                                                        </div>
+                                                    </SelectItem>
+                                                ));
+                                            })()}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+
+                            <div className="w-full space-y-2">
+                                <label
+                                    htmlFor="term_id"
+                                    className="text-sm leading-none font-medium peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                                >
+                                    Term *
+                                </label>
+                                <Select
+                                    value={formData.term_id}
+                                    onValueChange={handleTermChange}
+                                    disabled={!formData.program_code || availableTerms.length === 0}
+                                >
+                                    <SelectTrigger className="w-full">
+                                        <SelectValue
+                                            placeholder={
+                                                !formData.program_code
+                                                    ? 'Select a program first'
+                                                    : availableTerms.length === 0
+                                                      ? 'No terms available'
+                                                      : 'Select a term'
+                                            }
+                                        />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {availableTerms.map((term) => (
+                                            <SelectItem key={term.id} value={term.id.toString()}>
+                                                <div className="flex items-center gap-2">
+                                                    <span>{term.name}</span>
+                                                </div>
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        </div>
+
                         <div className="space-y-2">
                             <label
                                 htmlFor="subject_id"
@@ -319,45 +424,58 @@ function SubjectAllocationSheet({ isOpen, onClose, allocation = null, onSave, ex
                             <Select
                                 value={formData.prog_subj_id}
                                 onValueChange={handleSubjectChange}
-                                disabled={!formData.program_code || isLoadingSubjects}
+                                disabled={!formData.program_code || !formData.year_level || !formData.term_id || isLoadingSubjects}
                             >
                                 <SelectTrigger className="w-full">
                                     <SelectValue
                                         placeholder={
                                             !formData.program_code
                                                 ? 'Select a program first'
-                                                : isLoadingSubjects
-                                                ? 'Loading subjects...'
-                                                : 'Select a subject'
+                                                : !formData.year_level
+                                                  ? 'Select year level first'
+                                                  : !formData.term_id
+                                                    ? 'Select term first'
+                                                    : isLoadingSubjects
+                                                      ? 'Loading subjects...'
+                                                      : 'Select a subject'
                                         }
                                     />
                                 </SelectTrigger>
 
                                 <SelectContent className="!max-h-[250px] overflow-y-auto">
                                     {isLoadingSubjects ? (
-                                        <div className="text-muted-foreground p-2 text-center text-sm">
-                                            Loading subjects...
-                                        </div>
-                                    ) : formData.program_code && availableSubjects.length > 0 ? (
-                                        availableSubjects.map((programSubject) => {
-                                            if (!programSubject || !programSubject.subject) return null;
-                                            const subject = programSubject.subject;
-                                            return (
-                                                <SelectItem key={programSubject.id} value={programSubject.id.toString()}>
-                                                    <div className="flex items-center gap-2">
-                                                        <span className="font-medium">{subject.code} - {subject.name}</span>
-                                                        <Badge variant="outline" className="text-xs">
-                                                            {subject.unit || 0} unit{(subject.unit || 0) !== 1 ? 's' : ''}
-                                                        </Badge>
-                                                    </div>
-                                                </SelectItem>
-                                            );
-                                        })
+                                        <div className="text-muted-foreground p-2 text-center text-sm">Loading subjects...</div>
+                                    ) : formData.program_code && formData.year_level && formData.term_id && availableSubjects.length > 0 ? (
+                                        availableSubjects
+                                            .filter(
+                                                (ps) =>
+                                                    ps.year_level.toString() === formData.year_level && ps.term_id.toString() === formData.term_id,
+                                            )
+                                            .map((programSubject) => {
+                                                if (!programSubject || !programSubject.subject) return null;
+                                                const subject = programSubject.subject;
+                                                return (
+                                                    <SelectItem key={programSubject.id} value={programSubject.id.toString()}>
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="font-medium">
+                                                                {subject.code} - {subject.name}
+                                                            </span>
+                                                            <Badge variant="outline" className="text-xs">
+                                                                {subject.unit || 0} unit{(subject.unit || 0) !== 1 ? 's' : ''}
+                                                            </Badge>
+                                                        </div>
+                                                    </SelectItem>
+                                                );
+                                            })
                                     ) : (
                                         <div className="text-muted-foreground p-2 text-center text-sm">
                                             {!formData.program_code
                                                 ? 'Select a program first'
-                                                : 'No available subjects for this program'}
+                                                : !formData.year_level
+                                                  ? 'Select year level first'
+                                                  : !formData.term_id
+                                                    ? 'Select term first'
+                                                    : 'No available subjects for this combination'}
                                         </div>
                                     )}
                                 </SelectContent>
@@ -382,16 +500,14 @@ function SubjectAllocationSheet({ isOpen, onClose, allocation = null, onSave, ex
                                             !formData.prog_subj_id
                                                 ? 'Select a subject first'
                                                 : isLoadingCalendars
-                                                ? 'Loading terms...'
-                                                : 'Select a term'
+                                                  ? 'Loading terms...'
+                                                  : 'Select a term'
                                         }
                                     />
                                 </SelectTrigger>
                                 <SelectContent>
                                     {isLoadingCalendars ? (
-                                        <div className="text-muted-foreground p-2 text-center text-sm">
-                                            Loading terms...
-                                        </div>
+                                        <div className="text-muted-foreground p-2 text-center text-sm">Loading terms...</div>
                                     ) : filteredAcademicCalendars.length > 0 ? (
                                         filteredAcademicCalendars.map((calendar) => {
                                             const term = calendar.term;
@@ -408,9 +524,7 @@ function SubjectAllocationSheet({ isOpen, onClose, allocation = null, onSave, ex
                                         })
                                     ) : (
                                         <div className="text-muted-foreground p-2 text-center text-sm">
-                                            {!formData.prog_subj_id
-                                                ? 'Select a subject first'
-                                                : 'No academic terms available for this subject'}
+                                            {!formData.prog_subj_id ? 'Select a subject first' : 'No academic terms available for this subject'}
                                         </div>
                                     )}
                                 </SelectContent>
@@ -435,16 +549,14 @@ function SubjectAllocationSheet({ isOpen, onClose, allocation = null, onSave, ex
                                             !formData.prog_subj_id
                                                 ? 'Select a subject first'
                                                 : isLoadingClasses
-                                                ? 'Loading classes...'
-                                                : 'Select a class (optional)'
+                                                  ? 'Loading classes...'
+                                                  : 'Select a class (optional)'
                                         }
                                     />
                                 </SelectTrigger>
                                 <SelectContent>
                                     {isLoadingClasses ? (
-                                        <div className="text-muted-foreground p-2 text-center text-sm">
-                                            Loading classes...
-                                        </div>
+                                        <div className="text-muted-foreground p-2 text-center text-sm">Loading classes...</div>
                                     ) : availableClasses.length > 0 ? (
                                         [
                                             <SelectItem key="none" value="">
@@ -461,13 +573,11 @@ function SubjectAllocationSheet({ isOpen, onClose, allocation = null, onSave, ex
                                                         </span>
                                                     </div>
                                                 </SelectItem>
-                                            ))
+                                            )),
                                         ]
                                     ) : (
                                         <div className="text-muted-foreground p-2 text-center text-sm">
-                                            {!formData.prog_subj_id
-                                                ? 'Select a subject first'
-                                                : 'No classes available for this program'}
+                                            {!formData.prog_subj_id ? 'Select a subject first' : 'No classes available for this program'}
                                         </div>
                                     )}
                                 </SelectContent>
@@ -532,18 +642,35 @@ function SubjectAllocationSheet({ isOpen, onClose, allocation = null, onSave, ex
                                                     <div className="text-foreground text-xs font-medium">
                                                         For: {program?.code} - {program?.name}
                                                     </div>
-                                                    {formData.lecturer_id && (() => {
-                                                        const selectedLecturer = lecturers.find(l => l.id.toString() === formData.lecturer_id);
-                                                        return selectedLecturer && (
-                                                            <div className="text-foreground text-xs font-medium">
-                                                                To: {selectedLecturer.title} {selectedLecturer.fname} {selectedLecturer.lname}
-                                                            </div>
-                                                        );
-                                                    })()}
+                                                    {formData.lecturer_id &&
+                                                        (() => {
+                                                            const selectedLecturer = lecturers.find((l) => l.id.toString() === formData.lecturer_id);
+                                                            return (
+                                                                selectedLecturer && (
+                                                                    <div className="text-foreground text-xs font-medium">
+                                                                        To: {selectedLecturer.title} {selectedLecturer.fname} {selectedLecturer.lname}
+                                                                    </div>
+                                                                )
+                                                            );
+                                                        })()}
                                                     <div className="flex flex-wrap gap-1 text-xs">
-                                                        <Badge variant="secondary">{programSubject.year_level}{programSubject.year_level === 1 ? 'st' : programSubject.year_level === 2 ? 'nd' : programSubject.year_level === 3 ? 'rd' : 'th'} Year</Badge>
-                                                        <Badge variant="outline">{subject.unit} unit{subject.unit !== 1 ? 's' : ''}</Badge>
-                                                        <Badge variant="outline" className="bg-gray-100 text-gray-800">{programSubject.term?.name || 'Unknown Term'}</Badge>
+                                                        <Badge variant="secondary">
+                                                            {programSubject.year_level}
+                                                            {programSubject.year_level === 1
+                                                                ? 'st'
+                                                                : programSubject.year_level === 2
+                                                                  ? 'nd'
+                                                                  : programSubject.year_level === 3
+                                                                    ? 'rd'
+                                                                    : 'th'}{' '}
+                                                            Year
+                                                        </Badge>
+                                                        <Badge variant="outline">
+                                                            {subject.unit} unit{subject.unit !== 1 ? 's' : ''}
+                                                        </Badge>
+                                                        <Badge variant="outline" className="bg-gray-100 text-gray-800">
+                                                            {programSubject.term?.name || 'Unknown Term'}
+                                                        </Badge>
                                                     </div>
                                                 </div>
                                             </div>
@@ -584,17 +711,19 @@ export default function SubjectAllocation() {
         programs = [],
         academicCalendarFilterOption = [],
         programFilterOption = [],
-        lecturerFilterOption = []
+        lecturerFilterOption = [],
     } = data;
 
     // Handle pagination data structure from Laravel
-    const lecturerSubjectsData = lecturerSubjects.data ? lecturerSubjects.data : (Array.isArray(lecturerSubjects) ? lecturerSubjects : []);
-    const paginationInfo = lecturerSubjects.current_page ? {
-        currentPage: lecturerSubjects.current_page,
-        lastPage: lecturerSubjects.last_page,
-        perPage: lecturerSubjects.per_page,
-        total: lecturerSubjects.total
-    } : null;
+    const lecturerSubjectsData = lecturerSubjects.data ? lecturerSubjects.data : Array.isArray(lecturerSubjects) ? lecturerSubjects : [];
+    const paginationInfo = lecturerSubjects.current_page
+        ? {
+              currentPage: lecturerSubjects.current_page,
+              lastPage: lecturerSubjects.last_page,
+              perPage: lecturerSubjects.per_page,
+              total: lecturerSubjects.total,
+          }
+        : null;
 
     const [currentPage, setCurrentPage] = useState(paginationInfo?.currentPage || 1);
     const [isLoading, setIsLoading] = useState(false);
@@ -739,37 +868,45 @@ export default function SubjectAllocation() {
         // Backend request to store/update subject allocation
         if (editingAllocation) {
             // UPDATE: Edit existing allocation
-            router.put(`/subject-allocation/${editingAllocation.id}`, {
-                lecturer_id: formData.lecturer_id,
-                prog_subj_id: formData.prog_subj_id,
-                sy_term_id: formData.sy_term_id
-            }, {
-                preserveScroll: true,
-                onSuccess: () => {
-                    console.log('Allocation updated successfully');
-                    setIsDialogOpen(false);
+            router.put(
+                `/subject-allocation/${editingAllocation.id}`,
+                {
+                    lecturer_id: formData.lecturer_id,
+                    prog_subj_id: formData.prog_subj_id,
+                    sy_term_id: formData.sy_term_id,
                 },
-                onError: (errors) => {
-                    console.error('Error updating allocation:', errors);
-                }
-            });
+                {
+                    preserveScroll: true,
+                    onSuccess: () => {
+                        console.log('Allocation updated successfully');
+                        setIsDialogOpen(false);
+                    },
+                    onError: (errors) => {
+                        console.error('Error updating allocation:', errors);
+                    },
+                },
+            );
         } else {
             // CREATE: Add new allocation
-            router.post('/subject-allocation', {
-                lecturer_id: formData.lecturer_id,
-                prog_subj_id: formData.prog_subj_id,
-                sy_term_id: formData.sy_term_id
-            }, {
-                preserveScroll: true,
-                onSuccess: () => {
-                    console.log('Allocation created successfully');
-                    setCurrentPage(1);
-                    setIsDialogOpen(false);
+            router.post(
+                '/subject-allocation',
+                {
+                    lecturer_id: formData.lecturer_id,
+                    prog_subj_id: formData.prog_subj_id,
+                    sy_term_id: formData.sy_term_id,
                 },
-                onError: (errors) => {
-                    console.error('Error creating allocation:', errors);
-                }
-            });
+                {
+                    preserveScroll: true,
+                    onSuccess: () => {
+                        console.log('Allocation created successfully');
+                        setCurrentPage(1);
+                        setIsDialogOpen(false);
+                    },
+                    onError: (errors) => {
+                        console.error('Error creating allocation:', errors);
+                    },
+                },
+            );
         }
 
         if (!editingAllocation) {
@@ -781,7 +918,7 @@ export default function SubjectAllocation() {
     const handleDeleteAllocation = (allocation) => {
         setAllocationToDelete(allocation);
         setDeleteDialogOpen(true);
-        console.log(allocationToDelete)
+        console.log(allocationToDelete);
     };
 
     const confirmDeleteAllocation = async () => {
@@ -792,7 +929,6 @@ export default function SubjectAllocation() {
             router.delete(`/subject-allocation/${allocationToDelete.id}`, {
                 preserveScroll: true,
                 onSuccess: () => {
-
                     // Check if we need to adjust the current page
                     const totalItems = paginationInfo?.total || paginatedData.length;
                     const newTotalPages = Math.ceil((totalItems - 1) / itemsPerPage);
@@ -811,7 +947,7 @@ export default function SubjectAllocation() {
                     setIsDeleting(false);
                     setDeleteDialogOpen(false);
                     setAllocationToDelete(null);
-                }
+                },
             });
         }
     };
@@ -827,13 +963,7 @@ export default function SubjectAllocation() {
     };
 
     const schoolYears = [...new Set(academicCalendars.map((c) => c.school_year))];
-    const termNames = [
-        ...new Set(
-            academicCalendars
-                .map((c) => c.term?.name)
-                .filter(Boolean),
-        ),
-    ];
+    const termNames = [...new Set(academicCalendars.map((c) => c.term?.name).filter(Boolean))];
     const programCodes = programs.map((p) => p.code);
 
     return (
@@ -903,8 +1033,7 @@ export default function SubjectAllocation() {
                                             <SelectItem key={program.code} value={program.code}>
                                                 {program.code} - {program.name}
                                             </SelectItem>
-                                        ))
-                                        }
+                                        ))}
                                     </SelectContent>
                                 </Select>
                                 <Select value={lecturerFilter} onValueChange={setLecturerFilter}>
@@ -955,14 +1084,17 @@ export default function SubjectAllocation() {
                                             const program = allocation.program;
                                             const term = allocation.term;
                                             return (
-                                                <TableRow key={allocation.lecturer_id + '' + allocation.prog_subj_id + '' + allocation.sy_term_id} className="hover:bg-muted/50">
+                                                <TableRow
+                                                    key={allocation.lecturer_id + '' + allocation.prog_subj_id + '' + allocation.sy_term_id}
+                                                    className="hover:bg-muted/50"
+                                                >
                                                     <TableCell>
                                                         <div className="flex items-center gap-2">
                                                             <User className="text-muted-foreground h-4 w-4" />
                                                             <div>
                                                                 <div className="font-medium">
                                                                     {lecturer
-                                                                        ? `${lecturer.title} ${lecturer.fname} ${(lecturer.lname) ? lecturer.lname : ''}`
+                                                                        ? `${lecturer.title} ${lecturer.fname} ${lecturer.lname ? lecturer.lname : ''}`
                                                                         : 'Unknown Lecturer'}
                                                                 </div>
                                                             </div>
@@ -985,11 +1117,16 @@ export default function SubjectAllocation() {
                                                                     </Badge>
                                                                 )}
                                                                 {allocation.program_subject?.year_level && (
-                                                                    <Badge
-                                                                        variant="default"
-                                                                        className="bg-blue-100 text-xs text-blue-800"
-                                                                    >
-                                                                        {allocation.program_subject.year_level}{allocation.program_subject.year_level === 1 ? 'st' : allocation.program_subject.year_level === 2 ? 'nd' : allocation.program_subject.year_level === 3 ? 'rd' : 'th'} Year
+                                                                    <Badge variant="default" className="bg-blue-100 text-xs text-blue-800">
+                                                                        {allocation.program_subject.year_level}
+                                                                        {allocation.program_subject.year_level === 1
+                                                                            ? 'st'
+                                                                            : allocation.program_subject.year_level === 2
+                                                                              ? 'nd'
+                                                                              : allocation.program_subject.year_level === 3
+                                                                                ? 'rd'
+                                                                                : 'th'}{' '}
+                                                                        Year
                                                                     </Badge>
                                                                 )}
                                                             </div>
@@ -1005,9 +1142,7 @@ export default function SubjectAllocation() {
                                                     <TableCell className="text-center">
                                                         <div className="flex items-center justify-center gap-1">
                                                             <GraduationCap className="text-muted-foreground h-4 w-4" />
-                                                            <span className="font-medium">
-                                                                {term?.name || 'Unknown Term'}
-                                                            </span>
+                                                            <span className="font-medium">{term?.name || 'Unknown Term'}</span>
                                                         </div>
                                                     </TableCell>
                                                     <TableCell className="text-center">
@@ -1082,7 +1217,12 @@ export default function SubjectAllocation() {
                             Page {paginationInfo.currentPage} of {paginationInfo.lastPage}
                         </div>
                         <div className="flex items-center space-x-2">
-                            <Button variant="outline" size="sm" onClick={() => handlePageChange(paginationInfo.currentPage - 1)} disabled={paginationInfo.currentPage === 1}>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handlePageChange(paginationInfo.currentPage - 1)}
+                                disabled={paginationInfo.currentPage === 1}
+                            >
                                 <ChevronLeft className="h-4 w-4" />
                                 Previous
                             </Button>
@@ -1108,7 +1248,7 @@ export default function SubjectAllocation() {
                 lecturers={lecturers}
                 programs={programs}
                 academicCalendars={academicCalendars}
-                />
+            />
 
             <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
                 <DialogContent className="sm:max-w-[400px]">
