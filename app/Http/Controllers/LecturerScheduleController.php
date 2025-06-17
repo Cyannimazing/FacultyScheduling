@@ -22,7 +22,7 @@ class LecturerScheduleController extends Controller
      */
     public function index(Request $request)
     {
-        $search = $request->input('search');
+        $search = $request->input('search', '');
         $page = $request->input('page', 1);
         $perPage = 5;
 
@@ -34,14 +34,72 @@ class LecturerScheduleController extends Controller
                                 ->pluck('lecturer');
         $rooms = Room::orderBy('name')->get();
 
-
-
-        // return response()->json($rooms);
+        $lecturerSchedules = LecturerSchedule::with(['lecturer', 'subject', 'group', 'academicCalendar.term'])
+                                ->where('lecturer_id', $search)
+                                ->get();
+    /*Sample output data of lecturerSchedules
+    [
+        {
+            "id": 0,
+            "lecturer_id": 1,
+            "subj_code": "BTEA 1102",
+            "room_code": "BMW",
+            "class_id": 1,
+            "sy_term_id": 1,
+            "day": "MONDAY",
+            "start_time": "08:00",
+            "end_time": "10:00",
+            "created_at": null,
+            "updated_at": null,
+            "lecturer": {
+            "id": 1,
+            "title": "Ms.",
+            "fname": "Hawa",
+            "lname": "ALmujaini",
+            "created_at": "2025-06-17T09:41:41.000000Z",
+            "updated_at": "2025-06-17T09:41:41.000000Z"
+            },
+            "subject": {
+            "id": 2,
+            "code": "BTEA 1102",
+            "name": "Soft Skills I",
+            "unit": 0,
+            "is_gen_ed": 1,
+            "created_at": "2025-06-17T09:41:41.000000Z",
+            "updated_at": "2025-06-17T09:41:41.000000Z"
+            },
+            "group": {
+            "id": 1,
+            "name": "A",
+            "prog_code": "CBT 29",
+            "created_at": "2025-06-17T09:41:41.000000Z",
+            "updated_at": "2025-06-17T09:41:41.000000Z"
+            },
+            "academic_calendar": {
+            "id": 1,
+            "term_id": 1,
+            "school_year": "2024-2025",
+            "start_date": "2025-01-05T00:00:00.000000Z",
+            "end_date": "2025-04-04T00:00:00.000000Z",
+            "created_at": "2025-06-17T09:52:31.000000Z",
+            "updated_at": "2025-06-17T09:52:31.000000Z",
+            "term": {
+                "id": 1,
+                "name": "1st Term",
+                "created_at": "2025-06-17T09:41:41.000000Z",
+                "updated_at": "2025-06-17T09:52:44.000000Z"
+            }
+            }
+        },
+    ]
+    */
+        // return response()->json($lecturerSchedules);
         return Inertia::render('application/faculty-schedule', [
             'data' => [
                 'academicCalendars' => $academicCalendars,
                 'lecturers' => $lecturers,
-                'rooms' => $rooms
+                'rooms' => $rooms,
+                'lecturerSchedules' => $lecturerSchedules
             ]
         ]);
     }
