@@ -97,7 +97,9 @@ class LecturerScheduleController extends Controller
                 'lecturer_id' => $request->lecturer_id,
                 'subj_code' => $request->subj_code,
                 'room_code' => $request->room_code,
-                'time_slot_id' => $request->time_slot_id,
+                'start_time' => $request->start_time,
+                'end_time' => $request->end_time,
+                'day' => $request->day,
                 'class_id' => $request->class_id,
                 'sy_term_id' => $request->sy_term_id
             ]);
