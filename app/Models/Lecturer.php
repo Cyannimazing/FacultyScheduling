@@ -20,7 +20,7 @@ class Lecturer extends Model
      */
     public function subjects(): BelongsToMany
     {
-        return $this->belongsToMany(Subject::class, 'lecturer_subjects', 'lecturer_id', 'subj_code', 'id', 'code')
+        return $this->belongsToMany(Subject::class, 'lecturer_subjects', 'lecturer_id', 'prog_subj_id', 'id')
                     ->withPivot('sy_term_id')
                     ->withTimestamps();
     }

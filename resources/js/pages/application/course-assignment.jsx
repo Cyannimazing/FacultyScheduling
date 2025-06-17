@@ -96,7 +96,7 @@ function ProgramDropZone({ program, assignments, onDrop, onRemoveAssignment, ter
             <CardHeader>
                 <div className="flex items-center justify-between">
                     <div>
-                        <CardTitle className="text-lg">{program.name}</CardTitle>
+                        <CardTitle className="text-lg">{program.description}</CardTitle>
                         <p className="text-muted-foreground text-sm">{program.code}</p>
                     </div>
                     <Badge variant="outline">{programAssignments.length} subjects</Badge>
@@ -501,7 +501,7 @@ export default function CourseAssignment() {
         // Get the selected program and subject to check by codes
         const selectedProgram = programs.find(p => p.id == formData.program_id);
         const selectedSubject = subjects.find(s => s.id == formData.subject_id);
-        
+
         // Check if assignment already exists
         const existingAssignment = assignments.find(
             (a) =>
@@ -515,7 +515,7 @@ export default function CourseAssignment() {
             // Get the selected program and subject to send codes instead of IDs
             const selectedProgram = programs.find(p => p.id == formData.program_id);
             const selectedSubject = subjects.find(s => s.id == formData.subject_id);
-            
+
             // Create new assignment using Inertia router
             router.post('/course-assignment', {
                 prog_code: selectedProgram.code,
