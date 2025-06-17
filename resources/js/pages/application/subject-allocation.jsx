@@ -54,12 +54,15 @@ function SubjectAllocationSheet({ isOpen, onClose, allocation = null, onSave, ex
         prog_subj_id: '',
         sy_term_id: '',
         program_code: '',
+        year_level: '',
+        term_id: '',
     });
     const [validationError, setValidationError] = useState('');
     const [availableSubjects, setAvailableSubjects] = useState([]);
     const [filteredAcademicCalendars, setFilteredAcademicCalendars] = useState(academicCalendars);
     const [isLoadingSubjects, setIsLoadingSubjects] = useState(false);
     const [isLoadingCalendars, setIsLoadingCalendars] = useState(false);
+    const [availableTerms, setAvailableTerms] = useState([]);
 
     React.useEffect(() => {
         if (allocation) {
@@ -69,6 +72,8 @@ function SubjectAllocationSheet({ isOpen, onClose, allocation = null, onSave, ex
                 prog_subj_id: allocation.prog_subj_id?.toString() || '',
                 sy_term_id: allocation.sy_term_id?.toString() || '',
                 program_code: programCode,
+                year_level: allocation.program_subject?.year_level?.toString() || '',
+                term_id: allocation.program_subject?.term_id?.toString() || '',
             });
 
             // Load subjects for the program if editing
@@ -105,9 +110,10 @@ function SubjectAllocationSheet({ isOpen, onClose, allocation = null, onSave, ex
                     .finally(() => setIsLoadingSubjects(false));
             }
         } else {
-            setFormData({ lecturer_id: '', prog_subj_id: '', sy_term_id: '', program_code: '' });
+            setFormData({ lecturer_id: '', prog_subj_id: '', sy_term_id: '', program_code: '', year_level: '', term_id: '' });
             setAvailableSubjects([]);
             setFilteredAcademicCalendars(academicCalendars);
+            setAvailableTerms([]);
         }
         setValidationError('');
     }, [allocation, academicCalendars]);
@@ -151,10 +157,11 @@ function SubjectAllocationSheet({ isOpen, onClose, allocation = null, onSave, ex
     };
 
     const handleProgramChange = async (value) => {
-        setFormData({ ...formData, program_code: value, prog_subj_id: '', sy_term_id: '' });
+        setFormData({ ...formData, program_code: value, prog_subj_id: '', sy_term_id: '', year_level: '', term_id: '' });
         setValidationError('');
         setAvailableSubjects([]);
         setFilteredAcademicCalendars(academicCalendars);
+        setAvailableTerms([]);
 
         if (value) {
             setIsLoadingSubjects(true);
@@ -162,13 +169,35 @@ function SubjectAllocationSheet({ isOpen, onClose, allocation = null, onSave, ex
                 const response = await fetch(`/api/subjects-by-program/${value}`);
                 const programSubjects = await response.json();
                 setAvailableSubjects(programSubjects);
+
+                // Get unique terms from the program subjects
+                const uniqueTerms = programSubjects.reduce((acc, ps) => {
+                    if (ps.term && !acc.find(t => t.id === ps.term.id)) {
+                        acc.push(ps.term);
+                    }
+                    return acc;
+                }, []);
+                setAvailableTerms(uniqueTerms);
             } catch (error) {
                 console.error('Error fetching subjects:', error);
                 setAvailableSubjects([]);
+                setAvailableTerms([]);
             } finally {
                 setIsLoadingSubjects(false);
             }
         }
+    };
+
+    const handleYearLevelChange = async (value) => {
+        setFormData({ ...formData, year_level: value, prog_subj_id: '', sy_term_id: '' });
+        setValidationError('');
+        setFilteredAcademicCalendars([]);
+    };
+
+    const handleTermChange = async (value) => {
+        setFormData({ ...formData, term_id: value, prog_subj_id: '', sy_term_id: '' });
+        setValidationError('');
+        setFilteredAcademicCalendars([]);
     };
 
     const handleSubjectChange = async (value) => {
@@ -258,6 +287,82 @@ function SubjectAllocationSheet({ isOpen, onClose, allocation = null, onSave, ex
                                 </SelectContent>
                             </Select>
                         </div>
+                        <div className='flex gap-4'>
+                            <div className="space-y-2 w-full">
+                                <label
+                                    htmlFor="year_level"
+                                    className="text-sm leading-none font-medium peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                                >
+                                    Year Level *
+                                </label>
+                                <Select
+                                    value={formData.year_level}
+                                    onValueChange={handleYearLevelChange}
+                                    disabled={!formData.program_code}
+                                >
+                                    <SelectTrigger className="w-full">
+                                        <SelectValue
+                                            placeholder={
+                                                !formData.program_code
+                                                    ? 'Select a program first'
+                                                    : 'Select year level'
+                                            }
+                                        />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {formData.program_code && (() => {
+                                            const selectedProgram = programs.find(p => p.code === formData.program_code);
+                                            const numberOfYears = selectedProgram?.number_of_year || 0;
+                                            return Array.from({ length: numberOfYears }, (_, i) => i + 1).map(year => (
+                                                <SelectItem key={year} value={year.toString()}>
+                                                    <div className="flex items-center gap-2">
+                                                        <span>
+                                                            {year}{year === 1 ? 'st' : year === 2 ? 'nd' : year === 3 ? 'rd' : 'th'} Year
+                                                        </span>
+                                                    </div>
+                                                </SelectItem>
+                                            ));
+                                        })()}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+
+                            <div className="space-y-2 w-full">
+                                <label
+                                    htmlFor="term_id"
+                                    className="text-sm leading-none font-medium peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                                >
+                                    Term *
+                                </label>
+                                <Select
+                                    value={formData.term_id}
+                                    onValueChange={handleTermChange}
+                                    disabled={!formData.program_code || availableTerms.length === 0}
+                                >
+                                    <SelectTrigger className="w-full">
+                                        <SelectValue
+                                            placeholder={
+                                                !formData.program_code
+                                                    ? 'Select a program first'
+                                                    : availableTerms.length === 0
+                                                    ? 'No terms available'
+                                                    : 'Select a term'
+                                            }
+                                        />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {availableTerms.map((term) => (
+                                            <SelectItem key={term.id} value={term.id.toString()}>
+                                                <div className="flex items-center gap-2">
+                                                    <span>{term.name}</span>
+                                                </div>
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        </div>
+
                         <div className="space-y-2">
                             <label
                                 htmlFor="subject_id"
@@ -268,13 +373,17 @@ function SubjectAllocationSheet({ isOpen, onClose, allocation = null, onSave, ex
                             <Select
                                 value={formData.prog_subj_id}
                                 onValueChange={handleSubjectChange}
-                                disabled={!formData.program_code || isLoadingSubjects}
+                                disabled={!formData.program_code || !formData.year_level || !formData.term_id || isLoadingSubjects}
                             >
                                 <SelectTrigger className="w-full">
                                     <SelectValue
                                         placeholder={
                                             !formData.program_code
                                                 ? 'Select a program first'
+                                                : !formData.year_level
+                                                ? 'Select year level first'
+                                                : !formData.term_id
+                                                ? 'Select term first'
                                                 : isLoadingSubjects
                                                 ? 'Loading subjects...'
                                                 : 'Select a subject'
@@ -287,8 +396,13 @@ function SubjectAllocationSheet({ isOpen, onClose, allocation = null, onSave, ex
                                         <div className="text-muted-foreground p-2 text-center text-sm">
                                             Loading subjects...
                                         </div>
-                                    ) : formData.program_code && availableSubjects.length > 0 ? (
-                                        availableSubjects.map((programSubject) => {
+                                    ) : formData.program_code && formData.year_level && formData.term_id && availableSubjects.length > 0 ? (
+                                        availableSubjects
+                                            .filter(ps =>
+                                                ps.year_level.toString() === formData.year_level &&
+                                                ps.term_id.toString() === formData.term_id
+                                            )
+                                            .map((programSubject) => {
                                             if (!programSubject || !programSubject.subject) return null;
                                             const subject = programSubject.subject;
                                             return (
@@ -316,7 +430,11 @@ function SubjectAllocationSheet({ isOpen, onClose, allocation = null, onSave, ex
                                         <div className="text-muted-foreground p-2 text-center text-sm">
                                             {!formData.program_code
                                                 ? 'Select a program first'
-                                                : 'No available subjects for this program'}
+                                                : !formData.year_level
+                                                ? 'Select year level first'
+                                                : !formData.term_id
+                                                ? 'Select term first'
+                                                : 'No available subjects for this combination'}
                                         </div>
                                     )}
                                 </SelectContent>

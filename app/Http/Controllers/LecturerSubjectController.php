@@ -184,9 +184,23 @@ class LecturerSubjectController extends Controller
      */
     public function getSubjectsByProgram(Request $request, $programCode)
     {
-        $programSubjects = ProgramSubject::with(['subject', 'term'])
-            ->where('prog_code', $programCode)
-            ->get();
+        $yearLevel = $request->input('year_level');
+        $termId = $request->input('term_id');
+        
+        $query = ProgramSubject::with(['subject', 'term'])
+            ->where('prog_code', $programCode);
+        
+        // Filter by year level if provided
+        if ($yearLevel) {
+            $query->where('year_level', $yearLevel);
+        }
+        
+        // Filter by term ID if provided
+        if ($termId) {
+            $query->where('term_id', $termId);
+        }
+        
+        $programSubjects = $query->get();
 
         return response()->json($programSubjects);
     }
