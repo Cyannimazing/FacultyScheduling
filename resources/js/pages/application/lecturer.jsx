@@ -80,16 +80,20 @@ function LecturerDialog({ isOpen, onClose, lecturer = null, onSave }) {
     });
 
     React.useEffect(() => {
-        if (lecturer) {
-            setFormData({
-                title: lecturer.title || '',
-                fname: lecturer.fname || '',
-                lname: lecturer.lname || '',
-            });
-        } else {
-            setFormData({ title: '', fname: '', lname: '' });
+        if (isOpen) {
+            if (lecturer) {
+                // Only populate form data when editing (lecturer exists)
+                setFormData({
+                    title: lecturer.title || '',
+                    fname: lecturer.fname || '',
+                    lname: lecturer.lname || '',
+                });
+            } else {
+                // Clear form data when adding new lecturer
+                setFormData({ title: '', fname: '', lname: '' });
+            }
         }
-    }, [lecturer]);
+    }, [lecturer, isOpen]);
 
     const handleSave = () => {
         if (formData.title && formData.fname && formData.lname) {

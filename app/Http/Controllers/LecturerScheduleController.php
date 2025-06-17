@@ -22,26 +22,70 @@ class LecturerScheduleController extends Controller
      */
     public function index(Request $request)
     {
-        $search = $request->input('search');
-        $page = $request->input('page', 1);
-        $perPage = 5;
+        $termFilter = $request->input('term_filter');
+        $lecturerFilter = $request->input('lecturer_filter');
+        $classFilter = $request->input('class_filter');
+
+        // Initialize empty schedules if required filters are not provided
+        $schedules = collect();
+        
+        // Only fetch schedules if both lecturer and term are selected
+        if ($lecturerFilter && $termFilter) {
+            // Get schedules with relationships
+            $schedulesQuery = LecturerSchedule::with([
+                'lecturer',
+                'subject',
+                'room',
+                'group',
+                'academicCalendar.term'
+            ]);
+
+            // Apply required filters
+            $schedulesQuery->where('sy_term_id', $termFilter)
+                          ->where('lecturer_id', $lecturerFilter);
+
+            // Apply optional class filter (ignore if 'all' is selected)
+            if ($classFilter && $classFilter !== 'all') {
+                $schedulesQuery->whereHas('group', function ($q) use ($classFilter) {
+                    $q->where('name', $classFilter);
+                });
+            }
+
+            $schedules = $schedulesQuery->orderBy('day')
+                                       ->orderBy('start_time')
+                                       ->get();
+        }
 
         $academicCalendars = AcademicCalendar::with('term')
+                                ->orderBy('school_year', 'desc')
+                                ->orderBy('id')
                                 ->get();
+                                
         $lecturers = LecturerSubject::with('lecturer')
                                 ->groupBy('lecturer_id')
                                 ->get()
-                                ->pluck('lecturer');
+                                ->pluck('lecturer')
+                                ->unique('id')
+                                ->values();
+                                
         $rooms = Room::orderBy('name')->get();
 
+        // Calculate overall statistics (independent of current filters)
+        $totalSchedules = LecturerSchedule::count();
+        $totalActiveLecturers = LecturerSchedule::distinct('lecturer_id')->count('lecturer_id');
+        $totalRoomsInUse = LecturerSchedule::distinct('room_code')->count('room_code');
 
-
-        // return response()->json($rooms);
         return Inertia::render('application/faculty-schedule', [
             'data' => [
+                'schedules' => $schedules,
                 'academicCalendars' => $academicCalendars,
                 'lecturers' => $lecturers,
-                'rooms' => $rooms
+                'rooms' => $rooms,
+                'statistics' => [
+                    'totalSchedules' => $totalSchedules,
+                    'totalActiveLecturers' => $totalActiveLecturers,
+                    'totalRoomsInUse' => $totalRoomsInUse
+                ]
             ]
         ]);
     }
@@ -72,7 +116,19 @@ class LecturerScheduleController extends Controller
 
         LecturerSchedule::create($validated);
 
-        return redirect()->route('faculty-schedule')->with('success', 'Lecturer Schedule created successfully.');
+        // Preserve the current filters in the redirect
+        $queryParams = [];
+        if ($request->input('term_filter')) {
+            $queryParams['term_filter'] = $request->input('term_filter');
+        }
+        if ($request->input('lecturer_filter')) {
+            $queryParams['lecturer_filter'] = $request->input('lecturer_filter');
+        }
+        if ($request->input('class_filter')) {
+            $queryParams['class_filter'] = $request->input('class_filter');
+        }
+
+        return redirect()->route('faculty-schedule', $queryParams)->with('success', 'Lecturer Schedule created successfully.');
     }
 
     /**
@@ -104,16 +160,41 @@ class LecturerScheduleController extends Controller
                 'sy_term_id' => $request->sy_term_id
             ]);
         }
-        return redirect()->route('faculty-schedule')->with('success', 'Lecturer Schedule updated successfully.');
+        
+        // Preserve the current filters in the redirect
+        $queryParams = [];
+        if ($request->input('term_filter')) {
+            $queryParams['term_filter'] = $request->input('term_filter');
+        }
+        if ($request->input('lecturer_filter')) {
+            $queryParams['lecturer_filter'] = $request->input('lecturer_filter');
+        }
+        if ($request->input('class_filter')) {
+            $queryParams['class_filter'] = $request->input('class_filter');
+        }
+        
+        return redirect()->route('faculty-schedule', $queryParams)->with('success', 'Lecturer Schedule updated successfully.');
     }
 
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(LecturerSchedule $lecturerSchedule)
+    public function destroy(Request $request, LecturerSchedule $lecturerSchedule)
     {
         $lecturerSchedule->delete();
 
-        return redirect()->route('faculty-schedule')->with('success', 'Lecturer Schedule deleted successfully.');
+        // Preserve the current filters in the redirect
+        $queryParams = [];
+        if ($request->input('term_filter')) {
+            $queryParams['term_filter'] = $request->input('term_filter');
+        }
+        if ($request->input('lecturer_filter')) {
+            $queryParams['lecturer_filter'] = $request->input('lecturer_filter');
+        }
+        if ($request->input('class_filter')) {
+            $queryParams['class_filter'] = $request->input('class_filter');
+        }
+
+        return redirect()->route('faculty-schedule', $queryParams)->with('success', 'Lecturer Schedule deleted successfully.');
     }
 }

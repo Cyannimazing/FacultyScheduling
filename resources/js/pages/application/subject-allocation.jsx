@@ -54,12 +54,15 @@ function SubjectAllocationSheet({ isOpen, onClose, allocation = null, onSave, ex
         prog_subj_id: '',
         sy_term_id: '',
         program_code: '',
+        class_id: '',
     });
     const [validationError, setValidationError] = useState('');
     const [availableSubjects, setAvailableSubjects] = useState([]);
     const [filteredAcademicCalendars, setFilteredAcademicCalendars] = useState(academicCalendars);
+    const [availableClasses, setAvailableClasses] = useState([]);
     const [isLoadingSubjects, setIsLoadingSubjects] = useState(false);
     const [isLoadingCalendars, setIsLoadingCalendars] = useState(false);
+    const [isLoadingClasses, setIsLoadingClasses] = useState(false);
 
     React.useEffect(() => {
         if (allocation) {
@@ -105,8 +108,9 @@ function SubjectAllocationSheet({ isOpen, onClose, allocation = null, onSave, ex
                     .finally(() => setIsLoadingSubjects(false));
             }
         } else {
-            setFormData({ lecturer_id: '', prog_subj_id: '', sy_term_id: '', program_code: '' });
+            setFormData({ lecturer_id: '', prog_subj_id: '', sy_term_id: '', program_code: '', class_id: '' });
             setAvailableSubjects([]);
+            setAvailableClasses([]);
             setFilteredAcademicCalendars(academicCalendars);
         }
         setValidationError('');
@@ -158,37 +162,84 @@ function SubjectAllocationSheet({ isOpen, onClose, allocation = null, onSave, ex
 
         if (value) {
             setIsLoadingSubjects(true);
-            try {
-                const response = await fetch(`/api/subjects-by-program/${value}`);
-                const programSubjects = await response.json();
-                setAvailableSubjects(programSubjects);
-            } catch (error) {
-                console.error('Error fetching subjects:', error);
-                setAvailableSubjects([]);
-            } finally {
-                setIsLoadingSubjects(false);
-            }
+            router.get(`/api/subjects-by-program/${value}`, {}, {
+                preserveState: true,
+                preserveScroll: true,
+                only: [],
+                onSuccess: (page) => {
+                    // Inertia returns the data directly
+                    const programSubjects = page.props || [];
+                    console.log('Program Subjects loaded:', programSubjects);
+                    setAvailableSubjects(programSubjects);
+                },
+                onError: (errors) => {
+                    console.error('Error fetching subjects:', errors);
+                    setAvailableSubjects([]);
+                },
+                onFinish: () => {
+                    setIsLoadingSubjects(false);
+                }
+            });
         }
     };
 
     const handleSubjectChange = async (value) => {
-        setFormData({ ...formData, prog_subj_id: value, sy_term_id: '' });
+        setFormData({ ...formData, prog_subj_id: value, sy_term_id: '', class_id: '' });
         setValidationError('');
         setFilteredAcademicCalendars([]);
+        setAvailableClasses([]);
 
-        // Find the selected program subject to get its term_id
+        // Find the selected program subject to get its term_id and program code
         const selectedSubject = availableSubjects.find(ps => ps.id === parseInt(value));
-        if (selectedSubject && selectedSubject.term_id) {
-            setIsLoadingCalendars(true);
-            try {
-                const response = await fetch(`/api/academic-calendars-by-term/${selectedSubject.term_id}`);
-                const filteredCalendars = await response.json();
-                setFilteredAcademicCalendars(filteredCalendars);
-            } catch (error) {
-                console.error('Error fetching academic calendars:', error);
-                setFilteredAcademicCalendars([]);
-            } finally {
-                setIsLoadingCalendars(false);
+        console.log('Selected Subject:', selectedSubject);
+        console.log('Current formData.program_code:', formData.program_code);
+        if (selectedSubject) {
+            // Load academic calendars based on term_id
+            if (selectedSubject.term_id) {
+                setIsLoadingCalendars(true);
+                router.get(`/api/academic-calendars-by-term/${selectedSubject.term_id}`, {}, {
+                    preserveState: true,
+                    preserveScroll: true,
+                    only: [],
+                    onSuccess: (page) => {
+                        const filteredCalendars = page.props || [];
+                        console.log('Academic calendars loaded:', filteredCalendars);
+                        setFilteredAcademicCalendars(filteredCalendars);
+                    },
+                    onError: (errors) => {
+                        console.error('Error fetching academic calendars:', errors);
+                        setFilteredAcademicCalendars([]);
+                    },
+                    onFinish: () => {
+                        setIsLoadingCalendars(false);
+                    }
+                });
+            }
+
+            // Load classes based on program code from selected subject
+            const programCodeFromSubject = selectedSubject.prog_code;
+            console.log('Trying to load classes for program code from subject:', programCodeFromSubject);
+            if (programCodeFromSubject) {
+                setIsLoadingClasses(true);
+                router.get(`/api/classes-by-prog-code/${programCodeFromSubject}`, {}, {
+                    preserveState: true,
+                    preserveScroll: true,
+                    only: [],
+                    onSuccess: (page) => {
+                        const classes = page.props || [];
+                        console.log('Classes loaded:', classes);
+                        setAvailableClasses(classes);
+                    },
+                    onError: (errors) => {
+                        console.error('Error fetching classes:', errors);
+                        setAvailableClasses([]);
+                    },
+                    onFinish: () => {
+                        setIsLoadingClasses(false);
+                    }
+                });
+            } else {
+                console.log('No program code found in selected subject');
             }
         }
     };
@@ -293,21 +344,11 @@ function SubjectAllocationSheet({ isOpen, onClose, allocation = null, onSave, ex
                                             const subject = programSubject.subject;
                                             return (
                                                 <SelectItem key={programSubject.id} value={programSubject.id.toString()}>
-                                                    <div className="flex flex-col gap-1">
-                                                        <div className="flex items-center gap-2">
-                                                            <span className="font-medium">{subject.code} - {subject.name}</span>
-                                                            <Badge variant="outline" className="text-xs">
-                                                                {subject.unit || 0} unit{(subject.unit || 0) !== 1 ? 's' : ''}
-                                                            </Badge>
-                                                        </div>
-                                                        <div className="flex items-center gap-1">
-                                                            <Badge variant="default" className="bg-blue-100 text-xs text-blue-800">
-                                                                {programSubject.year_level}{programSubject.year_level === 1 ? 'st' : programSubject.year_level === 2 ? 'nd' : programSubject.year_level === 3 ? 'rd' : 'th'} Year
-                                                            </Badge>
-                                                            <Badge variant="secondary" className="bg-gray-100 text-xs text-gray-800">
-                                                                {programSubject.term?.name || 'Unknown Term'}
-                                                            </Badge>
-                                                        </div>
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="font-medium">{subject.code} - {subject.name}</span>
+                                                        <Badge variant="outline" className="text-xs">
+                                                            {subject.unit || 0} unit{(subject.unit || 0) !== 1 ? 's' : ''}
+                                                        </Badge>
                                                     </div>
                                                 </SelectItem>
                                             );
@@ -370,6 +411,63 @@ function SubjectAllocationSheet({ isOpen, onClose, allocation = null, onSave, ex
                                             {!formData.prog_subj_id
                                                 ? 'Select a subject first'
                                                 : 'No academic terms available for this subject'}
+                                        </div>
+                                    )}
+                                </SelectContent>
+                            </Select>
+                        </div>
+
+                        <div className="space-y-2">
+                            <label
+                                htmlFor="class_id"
+                                className="text-sm leading-none font-medium peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                            >
+                                Class/Group
+                            </label>
+                            <Select
+                                value={formData.class_id}
+                                onValueChange={(value) => setFormData({ ...formData, class_id: value })}
+                                disabled={!formData.prog_subj_id || isLoadingClasses}
+                            >
+                                <SelectTrigger className="w-full">
+                                    <SelectValue
+                                        placeholder={
+                                            !formData.prog_subj_id
+                                                ? 'Select a subject first'
+                                                : isLoadingClasses
+                                                ? 'Loading classes...'
+                                                : 'Select a class (optional)'
+                                        }
+                                    />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {isLoadingClasses ? (
+                                        <div className="text-muted-foreground p-2 text-center text-sm">
+                                            Loading classes...
+                                        </div>
+                                    ) : availableClasses.length > 0 ? (
+                                        [
+                                            <SelectItem key="none" value="">
+                                                <div className="flex items-center gap-2">
+                                                    <span>No specific class (All classes)</span>
+                                                </div>
+                                            </SelectItem>,
+                                            ...availableClasses.map((classItem) => (
+                                                <SelectItem key={classItem.id} value={classItem.id.toString()}>
+                                                    <div className="flex items-center gap-2">
+                                                        <GraduationCap className="h-4 w-4" />
+                                                        <span>
+                                                            {classItem.name} ({classItem.prog_code})
+                                                        </span>
+                                                    </div>
+                                                </SelectItem>
+                                            ))
+                                        ]
+                                    ) : (
+                                        <div className="text-muted-foreground p-2 text-center text-sm">
+                                            {!formData.prog_subj_id
+                                                ? 'Select a subject first'
+                                                : 'No classes available for this program'}
                                         </div>
                                     )}
                                 </SelectContent>

@@ -48,18 +48,21 @@ function SubjectDialog({ isOpen, onClose, subjectData = null, onSave }) {
 
     // Update form data when subjectData prop changes (for edit mode)
     React.useEffect(() => {
-        if (subjectData) {
-            setFormData({
-                code: subjectData.code || '',
-                name: subjectData.name || '',
-                unit: subjectData.unit || '',
-                is_gen_ed: subjectData.is_gen_ed || false,
-            });
-        } else {
-            // Reset form for add mode
-            setFormData({ code: '', name: '', unit: '', is_gen_ed: false });
+        if (isOpen) {
+            if (subjectData) {
+                // Only populate form data when editing (subjectData exists)
+                setFormData({
+                    code: subjectData.code || '',
+                    name: subjectData.name || '',
+                    unit: subjectData.unit || '',
+                    is_gen_ed: subjectData.is_gen_ed || false,
+                });
+            } else {
+                // Clear form data when adding new subject
+                setFormData({ code: '', name: '', unit: '', is_gen_ed: false });
+            }
         }
-    }, [subjectData]);
+    }, [subjectData, isOpen]);
 
     const handleSave = () => {
         if (formData.code && formData.name && formData.unit) {

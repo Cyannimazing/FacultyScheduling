@@ -39,15 +39,18 @@ function RoomDialog({ isOpen, onClose, roomData = null, onSave }) {
 
     // Update form data when roomData prop changes (for edit mode)
     React.useEffect(() => {
-        if (roomData) {
-            setFormData({
-                name: roomData.name || '',
-            });
-        } else {
-            // Reset form for add mode
-            setFormData({ name: '' });
+        if (isOpen) {
+            if (roomData) {
+                // Only populate form data when editing (roomData exists)
+                setFormData({
+                    name: roomData.name || '',
+                });
+            } else {
+                // Clear form data when adding new room
+                setFormData({ name: '' });
+            }
         }
-    }, [roomData]);
+    }, [roomData, isOpen]);
 
     const handleSave = () => {
         if (formData.name) {

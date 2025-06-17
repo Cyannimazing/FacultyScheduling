@@ -62,19 +62,23 @@ function CalendarDialog({ isOpen, onClose, calendar = null, onSave }) {
     });
 
     React.useEffect(() => {
-        if (calendar) {
-            console.log('Calendar data:', calendar); // Debug log
-            setFormData({
-                term_id: calendar.term_id ? calendar.term_id.toString() : '',
-                term_name: calendar.term?.name || '',
-                school_year: calendar.school_year || '',
-                start_date: calendar.start_date ? calendar.start_date.split('T')[0] : '',
-                end_date: calendar.end_date ? calendar.end_date.split('T')[0] : '',
-            });
-        } else {
-            setFormData({ term_id:'', term_name: '', school_year: '', start_date: '', end_date: '' });
+        if (isOpen) {
+            if (calendar) {
+                // Only populate form data when editing (calendar exists)
+                console.log('Calendar data:', calendar); // Debug log
+                setFormData({
+                    term_id: calendar.term_id ? calendar.term_id.toString() : '',
+                    term_name: calendar.term?.name || '',
+                    school_year: calendar.school_year || '',
+                    start_date: calendar.start_date ? calendar.start_date.split('T')[0] : '',
+                    end_date: calendar.end_date ? calendar.end_date.split('T')[0] : '',
+                });
+            } else {
+                // Clear form data when adding new calendar
+                setFormData({ term_id:'', term_name: '', school_year: '', start_date: '', end_date: '' });
+            }
         }
-    }, [calendar]);
+    }, [calendar, isOpen]);
 
     const handleSave = () => {
         if (formData.term_id && formData.school_year && formData.start_date && formData.end_date) {
