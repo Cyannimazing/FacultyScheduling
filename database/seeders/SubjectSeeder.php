@@ -26,7 +26,7 @@ class SubjectSeeder extends Seeder
             ['code' => 'BUSS 2320','name' => 'Entrepreneurship for Engineers',             'unit' => 0, 'is_gen_ed' => false],
             ['code' => 'BTEA 2101','name' => 'Work Ethics',                                 'unit' => 0, 'is_gen_ed' => true],
             ['code' => 'AUTO 2301','name' => 'Transmission Systems I',                     'unit' => 0, 'is_gen_ed' => false],
-            ['code' => 'AUTO2401','name' => 'Chassis Structure & Suspension System',       'unit' => 0, 'is_gen_ed' => false],
+            ['code' => 'AUTO 2401','name' => 'Chassis Structure & Suspension System',       'unit' => 0, 'is_gen_ed' => false],
             ['code' => 'AUTO 2501','name' => 'Petrol Engine Fuel System',                  'unit' => 0, 'is_gen_ed' => false],
             ['code' => 'AUTO 2102','name' => 'Internal Combustion Engine I',              'unit' => 0, 'is_gen_ed' => false],
             ['code' => 'AUTO 2202','name' => 'Automotive Electrical Sys I',               'unit' => 0, 'is_gen_ed' => false],
