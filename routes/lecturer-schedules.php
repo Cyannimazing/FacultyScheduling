@@ -12,6 +12,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('api/subject-by-lecturer-schoolyear/{sy_term_id}/{lecturer_id}', 'getSubjectsByLecturerAndSchoolYear');
         Route::get('api/classes-by-prog-code/{prog_code}', 'getClassByProgram');
         Route::get('api/time-slot-by-day/{day}', 'getTimeSlotByDay');
+
+        Route::get('class-schedule', 'getGroupSchedule');
     });
 });
 

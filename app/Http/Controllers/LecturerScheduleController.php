@@ -28,7 +28,7 @@ class LecturerScheduleController extends Controller
 
         // Initialize empty schedules if required filters are not provided
         $schedules = collect();
-        
+
         // Only fetch schedules if both lecturer and term are selected
         if ($lecturerFilter && $termFilter) {
             // Get schedules with relationships
@@ -60,14 +60,14 @@ class LecturerScheduleController extends Controller
                                 ->orderBy('school_year', 'desc')
                                 ->orderBy('id')
                                 ->get();
-                                
+
         $lecturers = LecturerSubject::with('lecturer')
                                 ->groupBy('lecturer_id')
                                 ->get()
                                 ->pluck('lecturer')
                                 ->unique('id')
                                 ->values();
-                                
+
         $rooms = Room::orderBy('name')->get();
 
         // Calculate overall statistics (independent of current filters)
@@ -75,6 +75,7 @@ class LecturerScheduleController extends Controller
         $totalActiveLecturers = LecturerSchedule::distinct('lecturer_id')->count('lecturer_id');
         $totalRoomsInUse = LecturerSchedule::distinct('room_code')->count('room_code');
 
+        // return response()->json($schedules);
         return Inertia::render('application/faculty-schedule', [
             'data' => [
                 'schedules' => $schedules,
@@ -160,7 +161,7 @@ class LecturerScheduleController extends Controller
                 'sy_term_id' => $request->sy_term_id
             ]);
         }
-        
+
         // Preserve the current filters in the redirect
         $queryParams = [];
         if ($request->input('term_filter')) {
@@ -172,7 +173,7 @@ class LecturerScheduleController extends Controller
         if ($request->input('class_filter')) {
             $queryParams['class_filter'] = $request->input('class_filter');
         }
-        
+
         return redirect()->route('faculty-schedule', $queryParams)->with('success', 'Lecturer Schedule updated successfully.');
     }
 
@@ -196,5 +197,36 @@ class LecturerScheduleController extends Controller
         }
 
         return redirect()->route('faculty-schedule', $queryParams)->with('success', 'Lecturer Schedule deleted successfully.');
+    }
+
+    public function getGroupSchedule(Request $request){
+        $termFilter = $request->input('sy_term_id');
+        $classFilter = $request->input('class_id');
+
+        $schedules = collect();
+
+        if ($classFilter && $termFilter) {
+            $schedulesQuery = LecturerSchedule::with([
+                'lecturer',
+                'subject',
+                'room',
+                'group',
+                'academicCalendar.term'
+            ]);
+
+            $schedulesQuery->where('sy_term_id', $termFilter)
+                          ->where('class_id', $classFilter);
+
+
+            $schedules = $schedulesQuery->orderBy('day')
+                                       ->orderBy('start_time')
+                                       ->get();
+        }
+
+        return Inertia::render('application/class-schedule', [
+            'data' => [
+                'schedules' => $schedules
+            ]
+        ]);
     }
 }
