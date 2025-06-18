@@ -18,7 +18,7 @@ const breadcrumbs = [
     },
 ];
 
-const DAYS_OF_WEEK = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday' ];
+const DAYS_OF_WEEK = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday'];
 
 // Time slots as key-value pairs: key = 24h format (for backend), value = 12h format (for display)
 const TIME_SLOTS = {
@@ -83,7 +83,7 @@ function generateColors() {
 // Create time slot grid
 function ScheduleGrid({ schedules }) {
     const timeSlots = Object.keys(TIME_SLOTS);
-    const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday' ];
+    const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday'];
     const colors = generateColors();
 
     // Create color mapping for each unique class-subject combination
@@ -158,8 +158,8 @@ function ScheduleGrid({ schedules }) {
     };
 
     return (
-        <div className="overflow-x-auto ">
-            <div className="relative min-w-[800px] ">
+        <div className="overflow-x-auto">
+            <div className="relative min-w-[800px]">
                 {/* Header */}
                 <div className="mb-2 grid grid-cols-6 gap-1">
                     <div className="rounded bg-gray-100 p-3 text-center font-semibold">Time</div>
@@ -242,6 +242,7 @@ function ScheduleDialog({ isOpen, onClose, schedule = null, onSave, lecturers, a
         day: '',
         start_time: '',
         end_time: '',
+        selectedSubjectValue: '',
     });
     const [validationError, setValidationError] = useState('');
     const [availableSubjects, setAvailableSubjects] = useState([]);
@@ -262,6 +263,7 @@ function ScheduleDialog({ isOpen, onClose, schedule = null, onSave, lecturers, a
                     day: schedule.day || '',
                     start_time: schedule.start_time || '',
                     end_time: schedule.end_time || '',
+                    selectedSubjectValue: '', // Will be set when subjects are loaded
                 });
 
                 // Load subjects and classes if we have the required data
@@ -279,6 +281,7 @@ function ScheduleDialog({ isOpen, onClose, schedule = null, onSave, lecturers, a
                     day: '',
                     start_time: '',
                     end_time: '',
+                    selectedSubjectValue: '',
                 });
                 setAvailableSubjects([]);
                 setAvailableClasses([]);
@@ -339,9 +342,12 @@ function ScheduleDialog({ isOpen, onClose, schedule = null, onSave, lecturers, a
         }
     };
 
-    const handleSubjectChange = async (subjCode) => {
-        // Always reset class selection when subject changes
-        setFormData({ ...formData, subj_code: subjCode, class_id: '' });
+    const handleSubjectChange = async (uniqueValue) => {
+        // Extract subject code and program code from the unique value (e.g., "MATH101-BSIT")
+        const [subjCode, progCode] = uniqueValue ? uniqueValue.split('-') : ['', ''];
+
+        // Store the unique value and reset class selection when subject changes
+        setFormData({ ...formData, subj_code: subjCode, selectedSubjectValue: uniqueValue, class_id: '' });
         setAvailableClasses([]); // Clear existing classes first
 
         // If no subject selected, just clear classes
@@ -350,7 +356,12 @@ function ScheduleDialog({ isOpen, onClose, schedule = null, onSave, lecturers, a
         }
 
         // Find the selected subject from availableSubjects including its prog_code
-        const selectedProgramSubject = availableSubjects.find((programSubject) => programSubject.subject?.code === subjCode);
+        const selectedProgramSubject = availableSubjects.find((programSubject) => {
+            const subject = programSubject.subject;
+            const program = programSubject.program;
+            const programCode = program?.code || programSubject.prog_code;
+            return subject?.code === subjCode && programCode === progCode;
+        });
 
         if (selectedProgramSubject) {
             console.log('Selected Subject:', {
@@ -371,12 +382,26 @@ function ScheduleDialog({ isOpen, onClose, schedule = null, onSave, lecturers, a
         handleLecturerTermChange();
     }, [formData.lecturer_id, formData.sy_term_id]);
 
-    // Watch for availableSubjects changes in edit mode to load classes
+    // Watch for availableSubjects changes in edit mode to load classes and set selectedSubjectValue
     React.useEffect(() => {
-        if (schedule && availableSubjects.length > 0 && formData.subj_code && availableClasses.length === 0) {
-            // This is edit mode and subjects have been loaded, now load classes for the existing subject
+        if (schedule && availableSubjects.length > 0 && formData.subj_code) {
+            // This is edit mode and subjects have been loaded
             console.log('Edit mode: Loading classes for existing subject', formData.subj_code);
-            loadClassesForExistingSubject(formData.subj_code);
+            
+            // Set the selectedSubjectValue for the current subject
+            const matchingProgramSubject = availableSubjects.find((ps) => ps.subject?.code === formData.subj_code);
+            if (matchingProgramSubject) {
+                const program = matchingProgramSubject.program;
+                const programCode = program?.code || matchingProgramSubject.prog_code;
+                const uniqueValue = `${formData.subj_code}-${programCode}`;
+                
+                setFormData(prev => ({ ...prev, selectedSubjectValue: uniqueValue }));
+            }
+            
+            // Load classes if not already loaded
+            if (availableClasses.length === 0) {
+                loadClassesForExistingSubject(formData.subj_code);
+            }
         }
     }, [availableSubjects, formData.subj_code, schedule]);
 
@@ -485,7 +510,7 @@ function ScheduleDialog({ isOpen, onClose, schedule = null, onSave, lecturers, a
                         <div className="space-y-2">
                             <Label htmlFor="subj_code">Subject *</Label>
                             <Select
-                                value={formData.subj_code}
+                                value={formData.selectedSubjectValue || ''}
                                 onValueChange={handleSubjectChange}
                                 disabled={!formData.lecturer_id || !formData.sy_term_id || isLoadingSubjects}
                             >
@@ -503,12 +528,14 @@ function ScheduleDialog({ isOpen, onClose, schedule = null, onSave, lecturers, a
                                 <SelectContent>
                                     {availableSubjects.map((programSubject) => {
                                         const subject = programSubject.subject;
+                                        const program = programSubject.program;
+                                        const uniqueValue = `${subject?.code}-${program?.code || programSubject.prog_code}`;
                                         return subject ? (
-                                            <SelectItem key={subject.code} value={subject.code}>
+                                            <SelectItem key={uniqueValue} value={uniqueValue}>
                                                 <div className="flex items-center gap-2">
                                                     <BookOpen className="h-4 w-4" />
                                                     <span>
-                                                        {subject.code} - {subject.name}
+                                                        {subject.code} - {subject.name} - {program?.code || programSubject.prog_code}
                                                     </span>
                                                 </div>
                                             </SelectItem>

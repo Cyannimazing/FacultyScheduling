@@ -407,21 +407,11 @@ function SubjectAllocationSheet({ isOpen, onClose, allocation = null, onSave, ex
                                             const subject = programSubject.subject;
                                             return (
                                                 <SelectItem key={programSubject.id} value={programSubject.id.toString()}>
-                                                    <div className="flex flex-col gap-1">
-                                                        <div className="flex items-center gap-2">
-                                                            <span className="font-medium">{subject.code} - {subject.name}</span>
-                                                            <Badge variant="outline" className="text-xs">
-                                                                {subject.unit || 0} unit{(subject.unit || 0) !== 1 ? 's' : ''}
-                                                            </Badge>
-                                                        </div>
-                                                        <div className="flex items-center gap-1">
-                                                            <Badge variant="default" className="bg-blue-100 text-xs text-blue-800">
-                                                                {programSubject.year_level}{programSubject.year_level === 1 ? 'st' : programSubject.year_level === 2 ? 'nd' : programSubject.year_level === 3 ? 'rd' : 'th'} Year
-                                                            </Badge>
-                                                            <Badge variant="secondary" className="bg-gray-100 text-xs text-gray-800">
-                                                                {programSubject.term?.name || 'Unknown Term'}
-                                                            </Badge>
-                                                        </div>
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="font-medium">{subject.code} - {subject.name}</span>
+                                                        <Badge variant="outline" className="text-xs">
+                                                            {subject.unit || 0} unit{(subject.unit || 0) !== 1 ? 's' : ''}
+                                                        </Badge>
                                                     </div>
                                                 </SelectItem>
                                             );

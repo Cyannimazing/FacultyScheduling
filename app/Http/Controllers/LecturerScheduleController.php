@@ -93,7 +93,7 @@ class LecturerScheduleController extends Controller
 
     //kani na query mo return rani ug mga subject base sa kinsa na lecturer ug unsa na schoolyear
     public function getSubjectsByLecturerAndSchoolYear($sy_term_id, $lecturer_id){
-        $subjects = LecturerSubject::with(['programSubject.subject'])
+        $subjects = LecturerSubject::with(['programSubject.subject', 'programSubject.program'])
                         ->where('lecturer_id', $lecturer_id)
                         ->where('sy_term_id', $sy_term_id)
                         ->get()
@@ -217,15 +217,27 @@ class LecturerScheduleController extends Controller
             $schedulesQuery->where('sy_term_id', $termFilter)
                           ->where('class_id', $classFilter);
 
-
             $schedules = $schedulesQuery->orderBy('day')
                                        ->orderBy('start_time')
                                        ->get();
         }
 
+        // Get academic calendars for the filter dropdown
+        $academicCalendars = AcademicCalendar::with('term')
+                            ->orderBy('school_year', 'desc')
+                            ->orderBy('id')
+                            ->get();
+
+        // Get all groups/classes for the filter dropdown
+        $groups = Group::with('program')
+                     ->orderBy('name')
+                     ->get();
+
         return Inertia::render('application/class-schedule', [
             'data' => [
-                'schedules' => $schedules
+                'schedules' => $schedules,
+                'academicCalendars' => $academicCalendars,
+                'groups' => $groups
             ]
         ]);
     }

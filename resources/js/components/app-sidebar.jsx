@@ -1,19 +1,24 @@
 import { NavMain } from '@/components/nav-main';
 import { NavUser } from '@/components/nav-user';
 import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar';
-import { Calendar1, CalendarPlus, Clipboard, DoorOpen, LayoutGrid, LibraryBig, NotebookIcon, Shapes, Users } from 'lucide-react';
+import { Calendar, Calendar1, CalendarPlus, Clipboard, DoorOpen, LibraryBig, NotebookIcon, PlusCircle, Shapes, Users } from 'lucide-react';
 import AppLogo from './app-logo';
 
 const mainNavItems = [
     {
         title: 'Faculty Schedule',
         url: '/faculty-schedule',
-        icon: LayoutGrid,
+        icon: CalendarPlus,
+    },
+    {
+        title: 'Class Schedule',
+        url: '/class-schedule',
+        icon: Calendar,
     },
     {
         title: 'Subject Allocation',
         url: '/subject-allocation',
-        icon: CalendarPlus,
+        icon: PlusCircle,
     },
     {
         title: 'Course Assignment',
