@@ -1,3 +1,4 @@
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
@@ -9,7 +10,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import AppLayout from '@/layouts/app-layout';
 import { Head, router, usePage } from '@inertiajs/react';
-import { BookOpen, Calendar, ChevronLeft, ChevronRight, Code, Edit, MoreHorizontal, Plus, Search, Trash2 } from 'lucide-react';
+import { AlertCircle, BookOpen, Calendar, ChevronLeft, ChevronRight, Code, Edit, MoreHorizontal, Plus, Search, Trash2, X } from 'lucide-react';
 import React, { useState } from 'react';
 
 const breadcrumbs = [
@@ -36,7 +37,7 @@ function LoadingSkeleton() {
     );
 }
 
-function ProgramDialog({ isOpen, onClose, program = null, onSave }) {
+function ProgramDialog({ isOpen, onClose, program = null, onSave, errors = null }) {
     const [formData, setFormData] = useState({
         code: '',
         name: '',
@@ -63,7 +64,6 @@ function ProgramDialog({ isOpen, onClose, program = null, onSave }) {
     const handleSave = () => {
         if (formData.code && formData.name && formData.description && formData.number_of_year) {
             onSave(formData);
-            onClose();
         }
     };
 
@@ -75,6 +75,19 @@ function ProgramDialog({ isOpen, onClose, program = null, onSave }) {
                     <DialogDescription>{program ? 'Update the program details below.' : 'Create a new academic program.'}</DialogDescription>
                 </DialogHeader>
                 <div className="grid gap-4 py-4">
+                    {errors && (
+                        <div className="rounded-md border border-red-200 bg-red-50 p-3 text-red-600">
+                            <div className="mb-2 font-semibold">⚠️ Please fix the following errors:</div>
+                            <ul className="list-inside list-disc space-y-1">
+                                {Object.entries(errors).map(([field, messages]) => (
+                                    <li key={field}>
+                                        <span className="font-medium capitalize">{field.replace('_', ' ')}:</span>{' '}
+                                        {Array.isArray(messages) ? messages[0] : messages}
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
+                    )}
                     <div className="grid grid-cols-4 items-center gap-4">
                         <label htmlFor="code" className="text-right text-sm font-medium">
                             Code
@@ -154,12 +167,12 @@ export default function Program() {
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [programToDelete, setProgramToDelete] = useState(null);
     const [isDeleting, setIsDeleting] = useState(false);
+    const [saveErrors, setSaveErrors] = useState(null);
 
     const itemsPerPage = data.programs.per_page;
 
     const totalPages = data.programs.last_page;
     const paginatedData = data.programs.data;
-    console.log(paginatedData);
 
     const handlePageChange = (page) => {
         setIsLoading(true);
@@ -188,25 +201,37 @@ export default function Program() {
 
     const handleAddProgram = () => {
         setEditingProgram(null);
+        setSaveErrors(null); // Clear any previous errors
         setIsDialogOpen(true);
     };
 
     const handleEditProgram = (program) => {
         setEditingProgram(program);
+        setSaveErrors(null); // Clear any previous errors
         setIsDialogOpen(true);
     };
 
     const handleSaveProgram = (formData) => {
+        setSaveErrors(null); // Clear previous errors
+
         if (editingProgram) {
             router.put(`/program/${editingProgram.id}`, formData, {
                 onSuccess: () => {
-                    setIsDialogOpen(false);
+                    setSaveErrors(null);
+                },
+                onError: (errors) => {
+                    console.error('Error updating program:', errors);
+                    setSaveErrors(errors);
                 },
             });
         } else {
             router.post('/program', formData, {
                 onSuccess: () => {
-                    setIsDialogOpen(false);
+                    setSaveErrors(null);
+                },
+                onError: (errors) => {
+                    console.error('Error creating program:', errors);
+                    setSaveErrors(errors);
                 },
             });
         }
@@ -387,7 +412,7 @@ export default function Program() {
                 )}
             </div>
 
-            <ProgramDialog isOpen={isDialogOpen} onClose={() => setIsDialogOpen(false)} program={editingProgram} onSave={handleSaveProgram} />
+            <ProgramDialog isOpen={isDialogOpen} onClose={() => setIsDialogOpen(false)} program={editingProgram} onSave={handleSaveProgram} errors={saveErrors} />
 
             <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
                 <DialogContent className="sm:max-w-[400px]">
@@ -407,6 +432,7 @@ export default function Program() {
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
+
         </AppLayout>
     );
 }

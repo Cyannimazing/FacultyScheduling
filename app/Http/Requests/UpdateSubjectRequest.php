@@ -38,7 +38,7 @@ class UpdateSubjectRequest extends FormRequest
     {
         return [
             'code.required' => 'Subject code is required.',
-            'code.unique' => 'Subject code must be unique.',
+            'code.unique' => 'Subject code already exists.',
             'name.required' => 'Subject name is required.',
             'unit.required' => 'Unit is required.',
             'unit.integer' => 'Unit must be an integer.',

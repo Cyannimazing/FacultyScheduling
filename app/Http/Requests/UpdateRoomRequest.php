@@ -22,7 +22,7 @@ class UpdateRoomRequest extends FormRequest
     public function rules(): array
     {
         $roomId = $this->route('room'); // Get the room ID from route
-        
+
         return [
             'name' => 'required|string|max:255|unique:rooms,name,' . $roomId . ',id',
         ];
@@ -35,7 +35,7 @@ class UpdateRoomRequest extends FormRequest
     {
         return [
             'name.required' => 'Room name is required.',
-            'name.unique' => 'Room name must be unique.',
+            'name.unique' => 'Room name already exists.',
             'name.string' => 'Room name must be a string.',
             'name.max' => 'Room name cannot exceed 255 characters.',
         ];

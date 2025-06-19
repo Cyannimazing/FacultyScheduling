@@ -36,7 +36,7 @@ class UpdateProgramRequest extends FormRequest
     {
         return [
             'code.required' => 'Program code is required.',
-            'code.unique' => 'Program code must be unique.',
+            'code.unique' => 'Program code already exists.',
             'name.required' => 'Program name is required.',
             'number_of_year.required' => 'Number of years is required.',
             'number_of_year.integer' => 'Number of years must be an integer.',

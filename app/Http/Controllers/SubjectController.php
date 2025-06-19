@@ -18,7 +18,7 @@ class SubjectController extends Controller
         $search = $request->input('search');
         $isGenEdFilter = $request->input('isGenEdFilter');
         $page = $request->input('page', 1);
-        $perPage = 5;
+        $perPage = 10;
 
         $subjects = Subject::where(function ($query) use ($search) {
                             $query->where('name', 'LIKE', "%$search%")

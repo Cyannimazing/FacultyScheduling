@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import AppLayout from '@/layouts/app-layout';
 import { Head, usePage, router } from '@inertiajs/react';
-import { BookOpen, ChevronLeft, ChevronRight, Code, GripVertical, Plus, Search, Trash2, Users } from 'lucide-react';
+import { BookOpen, ChevronLeft, ChevronRight, Code, GripVertical, Plus, Search, Trash2, Users, AlertCircle } from 'lucide-react';
 import { useState } from 'react';
 
 const breadcrumbs = [
@@ -167,7 +167,7 @@ function ProgramDropZone({ program, assignments, onDrop, onRemoveAssignment, ter
 }
 
 // Drag and drop assignment dialog
-function DropAssignmentDialog({ isOpen, onClose, onSave, subject, program, terms }) {
+function DropAssignmentDialog({ isOpen, onClose, onSave, subject, program, terms, errors }) {
     const [formData, setFormData] = useState({
         year_level: '',
         term_id: '',
@@ -176,8 +176,7 @@ function DropAssignmentDialog({ isOpen, onClose, onSave, subject, program, terms
     const handleSave = () => {
         if (formData.year_level && formData.term_id) {
             onSave(formData);
-            setFormData({ year_level: '', term_id: '' });
-            onClose();
+            // Don't close dialog here - let parent handle closing on success
         }
     };
 
@@ -200,6 +199,19 @@ function DropAssignmentDialog({ isOpen, onClose, onSave, subject, program, terms
                     </DialogDescription>
                 </DialogHeader>
                 <div className="grid gap-4 py-4">
+                    {errors && (
+                        <div className="rounded-md border border-red-200 bg-red-50 p-3 text-red-600">
+                            <div className="mb-2 font-semibold">⚠️ Please fix the following errors:</div>
+                            <ul className="list-inside list-disc space-y-1">
+                                {Object.entries(errors).map(([field, messages]) => (
+                                    <li key={field}>
+                                        <span className="font-medium capitalize">{field.replace('_', ' ')}:</span>{' '}
+                                        {Array.isArray(messages) ? messages[0] : messages}
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
+                    )}
                     <div className="grid grid-cols-4 items-center gap-4">
                         <Label htmlFor="year" className="text-right text-sm font-medium">
                             Year Level
@@ -249,7 +261,7 @@ function DropAssignmentDialog({ isOpen, onClose, onSave, subject, program, terms
 }
 
 // Assignment dialog for manual entry
-function AssignmentDialog({ isOpen, onClose, onSave, programs, subjects, terms }) {
+function AssignmentDialog({ isOpen, onClose, onSave, programs, subjects, terms, errors = null }) {
     const [formData, setFormData] = useState({
         program_id: '',
         subject_id: '',
@@ -269,8 +281,6 @@ function AssignmentDialog({ isOpen, onClose, onSave, programs, subjects, terms }
     const handleSave = () => {
         if (formData.program_id && formData.subject_id && formData.year_level && formData.term_id) {
             onSave(formData);
-            setFormData({ program_id: '', subject_id: '', year_level: '', term_id: '' });
-            onClose();
         }
     };
 
@@ -282,6 +292,19 @@ function AssignmentDialog({ isOpen, onClose, onSave, programs, subjects, terms }
                     <DialogDescription>Assign a subject to a specific program and academic term.</DialogDescription>
                 </DialogHeader>
                 <div className="grid gap-4 py-4">
+                    {errors && (
+                        <div className="rounded-md border border-red-200 bg-red-50 p-3 text-red-600">
+                            <div className="mb-2 font-semibold">⚠️ Please fix the following errors:</div>
+                            <ul className="list-inside list-disc space-y-1">
+                                {Object.entries(errors).map(([field, messages]) => (
+                                    <li key={field}>
+                                        <span className="font-medium capitalize">{field.replace('_', ' ')}:</span>{' '}
+                                        {Array.isArray(messages) ? messages[0] : messages}
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
+                    )}
                     <div className="grid grid-cols-4 items-center gap-4">
                         <Label htmlFor="program" className="text-right text-sm font-medium">
                             Program
@@ -368,7 +391,6 @@ export default function CourseAssignment() {
     const { data } = usePage().props;
     const { programSubjects: assignments = [], programs = [], subjects = [], terms = [], totalAssignment, totalProgramWithSubject, totalSubjectAssigned } = data;
 
-    console.log(data);
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedProgram, setSelectedProgram] = useState('all');
     const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -379,6 +401,8 @@ export default function CourseAssignment() {
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [assignmentToDelete, setAssignmentToDelete] = useState(null);
     const [currentPage, setCurrentPage] = useState(1);
+    const [assignmentErrors, setAssignmentErrors] = useState(null);
+    const [deleteErrors, setDeleteErrors] = useState(null);
 
     // Pagination settings
     const itemsPerPage = 5;
@@ -438,6 +462,9 @@ export default function CourseAssignment() {
         );
 
         if (!existingAssignment) {
+            // Clear any previous errors
+            setAssignmentErrors(null);
+
             // Create new assignment using Inertia router
             router.post('/course-assignment', {
                 prog_code: dropTarget.code,
@@ -447,20 +474,22 @@ export default function CourseAssignment() {
             }, {
                 preserveScroll: true,
                 onSuccess: () => {
-                    console.log('Assignment created successfully');
+                    setAssignmentErrors(null);
+                    // Reset state
+                    setDraggedSubject(null);
+                    setDropTarget(null);
+                    setShowDropDialog(false);
                 },
                 onError: (errors) => {
                     console.error('Error creating assignment:', errors);
+                    setAssignmentErrors(errors);
                 }
             });
         } else {
-            console.log('Assignment already exists');
+            setDraggedSubject(null);
+            setDropTarget(null);
+            setShowDropDialog(false);
         }
-
-        // Reset state
-        setDraggedSubject(null);
-        setDropTarget(null);
-        setShowDropDialog(false);
     };
 
     const handleRemoveAssignment = (assignment) => {
@@ -470,18 +499,19 @@ export default function CourseAssignment() {
 
     const confirmDeleteAssignment = () => {
         if (assignmentToDelete) {
+            // Clear any previous errors
+            setDeleteErrors(null);
+
             // Delete assignment using Inertia router
             router.delete(`/course-assignment/${assignmentToDelete.id}`, {
                 preserveScroll: true,
                 onSuccess: () => {
-                    console.log('Assignment deleted successfully');
+                    setDeleteErrors(null);
                     setDeleteDialogOpen(false);
                     setAssignmentToDelete(null);
                 },
                 onError: (errors) => {
-                    console.error('Error deleting assignment:', errors);
-                    setDeleteDialogOpen(false);
-                    setAssignmentToDelete(null);
+                    setDeleteErrors(errors);
                 }
             });
         } else {
@@ -497,43 +527,29 @@ export default function CourseAssignment() {
             year_level: parseInt(formData.year_level),
             term_id: parseInt(formData.term_id),
         };
+        setAssignmentErrors(null);
 
-        // Get the selected program and subject to check by codes
+        // Get the selected program and subject to send codes instead of IDs
         const selectedProgram = programs.find(p => p.id == formData.program_id);
         const selectedSubject = subjects.find(s => s.id == formData.subject_id);
 
-        // Check if assignment already exists
-        const existingAssignment = assignments.find(
-            (a) =>
-                a.prog_code === selectedProgram.code &&
-                a.subj_code === selectedSubject.code &&
-                a.year_level === parseInt(formData.year_level) &&
-                a.term_id === parseInt(formData.term_id),
-        );
-
-        if (!existingAssignment) {
-            // Get the selected program and subject to send codes instead of IDs
-            const selectedProgram = programs.find(p => p.id == formData.program_id);
-            const selectedSubject = subjects.find(s => s.id == formData.subject_id);
-
-            // Create new assignment using Inertia router
-            router.post('/course-assignment', {
-                prog_code: selectedProgram.code,
-                subj_code: selectedSubject.code,
-                year_level: parseInt(formData.year_level),
-                term_id: parseInt(formData.term_id)
-            }, {
-                preserveScroll: true,
-                onSuccess: () => {
-                    console.log('Manual assignment created successfully');
-                },
-                onError: (errors) => {
-                    console.error('Error creating manual assignment:', errors);
-                }
-            });
-        } else {
-            console.log('Assignment already exists');
-        }
+        // Create new assignment using Inertia router
+        router.post('/course-assignment', {
+            prog_code: selectedProgram.code,
+            subj_code: selectedSubject.code,
+            year_level: parseInt(formData.year_level),
+            term_id: parseInt(formData.term_id)
+        }, {
+            preserveScroll: true,
+            onSuccess: () => {
+                setAssignmentErrors(null);
+                setShowAssignmentForm(false);
+            },
+            onError: (errors) => {
+                console.error('Error creating manual assignment:', errors);
+                setAssignmentErrors(errors);
+            }
+        });
     };
 
     return (
@@ -779,11 +795,15 @@ export default function CourseAssignment() {
                 {/* Manual Assignment Dialog */}
                 <AssignmentDialog
                     isOpen={showAssignmentForm}
-                    onClose={() => setShowAssignmentForm(false)}
+                    onClose={() => {
+                        setShowAssignmentForm(false)
+                        setAssignmentErrors(null)
+                    } }
                     onSave={handleAddAssignment}
                     programs={programs}
                     subjects={subjects}
                     terms={terms}
+                    errors={assignmentErrors}
                 />
 
                 {/* Drag and Drop Assignment Dialog */}
@@ -793,11 +813,13 @@ export default function CourseAssignment() {
                         setShowDropDialog(false);
                         setDraggedSubject(null);
                         setDropTarget(null);
+                        setAssignmentErrors(null);
                     }}
                     onSave={handleDropAssignment}
                     subject={draggedSubject}
                     program={dropTarget}
                     terms={terms}
+                    errors={assignmentErrors}
                 />
 
                 {/* Delete Confirmation Dialog */}
@@ -826,6 +848,21 @@ export default function CourseAssignment() {
                                 )}
                             </DialogDescription>
                         </DialogHeader>
+                        <div className="grid gap-4 py-4">
+                            {deleteErrors && (
+                                <div className="rounded-md border border-red-200 bg-red-50 p-3 text-red-600">
+                                    <div className="mb-2 font-semibold">⚠️ Please fix the following errors:</div>
+                                    <ul className="list-inside list-disc space-y-1">
+                                        {Object.entries(deleteErrors).map(([field, messages]) => (
+                                            <li key={field}>
+                                                <span className="font-medium capitalize">{field.replace('_', ' ')}:</span>{' '}
+                                                {Array.isArray(messages) ? messages[0] : messages}
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </div>
+                            )}
+                        </div>
                         <DialogFooter>
                             <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>
                                 Cancel

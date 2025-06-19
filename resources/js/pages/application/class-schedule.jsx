@@ -378,7 +378,6 @@ export default function ClassSchedule() {
             return `${dayFormatted}${ordinal} ${month} ${year}`;
         }
 
-        console.log(group);
         const generateScheduleGrid = (schedules) => {
             // Use the same dynamic time slot logic as the main grid
             const getTimeSlotsFromSchedules = (schedules) => {
@@ -386,7 +385,6 @@ export default function ClassSchedule() {
                     return [];
                 }
 
-                console.log(term)
                 const allTimes = [];
                 schedules.forEach((schedule) => {
                     allTimes.push(schedule.start_time, schedule.end_time);

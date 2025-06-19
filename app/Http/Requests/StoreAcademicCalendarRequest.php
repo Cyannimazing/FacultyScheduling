@@ -42,14 +42,23 @@ class StoreAcademicCalendarRequest extends FormRequest
                 'required',
                 'date',
                 'before:end_date',
-                // Unique validation for start_date + end_date combination
+                // Check for date overlaps with existing academic calendars
                 function ($attribute, $value, $fail) {
-                    $exists = \App\Models\AcademicCalendar::where('start_date', $value)
-                        ->where('end_date', $this->input('end_date'))
-                        ->exists();
+                    $startDate = $value;
+                    $endDate = $this->input('end_date');
                     
-                    if ($exists) {
-                        $fail('An academic calendar with these dates already exists.');
+                    if (!$endDate) {
+                        return; // Let end_date validation handle missing end_date
+                    }
+                    
+                    // Check for any overlapping academic calendars
+                    $overlapping = \App\Models\AcademicCalendar::where(function ($query) use ($startDate, $endDate) {
+                        $query->where('start_date', '<', $endDate)
+                              ->where('end_date', '>', $startDate);
+                    })->exists();
+                    
+                    if ($overlapping) {
+                        $fail('The selected dates overlap with an existing academic calendar.');
                     }
                 },
             ],

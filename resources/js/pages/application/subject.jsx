@@ -1,3 +1,4 @@
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
@@ -11,7 +12,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import AppLayout from '@/layouts/app-layout';
 import { Head, router, usePage } from '@inertiajs/react';
-import { BookOpen, Calendar, ChevronLeft, ChevronRight, Code, Edit, MoreHorizontal, Plus, Search, Trash2 } from 'lucide-react';
+import { AlertCircle, BookOpen, Calendar, ChevronLeft, ChevronRight, Code, Edit, MoreHorizontal, Plus, Search, Trash2, X } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
 
 const breadcrumbs = [
@@ -38,7 +39,7 @@ function LoadingSkeleton() {
     );
 }
 
-function SubjectDialog({ isOpen, onClose, subjectData = null, onSave }) {
+function SubjectDialog({ isOpen, onClose, subjectData = null, onSave, errors = null }) {
     const [formData, setFormData] = useState({
         code: '',
         name: '',
@@ -70,7 +71,6 @@ function SubjectDialog({ isOpen, onClose, subjectData = null, onSave }) {
                 ...formData,
                 unit: parseInt(formData.unit),
             });
-            onClose();
         }
     };
 
@@ -82,6 +82,19 @@ function SubjectDialog({ isOpen, onClose, subjectData = null, onSave }) {
                     <DialogDescription>{subjectData ? 'Update the subject details below.' : 'Create a new academic subject.'}</DialogDescription>
                 </DialogHeader>
                 <div className="grid gap-4 py-4">
+                    {errors && (
+                        <div className="rounded-md border border-red-200 bg-red-50 p-3 text-red-600">
+                            <div className="mb-2 font-semibold">⚠️ Please fix the following errors:</div>
+                            <ul className="list-inside list-disc space-y-1">
+                                {Object.entries(errors).map(([field, messages]) => (
+                                    <li key={field}>
+                                        <span className="font-medium capitalize">{field.replace('_', ' ')}:</span>{' '}
+                                        {Array.isArray(messages) ? messages[0] : messages}
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
+                    )}
                     <div className="grid grid-cols-4 items-center gap-4">
                         <Label htmlFor="code" className="text-right text-sm font-medium">
                             Subject Code
@@ -155,7 +168,6 @@ function SubjectDialog({ isOpen, onClose, subjectData = null, onSave }) {
 
 export default function Subject() {
     const { data } = usePage().props
-    const [currentPage, setCurrentPage] = useState(1);
     const [isLoading, setIsLoading] = useState(false);
     const [searchSubject, setSearchSubject] = useState('');
     const [typeFilter, setTypeFilter] = useState('');
@@ -164,18 +176,20 @@ export default function Subject() {
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [subjectToDelete, setSubjectToDelete] = useState(null);
     const [isDeleting, setIsDeleting] = useState(false); // Add state to prevent multiple delete clicks
+    const [saveErrors, setSaveErrors] = useState(null);
 
     const itemsPerPage = data.subjects.per_page;
     const totalPages = data.subjects.last_page;
 
     const handlePageChange = (page) => {
-        if (page > 0 && page <= totalPages) {
-            setIsLoading(true);
-            setTimeout(() => {
-                setCurrentPage(page);
-                setIsLoading(false);
-            }, 800);
-        }
+         setIsLoading(true);
+        router.get(
+            '/subject',
+            { page },
+            {
+                preserveState: true,
+                onFinish: () => setIsLoading(false),
+            })
     };
 
     useEffect(() => {
@@ -205,25 +219,39 @@ export default function Subject() {
 
     const handleAddSubject = () => {
         setEditingSubject(null);
+        setSaveErrors(null); // Clear any previous errors
         setIsDialogOpen(true);
     };
 
     const handleEditSubject = (subject) => {
         setEditingSubject(subject);
+        setSaveErrors(null); // Clear any previous errors
         setIsDialogOpen(true);
     };
 
     const handleSaveSubject = (formData) => {
+        setSaveErrors(null); // Clear previous errors
+
         if (editingSubject) {
             router.put(`/subject/${editingSubject.id}`, formData, {
                 onSuccess: () => {
                     setIsDialogOpen(false);
+                    setSaveErrors(null);
+                },
+                onError: (errors) => {
+                    console.error('Error updating subject:', errors);
+                    setSaveErrors(errors);
                 },
             });
         } else {
             router.post('/subject', formData, {
                 onSuccess: () => {
                     setIsDialogOpen(false);
+                    setSaveErrors(null);
+                },
+                onError: (errors) => {
+                    console.error('Error creating subject:', errors);
+                    setSaveErrors(errors);
                 },
             });
         }
@@ -423,18 +451,18 @@ export default function Subject() {
                 {!isLoading && data.subjects.total > itemsPerPage && (
                     <div className="flex items-center justify-between">
                         <div className="text-muted-foreground text-sm">
-                            Page {currentPage} of {totalPages}
+                            Page {data.subjects.current_page} of {totalPages}
                         </div>
                         <div className="flex items-center space-x-2">
-                            <Button variant="outline" size="sm" onClick={() => handlePageChange(currentPage - 1)} disabled={currentPage === 1}>
+                            <Button variant="outline" size="sm" onClick={() => handlePageChange(data.subjects.current_page - 1)} disabled={data.subjects.current_page === 1}>
                                 <ChevronLeft className="h-4 w-4" />
                                 Previous
                             </Button>
                             <Button
                                 variant="outline"
                                 size="sm"
-                                onClick={() => handlePageChange(currentPage + 1)}
-                                disabled={currentPage === totalPages}
+                                onClick={() => handlePageChange(data.subjects.current_page + 1)}
+                                disabled={data.subjects.current_page === totalPages}
                             >
                                 Next
                                 <ChevronRight className="h-4 w-4" />
@@ -445,7 +473,7 @@ export default function Subject() {
             </div>
 
             {/* Add/Edit Subject Dialog */}
-            <SubjectDialog isOpen={isDialogOpen} onClose={() => setIsDialogOpen(false)} subjectData={editingSubject} onSave={handleSaveSubject} />
+            <SubjectDialog isOpen={isDialogOpen} onClose={() => setIsDialogOpen(false)} subjectData={editingSubject} onSave={handleSaveSubject} errors={saveErrors} />
 
             {/* Delete Confirmation Dialog */}
             <Dialog open={deleteDialogOpen} onOpenChange={cancelDelete}>
@@ -466,6 +494,7 @@ export default function Subject() {
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
+
         </AppLayout>
     );
 }

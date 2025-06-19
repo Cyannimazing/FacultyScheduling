@@ -1,3 +1,4 @@
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -8,7 +9,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import AppLayout from '@/layouts/app-layout';
 import { Head, router, usePage } from '@inertiajs/react';
-import { Calendar, ChevronLeft, ChevronRight, Clock, Edit, GraduationCap, MoreHorizontal, Plus, Search, Trash2, User } from 'lucide-react';
+import { AlertCircle, Calendar, ChevronLeft, ChevronRight, Clock, Edit, GraduationCap, MoreHorizontal, Plus, Search, Trash2, User, X } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
 
 const breadcrumbs = [
@@ -72,7 +73,7 @@ function LoadingSkeleton() {
     );
 }
 
-function LecturerDialog({ isOpen, onClose, lecturer = null, onSave }) {
+function LecturerDialog({ isOpen, onClose, lecturer = null, onSave, errors = null }) {
     const [formData, setFormData] = useState({
         title: '',
         fname: '',
@@ -96,9 +97,8 @@ function LecturerDialog({ isOpen, onClose, lecturer = null, onSave }) {
     }, [lecturer, isOpen]);
 
     const handleSave = () => {
-        if (formData.title && formData.fname && formData.lname) {
+        if (formData.title && formData.fname || formData.lname) {
             onSave(formData);
-            onClose();
         }
     };
 
@@ -110,6 +110,19 @@ function LecturerDialog({ isOpen, onClose, lecturer = null, onSave }) {
                     <DialogDescription>{lecturer ? 'Update the lecturer details below.' : 'Create a new lecturer profile.'}</DialogDescription>
                 </DialogHeader>
                 <div className="grid gap-4 py-4">
+                    {errors && (
+                        <div className="rounded-md border border-red-200 bg-red-50 p-3 text-red-600">
+                            <div className="mb-2 font-semibold">⚠️ Please fix the following errors:</div>
+                            <ul className="list-inside list-disc space-y-1">
+                                {Object.entries(errors).map(([field, messages]) => (
+                                    <li key={field}>
+                                        <span className="font-medium capitalize">{field.replace('_', ' ')}:</span>{' '}
+                                        {Array.isArray(messages) ? messages[0] : messages}
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
+                    )}
                     <div className="grid grid-cols-4 items-center gap-4">
                         <label htmlFor="title" className="text-right text-sm font-medium">
                             Title
@@ -156,7 +169,7 @@ function LecturerDialog({ isOpen, onClose, lecturer = null, onSave }) {
                     <Button variant="outline" onClick={onClose}>
                         Cancel
                     </Button>
-                    <Button onClick={handleSave} disabled={!formData.title || !formData.fname || !formData.lname}>
+                    <Button onClick={handleSave} disabled={!formData.title || !formData.fname}>
                         {lecturer ? 'Update' : 'Create'} Lecturer
                     </Button>
                 </DialogFooter>
@@ -175,6 +188,7 @@ export default function Lecturer() {
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [lecturerToDelete, setLecturerToDelete] = useState(null);
     const [isDeleting, setIsDeleting] = useState(false);
+    const [saveErrors, setSaveErrors] = useState(null);
 
     const itemsPerPage = data.lecturers.per_page;
     const totalPages = data.lecturers.last_page;
@@ -207,25 +221,39 @@ export default function Lecturer() {
 
     const handleAddLecturer = () => {
         setEditingLecturer(null);
+        setSaveErrors(null); // Clear any previous errors
         setIsDialogOpen(true);
     };
 
     const handleEditLecturer = (lecturer) => {
         setEditingLecturer(lecturer);
+        setSaveErrors(null); // Clear any previous errors
         setIsDialogOpen(true);
     };
 
     const handleSaveLecturer = (formData) => {
+        setSaveErrors(null); // Clear previous errors
+
         if (editingLecturer) {
             router.put(`/lecturer/${editingLecturer.id}`, formData, {
                 onSuccess: () => {
                     setIsDialogOpen(false);
+                    setSaveErrors(null);
+                },
+                onError: (errors) => {
+                    console.error('Error updating lecturer:', errors);
+                    setSaveErrors(errors);
                 },
             });
         } else {
             router.post('/lecturer', formData, {
                 onSuccess: () => {
                     setIsDialogOpen(false);
+                    setSaveErrors(null);
+                },
+                onError: (errors) => {
+                    console.error('Error creating lecturer:', errors);
+                    setSaveErrors(errors);
                 },
             });
         }
@@ -406,7 +434,7 @@ export default function Lecturer() {
                 )}
             </div>
 
-            <LecturerDialog isOpen={isDialogOpen} onClose={() => setIsDialogOpen(false)} lecturer={editingLecturer} onSave={handleSaveLecturer} />
+            <LecturerDialog isOpen={isDialogOpen} onClose={() => setIsDialogOpen(false)} lecturer={editingLecturer} onSave={handleSaveLecturer} errors={saveErrors} />
 
             <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
                 <DialogContent className="sm:max-w-[400px]">
@@ -427,6 +455,7 @@ export default function Lecturer() {
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
+
         </AppLayout>
     );
 }

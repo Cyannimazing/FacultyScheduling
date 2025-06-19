@@ -66,15 +66,11 @@ class AcademicCalendarController extends Controller
      */
     public function update(UpdateAcademicCalendarRequest $request, int $id)
     {
-        $academicCalendar = AcademicCalendar::find($id);
-        if($academicCalendar){
-            $academicCalendar->update([
-                'term_id' => $request->term_id,
-                'school_year' => $request->school_year,
-                'start_date' => $request->start_date,
-                'end_date' => $request->end_date,
-            ]);
-        }
+        $academicCalendar = AcademicCalendar::findOrFail($id);
+        $validated = $request->validated();
+        
+        $academicCalendar->update($validated);
+        
         return redirect()->route('calendar')->with('success', 'Academic Calendar updated successfully.');
     }
 

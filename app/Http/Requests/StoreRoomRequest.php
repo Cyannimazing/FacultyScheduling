@@ -33,7 +33,7 @@ class StoreRoomRequest extends FormRequest
     {
         return [
             'name.required' => 'Room name is required.',
-            'name.unique' => 'Room name must be unique.',
+            'name.unique' => 'Room name already exists.',
             'name.string' => 'Room name must be a string.',
             'name.max' => 'Room name cannot exceed 255 characters.',
         ];

@@ -1,3 +1,4 @@
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
@@ -11,6 +12,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import AppLayout from '@/layouts/app-layout';
 import { Head, router, usePage } from '@inertiajs/react';
 import {
+    AlertCircle,
     BookOpen,
     Calendar as CalendarIcon,
     ChevronLeft,
@@ -22,6 +24,7 @@ import {
     Search,
     Trash2,
     User,
+    X,
 } from 'lucide-react';
 import React, { useState } from 'react';
 
@@ -48,7 +51,7 @@ function LoadingSkeleton() {
     );
 }
 
-function SubjectAllocationSheet({ isOpen, onClose, allocation = null, onSave, existingAllocations = [], lecturers = [], programs = [], academicCalendars = [] }) {
+function SubjectAllocationSheet({ isOpen, onClose, allocation = null, onSave, existingAllocations = [], lecturers = [], programs = [], academicCalendars = [], onShowError }) {
     const [formData, setFormData] = useState({
         lecturer_id: '',
         prog_subj_id: '',
@@ -134,7 +137,11 @@ function SubjectAllocationSheet({ isOpen, onClose, allocation = null, onSave, ex
         });
 
         if (isDuplicate) {
-            setValidationError('This lecturer is already assigned to this subject in the selected term');
+            if (onShowError) {
+                onShowError('Duplicate Allocation', 'This lecturer is already assigned to this subject in the selected term');
+            } else {
+                setValidationError('This lecturer is already assigned to this subject in the selected term');
+            }
             return;
         }
 
@@ -619,6 +626,9 @@ export default function SubjectAllocation() {
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [allocationToDelete, setAllocationToDelete] = useState(null);
     const [isDeleting, setIsDeleting] = useState(false);
+    const [errorDialogOpen, setErrorDialogOpen] = useState(false);
+    const [errorMessage, setErrorMessage] = useState('');
+    const [errorTitle, setErrorTitle] = useState('');
 
     const itemsPerPage = 5;
 
@@ -730,6 +740,12 @@ export default function SubjectAllocation() {
         setIsDialogOpen(true);
     };
 
+    const showError = (title, message) => {
+        setErrorTitle(title);
+        setErrorMessage(message);
+        setErrorDialogOpen(true);
+    };
+
     const handleSaveAllocation = (formData) => {
         // Check for duplicate allocation by looking at existing allocations
         const existingAllocation = allocationsData.find((alloc) => {
@@ -742,7 +758,7 @@ export default function SubjectAllocation() {
         });
 
         if (existingAllocation) {
-            alert('This lecturer is already assigned to this subject in the selected term.');
+            showError('Duplicate Allocation', 'This lecturer is already assigned to this subject in the selected term.');
             return;
         }
 
@@ -760,7 +776,7 @@ export default function SubjectAllocation() {
                     setIsDialogOpen(false);
                 },
                 onError: (errors) => {
-                    console.error('Error updating allocation:', errors);
+                    showError('Update Failed', errors.message || Object.values(errors).flat().join('\n'));
                 }
             });
         } else {
@@ -777,7 +793,7 @@ export default function SubjectAllocation() {
                     setIsDialogOpen(false);
                 },
                 onError: (errors) => {
-                    console.error('Error creating allocation:', errors);
+                    showError('Save Failed', errors.message || Object.values(errors).flat().join('\n'));
                 }
             });
         }
@@ -791,7 +807,6 @@ export default function SubjectAllocation() {
     const handleDeleteAllocation = (allocation) => {
         setAllocationToDelete(allocation);
         setDeleteDialogOpen(true);
-        console.log(allocationToDelete)
     };
 
     const confirmDeleteAllocation = async () => {
@@ -1118,6 +1133,7 @@ export default function SubjectAllocation() {
                 lecturers={lecturers}
                 programs={programs}
                 academicCalendars={academicCalendars}
+                onShowError={showError}
                 />
 
             <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
@@ -1132,6 +1148,36 @@ export default function SubjectAllocation() {
                         </Button>
                         <Button variant="destructive" onClick={confirmDeleteAllocation} disabled={isDeleting}>
                             {isDeleting ? 'Deleting...' : 'Delete Allocation'}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Error Dialog */}
+            <Dialog open={errorDialogOpen} onOpenChange={setErrorDialogOpen}>
+                <DialogContent className="sm:max-w-[500px]">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2 text-destructive">
+                            <AlertCircle className="h-5 w-5" />
+                            {errorTitle}
+                        </DialogTitle>
+                        <DialogDescription>
+                            An error occurred while processing your request. Please review the details below.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="py-4">
+                        <Alert variant="destructive">
+                            <AlertCircle className="h-4 w-4" />
+                            <AlertTitle>Error Details</AlertTitle>
+                            <AlertDescription>
+                                {errorMessage}
+                            </AlertDescription>
+                        </Alert>
+                    </div>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setErrorDialogOpen(false)}>
+                            <X className="h-4 w-4 mr-2" />
+                            Close
                         </Button>
                     </DialogFooter>
                 </DialogContent>

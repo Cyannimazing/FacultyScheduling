@@ -31,9 +31,9 @@ class StoreGroupRequest extends FormRequest
                     $exists = \App\Models\Group::where('name', $value)
                         ->where('prog_code', $this->input('prog_code'))
                         ->exists();
-                    
+
                     if ($exists) {
-                        $fail('The combination of group name and program already exists.');
+                        $fail('The program already have this group.');
                     }
                 },
             ],

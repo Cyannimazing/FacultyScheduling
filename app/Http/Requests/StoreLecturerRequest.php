@@ -32,9 +32,9 @@ class StoreLecturerRequest extends FormRequest
                     $exists = \App\Models\Lecturer::where('fname', $value)
                         ->where('lname', $this->input('lname'))
                         ->exists();
-                    
+
                     if ($exists) {
-                        $fail('A lecturer with this name combination already exists.');
+                        $fail('A lecturer with this name already exists.');
                     }
                 },
             ],
