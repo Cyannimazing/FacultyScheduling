@@ -180,8 +180,8 @@ function CalendarDialog({ isOpen, onClose, calendar = null, onSave, errors = nul
                             setFormData({ ...formData, end_date: e.target.value })
                             }
                             className="col-span-3"
-                            min="2024-01-01"
-                            max="2025-12-31"
+                            min={formData.school_year.split('-').map(part => part.trim())[0] + "-01-01"}
+                            max={formData.school_year.split('-').map(part => part.trim())[1] + "-12-31"}
                         />
                     </div>
                 </div>
