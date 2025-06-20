@@ -40,7 +40,7 @@ function LoadingSkeleton() {
 function ProgramDialog({ isOpen, onClose, program = null, onSave, errors = null }) {
     const [formData, setFormData] = useState({
         code: '',
-        name: '',
+        type: '',
         description: '',
         number_of_year: '',
     });
@@ -51,18 +51,18 @@ function ProgramDialog({ isOpen, onClose, program = null, onSave, errors = null 
                 console.log('Program data:', program); // Debug log
                 setFormData({
                     code: program.code || '',
-                    name: program.name || '',
+                    type: program.type || '',
                     description: program.description || '',
                     number_of_year: program.number_of_year ? program.number_of_year.toString() : '',
                 });
             } else {
-                setFormData({ code: '', name: '', description: '', number_of_year: '' });
+                setFormData({ code: '', type: '', description: '', number_of_year: '' });
             }
         }
     }, [isOpen, program]);
 
     const handleSave = () => {
-        if (formData.code && formData.name && formData.description && formData.number_of_year) {
+        if (formData.code && formData.type && formData.description && formData.number_of_year) {
             onSave(formData);
         }
     };
@@ -101,16 +101,22 @@ function ProgramDialog({ isOpen, onClose, program = null, onSave, errors = null 
                         />
                     </div>
                     <div className="grid grid-cols-4 items-center gap-4">
-                        <label htmlFor="name" className="text-right text-sm font-medium">
-                            Name
+                        <label htmlFor="type" className="text-right text-sm font-medium">
+                            Program Type
                         </label>
-                        <Input
-                            id="name"
-                            value={formData.name}
-                            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                            className="col-span-3"
-                            placeholder="Program Name"
-                        />
+                        <Select
+                            value={formData.type}
+                            onValueChange={(value) => setFormData({ ...formData, type: value })}
+                        >
+                            <SelectTrigger className="col-span-3">
+                                <SelectValue placeholder="Select program type" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="Academic Program">Academic Program</SelectItem>
+                                <SelectItem value="General Foundation Program">General Foundation Program</SelectItem>
+                                <SelectItem value="Vocational Foundation Program">Vocational Foundation Program</SelectItem>
+                            </SelectContent>
+                        </Select>
                     </div>
                     <div className="grid grid-cols-4 items-center gap-4">
                         <label htmlFor="description" className="text-right text-sm font-medium">
@@ -148,7 +154,7 @@ function ProgramDialog({ isOpen, onClose, program = null, onSave, errors = null 
                     <Button variant="outline" onClick={onClose}>
                         Cancel
                     </Button>
-                    <Button onClick={handleSave} disabled={!formData.code || !formData.name || !formData.description || !formData.number_of_year}>
+                    <Button onClick={handleSave} disabled={!formData.code || !formData.type || !formData.description || !formData.number_of_year}>
                         {program ? 'Update' : 'Create'} Program
                     </Button>
                 </DialogFooter>
@@ -217,6 +223,7 @@ export default function Program() {
         if (editingProgram) {
             router.put(`/program/${editingProgram.id}`, formData, {
                 onSuccess: () => {
+                    setIsDialogOpen(false);
                     setSaveErrors(null);
                 },
                 onError: (errors) => {
@@ -227,6 +234,7 @@ export default function Program() {
         } else {
             router.post('/program', formData, {
                 onSuccess: () => {
+                    setIsDialogOpen(false);
                     setSaveErrors(null);
                 },
                 onError: (errors) => {
@@ -320,8 +328,8 @@ export default function Program() {
                                                 </TableCell>
                                                 <TableCell>
                                                     <div className="space-y-1">
-                                                        <div className="font-medium">{program.name}</div>
-                                                        <div className="text-muted-foreground text-sm">{program.description}</div>
+                                                        <div className="font-medium">{program.description}</div>
+                                                        <div className="text-muted-foreground text-sm">{program.type}</div>
                                                     </div>
                                                 </TableCell>
                                                 <TableCell className="text-center">
@@ -419,7 +427,7 @@ export default function Program() {
                     <DialogHeader>
                         <DialogTitle>Delete Program</DialogTitle>
                         <DialogDescription>
-                            Are you sure you want to delete "{programToDelete?.name}" ({programToDelete?.code})? This action cannot be undone.
+                            Are you sure you want to delete "{programToDelete?.type}" ({programToDelete?.code})? This action cannot be undone.
                         </DialogDescription>
                     </DialogHeader>
                     <DialogFooter>

@@ -24,6 +24,7 @@ class LecturerScheduleController extends Controller
     {
         $termFilter = $request->input('term_filter');
         $lecturerFilter = $request->input('lecturer_filter');
+        $programTypeFilter = $request->input('program_type_filter');
         $classFilter = $request->input('class_filter');
 
         // Initialize empty schedules if required filters are not provided
@@ -42,7 +43,13 @@ class LecturerScheduleController extends Controller
 
             // Apply required filters
             $schedulesQuery->where('sy_term_id', $termFilter)
-                          ->where('lecturer_id', $lecturerFilter);
+                        ->where('lecturer_id', $lecturerFilter);
+
+            if ($programTypeFilter){
+                $schedulesQuery->whereHas('group.program', function($query) use($programTypeFilter) {
+                            $query->where('type', $programTypeFilter);
+                });
+            }
 
             // Apply optional class filter (ignore if 'all' is selected)
             if ($classFilter && $classFilter !== 'all') {
@@ -202,6 +209,7 @@ class LecturerScheduleController extends Controller
     public function getGroupSchedule(Request $request){
         $termFilter = $request->input('sy_term_id');
         $classFilter = $request->input('class_id');
+        $programFilter = $request->input('prog_code');
 
         $schedules = collect();
 
@@ -228,16 +236,22 @@ class LecturerScheduleController extends Controller
                             ->orderBy('id')
                             ->get();
 
-        // Get all groups/classes for the filter dropdown
-        $groups = Group::with('program')
-                     ->orderBy('name')
-                     ->get();
+        // Get all programs for the program filter dropdown
+        $programs = \App\Models\Program::orderBy('description')->get();
+
+        // Get groups/classes filtered by program if program is selected
+        $groupsQuery = Group::with('program');
+        if ($programFilter) {
+            $groupsQuery->where('prog_code', $programFilter);
+        }
+        $groups = $groupsQuery->orderBy('name')->get();
 
         return Inertia::render('application/class-schedule', [
             'data' => [
                 'schedules' => $schedules,
                 'academicCalendars' => $academicCalendars,
-                'groups' => $groups
+                'groups' => $groups,
+                'programs' => $programs
             ]
         ]);
     }

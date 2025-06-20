@@ -19,9 +19,9 @@ class ProgramController extends Controller
         $page = $request->input('page', 1);
         $perPage = 5;
 
-        $programs = Program::where('name', 'LIKE', "%$search%")
+        $programs = Program::where('type', 'LIKE', "%$search%")
                         ->orWhere('code', 'LIKE', "%$search%")
-                        ->orderBy('name')
+                        ->orderBy('description')
                         ->paginate($perPage, ['*'], 'page', $page);
 
         return Inertia::render('application/program', [
@@ -60,7 +60,7 @@ class ProgramController extends Controller
         if($program){
             $program->update([
                 'code' => $request->code,
-                'name' => $request->name,
+                'type' => $request->type,
                 'description' => $request->description,
                 'number_of_year' => $request->number_of_year
             ]);

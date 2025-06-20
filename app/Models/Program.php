@@ -13,7 +13,7 @@ class Program extends Model
     use HasFactory;
 
     // Unique(code)
-    protected $fillable = ['code', 'name', 'description', 'number_of_year'];
+    protected $fillable = ['code', 'type', 'description', 'number_of_year'];
 
     /**
      * Get the groups for the program.

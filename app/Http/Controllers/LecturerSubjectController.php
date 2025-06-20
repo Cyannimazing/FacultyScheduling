@@ -58,7 +58,7 @@ class LecturerSubjectController extends Controller
                 })
                 ->orWhereHas('programSubject.program', function ($subQuery) use ($search) {
                     $subQuery->where('code', 'like', "%{$search}%")
-                        ->orWhere('name', 'like', "%{$search}%");
+                        ->orWhere('description', 'like', "%{$search}%");
                 })
                 ->orWhereHas('academicCalendar', function ($subQuery) use ($search) {
                     $subQuery->where('school_year', 'like', "%{$search}%");
@@ -105,7 +105,7 @@ class LecturerSubjectController extends Controller
 
         $programFilterOption = Program::join('program_subjects', 'program_subjects.prog_code', '=', 'programs.code')
                     ->join('lecturer_subjects', 'lecturer_subjects.prog_subj_id', '=', 'program_subjects.id')
-                    ->select('programs.code', 'programs.name')
+                    ->select('programs.code', 'programs.description')
                     ->distinct()
                     ->get();
         $lecturerFilterOption = LecturerSubject::with('lecturer')
@@ -186,20 +186,20 @@ class LecturerSubjectController extends Controller
     {
         $yearLevel = $request->input('year_level');
         $termId = $request->input('term_id');
-        
+
         $query = ProgramSubject::with(['subject', 'term'])
             ->where('prog_code', $programCode);
-        
+
         // Filter by year level if provided
         if ($yearLevel) {
             $query->where('year_level', $yearLevel);
         }
-        
+
         // Filter by term ID if provided
         if ($termId) {
             $query->where('term_id', $termId);
         }
-        
+
         $programSubjects = $query->get();
 
         return response()->json($programSubjects);

@@ -110,7 +110,7 @@ function ProgramDropZone({ program, assignments, onDrop, onRemoveAssignment, ter
                     </div>
                     <Badge variant="outline">{programAssignments.length} subjects</Badge>
                 </div>
-                
+
                 {/* Program-specific filters */}
                 <div className="flex flex-wrap gap-2 mt-4">
                     <Select value={selectedYear} onValueChange={setSelectedYear}>
@@ -433,9 +433,9 @@ export default function CourseAssignment() {
     // Initialize filter states from URL parameters
     const urlParams = new URLSearchParams(window.location.search);
     const programFilterFromUrl = urlParams.get('programFilter');
-    
+
     // Find program ID from code if exists
-    const initialProgram = programFilterFromUrl ? 
+    const initialProgram = programFilterFromUrl ?
         programs.find(p => p.code === programFilterFromUrl)?.id || 'all' : 'all';
 
     const [searchTerm, setSearchTerm] = useState('');
@@ -480,14 +480,14 @@ export default function CourseAssignment() {
     const handleProgramFilterChange = (value) => {
         setSelectedProgram(value);
         const params = new URLSearchParams(window.location.search);
-        
+
         if (value === 'all') {
             params.delete('programFilter');
         } else {
             const programCode = programs.find(p => p.id == value)?.code || '';
             params.set('programFilter', programCode);
         }
-        
+
         // Update the URL for program filter only
         router.get(`/course-assignment?${params.toString()}`, {}, {
             preserveState: true,
@@ -718,14 +718,14 @@ export default function CourseAssignment() {
                                 <h3 className="text-lg font-semibold">Programs</h3>
                                 <div className="flex flex-wrap gap-2">
                                     <Select value={selectedProgram} onValueChange={handleProgramFilterChange}>
-                                        <SelectTrigger className="w-[200px]">
+                                        <SelectTrigger>
                                             <SelectValue placeholder="Select program" />
                                         </SelectTrigger>
                                         <SelectContent>
                                             <SelectItem value="all">All Programs</SelectItem>
                                             {programs.map((program) => (
                                                 <SelectItem key={program.id} value={program.id}>
-                                                    {program.code} - {program.department}
+                                                    {program.code} - {program.description}
                                                 </SelectItem>
                                             ))}
                                         </SelectContent>
@@ -900,9 +900,10 @@ export default function CourseAssignment() {
                                 Are you sure you want to delete this assignment? This action cannot be undone.
                                 {assignmentToDelete && (
                                     <div className="bg-muted mt-2 rounded border p-2">
-                                        <strong>Assignment Details:</strong>
-                                        <br />
-                                        <strong>Program:</strong> {assignmentToDelete.program?.department}
+                                        <div className='border-b border-black/50 mb-1 text-center'>
+                                            <strong>Assignment Details</strong>
+                                        </div>
+                                        <strong>Program:</strong> {assignmentToDelete.program?.description}
                                         <br />
                                         <strong>Subject:</strong> {assignmentToDelete.subject?.name}
                                         <br />

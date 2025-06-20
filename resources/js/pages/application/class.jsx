@@ -44,7 +44,7 @@ function ClassDialog({ isOpen, onClose, classData = null, onSave, errors = null 
         name: '',
         prog_code: '',
         description: '',
-        prog_name: ''
+        prog_type: ''
     });
 
     const handleProgramChange = (progCode) => {
@@ -54,7 +54,7 @@ function ClassDialog({ isOpen, onClose, classData = null, onSave, errors = null 
                 ...prevState,
                 prog_code: selectedProgram.code,
                 description: selectedProgram.description,
-                prog_name: selectedProgram.name
+                prog_type: selectedProgram.type
             }));
         }
     };
@@ -66,10 +66,10 @@ function ClassDialog({ isOpen, onClose, classData = null, onSave, errors = null 
                     name: classData.name || '',
                     prog_code: classData.prog_code || '',
                     description: classData.program?.description || '',
-                    prog_name: classData.program?.name || ''
+                    prog_type: classData.program?.name || ''
                 });
             } else {
-                setFormData({ name: '', prog_code: '', description: '', prog_name: '' });
+                setFormData({ name: '', prog_code: '', description: '', prog_type: '' });
             }
         }
     }, [isOpen, classData]);
@@ -124,7 +124,7 @@ function ClassDialog({ isOpen, onClose, classData = null, onSave, errors = null 
                             <SelectContent>
                                 {availablePrograms.map((program) => (
                                     <SelectItem key={program.id} value={program.code}>
-                                        {program.name}
+                                        {program.description}
                                     </SelectItem>
                                 ))}
                             </SelectContent>
@@ -136,7 +136,7 @@ function ClassDialog({ isOpen, onClose, classData = null, onSave, errors = null 
                         </Label>
                         <Input
                             id="program_details"
-                            value={formData.description}
+                            value={formData.prog_type}
                             readOnly
                             className="bg-muted col-span-3"
                             placeholder="Program details will auto-populate when you select a program"
@@ -313,7 +313,7 @@ export default function Class() {
                                     />
                                 </div>
                                 <Select value={programFilter} onValueChange={handleProgramFilter}>
-                                    <SelectTrigger className="w-full md:w-[200px]">
+                                    <SelectTrigger>
                                         <SelectValue placeholder="Filter by program" />
                                     </SelectTrigger>
                                     <SelectContent>
@@ -356,8 +356,8 @@ export default function Class() {
                                                 </TableCell>
                                                 <TableCell>
                                                     <div className="space-y-1">
-                                                        <Badge variant="secondary">{classItem.program.name}</Badge>
-                                                        <div className="text-muted-foreground text-sm">{classItem.program.description}</div>
+                                                        <Badge variant="secondary">{classItem.program.description}</Badge>
+                                                        <div className="text-muted-foreground text-sm">{classItem.program.type}</div>
                                                     </div>
                                                 </TableCell>
                                                 <TableCell className="text-center">

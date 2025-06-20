@@ -286,7 +286,7 @@ function SubjectAllocationSheet({ isOpen, onClose, allocation = null, onSave, ex
                                                 <div className="flex items-center gap-2">
                                                     <GraduationCap className="h-4 w-4" />
                                                     <span>
-                                                        {program.code} - {program.name}
+                                                        {program.code} - {program.description}
                                                     </span>
                                                 </div>
                                             </SelectItem>
@@ -919,14 +919,14 @@ export default function SubjectAllocation() {
                                     </SelectContent>
                                 </Select>
                                 <Select value={programFilter} onValueChange={setProgramFilter}>
-                                    <SelectTrigger className="w-full md:w-[140px]">
+                                    <SelectTrigger>
                                         <SelectValue placeholder="Program" />
                                     </SelectTrigger>
                                     <SelectContent>
                                         <SelectItem value="all">All Programs</SelectItem>
                                         {programFilterOption.map((program) => (
                                             <SelectItem key={program.code} value={program.code}>
-                                                {program.code} - {program.name}
+                                                {program.code} - {program.description}
                                             </SelectItem>
                                         ))
                                         }
@@ -1023,7 +1023,7 @@ export default function SubjectAllocation() {
                                                     <TableCell>
                                                         <div className="text-xs">
                                                             <Badge variant="outline" className="text-xs">
-                                                                {program?.code || 'Unknown'} - {program?.name || 'Unknown Program'}
+                                                                {program?.code || 'Unknown'} - {program?.description || 'Unknown Program'}
                                                             </Badge>
                                                         </div>
                                                     </TableCell>
