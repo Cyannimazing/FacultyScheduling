@@ -62,6 +62,8 @@ function SubjectItem({ subject, onDragStart }) {
 // Program drop zone component
 function ProgramDropZone({ program, assignments, onDrop, onRemoveAssignment, terms }) {
     const [dragOver, setDragOver] = useState(false);
+    const [selectedYear, setSelectedYear] = useState('all');
+    const [selectedTerm, setSelectedTerm] = useState('all');
 
     const handleDragOver = (e) => {
         e.preventDefault();
@@ -81,8 +83,15 @@ function ProgramDropZone({ program, assignments, onDrop, onRemoveAssignment, ter
 
     const programAssignments = assignments.filter((a) => a.prog_code === program.code);
 
-    // Group assignments by year and term
-    const groupedAssignments = programAssignments.reduce((acc, assignment) => {
+    // Apply frontend filtering based on year and term
+    const filteredAssignments = programAssignments.filter((assignment) => {
+        const yearMatch = selectedYear === 'all' || assignment.year_level.toString() === selectedYear;
+        const termMatch = selectedTerm === 'all' || assignment.term_id.toString() === selectedTerm;
+        return yearMatch && termMatch;
+    });
+
+    // Group filtered assignments by year and term
+    const groupedAssignments = filteredAssignments.reduce((acc, assignment) => {
         const key = `${assignment.year_level}-${assignment.term_id}`;
         if (!acc[key]) {
             acc[key] = [];
@@ -100,6 +109,36 @@ function ProgramDropZone({ program, assignments, onDrop, onRemoveAssignment, ter
                         <p className="text-muted-foreground text-sm">{program.code}</p>
                     </div>
                     <Badge variant="outline">{programAssignments.length} subjects</Badge>
+                </div>
+                
+                {/* Program-specific filters */}
+                <div className="flex flex-wrap gap-2 mt-4">
+                    <Select value={selectedYear} onValueChange={setSelectedYear}>
+                        <SelectTrigger className="w-[130px]">
+                            <SelectValue placeholder="Year" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">All Years</SelectItem>
+                            {getAvailableYearLevels(program.number_of_year).map((year) => (
+                                <SelectItem key={year.id} value={year.id.toString()}>
+                                    {year.name}
+                                </SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                    <Select value={selectedTerm} onValueChange={setSelectedTerm}>
+                        <SelectTrigger className="w-[130px]">
+                            <SelectValue placeholder="Term" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">All Terms</SelectItem>
+                            {terms.map((term) => (
+                                <SelectItem key={term.id} value={term.id.toString()}>
+                                    {term.name}
+                                </SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
                 </div>
             </CardHeader>
             <CardContent
@@ -158,7 +197,7 @@ function ProgramDropZone({ program, assignments, onDrop, onRemoveAssignment, ter
                         })
                 ) : (
                     <div className="border-border text-muted-foreground flex h-32 items-center justify-center rounded-lg border-2 border-dashed text-sm">
-                        Drop subjects here to assign to {program.name}
+                        Drop subjects here to assign to {program.description}
                     </div>
                 )}
             </CardContent>
@@ -195,7 +234,7 @@ function DropAssignmentDialog({ isOpen, onClose, onSave, subject, program, terms
                         <strong>
                             {subject?.code} - {subject?.name}
                         </strong>{' '}
-                        to <strong>{program?.name}</strong>
+                        to <strong>{program?.department}</strong>
                     </DialogDescription>
                 </DialogHeader>
                 <div className="grid gap-4 py-4">
@@ -316,7 +355,7 @@ function AssignmentDialog({ isOpen, onClose, onSave, programs, subjects, terms, 
                             <SelectContent>
                                 {programs.map((program) => (
                                     <SelectItem key={program.id} value={program.id}>
-                                        {program.code} - {program.name}
+                                        {program.code} - {program.department}
                                     </SelectItem>
                                 ))}
                             </SelectContent>
@@ -391,8 +430,16 @@ export default function CourseAssignment() {
     const { data } = usePage().props;
     const { programSubjects: assignments = [], programs = [], subjects = [], terms = [], totalAssignment, totalProgramWithSubject, totalSubjectAssigned } = data;
 
+    // Initialize filter states from URL parameters
+    const urlParams = new URLSearchParams(window.location.search);
+    const programFilterFromUrl = urlParams.get('programFilter');
+    
+    // Find program ID from code if exists
+    const initialProgram = programFilterFromUrl ? 
+        programs.find(p => p.code === programFilterFromUrl)?.id || 'all' : 'all';
+
     const [searchTerm, setSearchTerm] = useState('');
-    const [selectedProgram, setSelectedProgram] = useState('all');
+    const [selectedProgram, setSelectedProgram] = useState(initialProgram);
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [draggedSubject, setDraggedSubject] = useState(null);
     const [showAssignmentForm, setShowAssignmentForm] = useState(false);
@@ -428,6 +475,26 @@ export default function CourseAssignment() {
 
     // Filter programs based on selection
     const filteredPrograms = selectedProgram === 'all' ? programs : programs.filter((p) => p.id == selectedProgram);
+
+    // Handle program filter change - only for program selection
+    const handleProgramFilterChange = (value) => {
+        setSelectedProgram(value);
+        const params = new URLSearchParams(window.location.search);
+        
+        if (value === 'all') {
+            params.delete('programFilter');
+        } else {
+            const programCode = programs.find(p => p.id == value)?.code || '';
+            params.set('programFilter', programCode);
+        }
+        
+        // Update the URL for program filter only
+        router.get(`/course-assignment?${params.toString()}`, {}, {
+            preserveState: true,
+            preserveScroll: true,
+            replace: true
+        });
+    };
 
     const handleDragStart = (e, subject) => {
         setDraggedSubject(subject);
@@ -647,21 +714,23 @@ export default function CourseAssignment() {
                     {/* Programs Panel */}
                     <div className="lg:col-span-8">
                         <div className="space-y-4">
-                            <div className="flex items-center justify-between">
+                            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                                 <h3 className="text-lg font-semibold">Programs</h3>
-                                <Select value={selectedProgram} onValueChange={setSelectedProgram}>
-                                    <SelectTrigger className="w-[250px]">
-                                        <SelectValue placeholder="Select program" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="all">All Programs</SelectItem>
-                                        {programs.map((program) => (
-                                            <SelectItem key={program.id} value={program.id}>
-                                                {program.code} - {program.name}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
+                                <div className="flex flex-wrap gap-2">
+                                    <Select value={selectedProgram} onValueChange={handleProgramFilterChange}>
+                                        <SelectTrigger className="w-[200px]">
+                                            <SelectValue placeholder="Select program" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="all">All Programs</SelectItem>
+                                            {programs.map((program) => (
+                                                <SelectItem key={program.id} value={program.id}>
+                                                    {program.code} - {program.department}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
                             </div>
 
                             <div className="grid gap-4">
@@ -712,7 +781,7 @@ export default function CourseAssignment() {
                                                 <TableRow key={assignment.id}>
                                                     <TableCell>
                                                         <div>
-                                                            <div className="font-medium">{program?.name}</div>
+                                                            <div className="font-medium">{program?.department}</div>
                                                             <div className="text-muted-foreground text-sm">{program?.code}</div>
                                                         </div>
                                                     </TableCell>
@@ -833,7 +902,7 @@ export default function CourseAssignment() {
                                     <div className="bg-muted mt-2 rounded border p-2">
                                         <strong>Assignment Details:</strong>
                                         <br />
-                                        <strong>Program:</strong> {assignmentToDelete.program?.name}
+                                        <strong>Program:</strong> {assignmentToDelete.program?.department}
                                         <br />
                                         <strong>Subject:</strong> {assignmentToDelete.subject?.name}
                                         <br />
