@@ -386,7 +386,7 @@ function AssignmentDialog({ isOpen, onClose, onSave, programs, subjects, terms, 
                             <SelectContent>
                                 {subjects.map((subject) => (
                                     <SelectItem key={subject.id} value={subject.id}>
-                                        {subject.id} - {subject.name}
+                                        {subject.name}
                                     </SelectItem>
                                 ))}
                             </SelectContent>
