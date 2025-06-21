@@ -292,9 +292,7 @@ function ReportDialog({ isOpen, onClose, onGenerate, program_type }) {
     const handleGenerate = () => {
         // For Vocational Foundation Program, both fields are required
         // For other programs, only preparedBy is required
-        const isValid = program_type === "Vocational Foundation Program"
-            ? (formData.batchNumber && formData.preparedBy)
-            : formData.preparedBy;
+        const isValid = program_type === 'Vocational Foundation Program' ? formData.batchNumber && formData.preparedBy : formData.preparedBy;
 
         if (isValid) {
             onGenerate(formData);
@@ -307,12 +305,10 @@ function ReportDialog({ isOpen, onClose, onGenerate, program_type }) {
             <DialogContent className="sm:max-w-[500px]">
                 <DialogHeader>
                     <DialogTitle>Generate Report</DialogTitle>
-                    <DialogDescription>
-                        Please enter the batch number and prepared by information for the report.
-                    </DialogDescription>
+                    <DialogDescription>Please enter the batch number and prepared by information for the report.</DialogDescription>
                 </DialogHeader>
                 <div className="grid gap-4 py-4">
-                    {program_type === "Vocational Foundation Program" && (
+                    {program_type === 'Vocational Foundation Program' && (
                         <div className="grid grid-cols-4 items-center gap-4">
                             <label htmlFor="batchNumber" className="text-right text-sm font-medium">
                                 Batch Number
@@ -346,9 +342,7 @@ function ReportDialog({ isOpen, onClose, onGenerate, program_type }) {
                     <Button
                         onClick={handleGenerate}
                         disabled={
-                            program_type === "Vocational Foundation Program"
-                                ? (!formData.batchNumber || !formData.preparedBy)
-                                : !formData.preparedBy
+                            program_type === 'Vocational Foundation Program' ? !formData.batchNumber || !formData.preparedBy : !formData.preparedBy
                         }
                     >
                         Generate Report
@@ -382,9 +376,8 @@ export default function ClassSchedule() {
     };
 
     toBase64('/PDFLogo.svg').then((base64) => {
-        setLogo(base64)
+        setLogo(base64);
     });
-
 
     // Apply filters and fetch schedules
     const applyFilters = React.useCallback(() => {
@@ -451,32 +444,55 @@ export default function ClassSchedule() {
 
     // Handle report generation with parameters
     const handleGenerateReportWithParams = (reportData) => {
-        const selectedGroupData = groups.find((g) => g.id.toString() === selectedGroup);
-        const selectedTermData = academicCalendars.find((c) => c.id.toString() === selectedTerm);
+        try {
+            const selectedGroupData = groups.find((g) => g.id.toString() === selectedGroup);
+            const selectedTermData = academicCalendars.find((c) => c.id.toString() === selectedTerm);
 
-        // Get unique subjects and lecturers
-        const uniqueSubjects = [...new Set(schedules.map((s) => s.program_subject.prog_subj_code))];
-        const uniqueLecturers = [
-            ...new Set(schedules.map((s) => `${s.lecturer?.title || ''} ${s.lecturer?.fname || ''} ${s.lecturer?.lname || ''}`.trim())),
-        ];
+            // Get unique subjects and lecturers
+            const uniqueSubjects = [...new Set(schedules.map((s) => s.subj_code))];
+            const uniqueLecturers = [
+                ...new Set(schedules.map((s) => `${s.lecturer?.title || ''} ${s.lecturer?.fname || ''} ${s.lecturer?.lname || ''}`.trim())),
+            ];
 
-        // Create print content with report parameters
-        const printContent = createPrintableReport({
-            group: selectedGroupData,
-            term: selectedTermData,
-            subjects: uniqueSubjects,
-            lecturers: uniqueLecturers,
-            totalClasses: schedules.length,
-            schedules: schedules,
-            batchNumber: reportData.batchNumber,
-            preparedBy: reportData.preparedBy,
-        });
+            // Create print content with report parameters
+            const printContent = createPrintableReport({
+                group: selectedGroupData,
+                term: selectedTermData,
+                subjects: uniqueSubjects,
+                lecturers: uniqueLecturers,
+                totalClasses: schedules.length,
+                schedules: schedules,
+                batchNumber: reportData.batchNumber,
+                preparedBy: reportData.preparedBy,
+            });
 
-        // Open print dialog
-        const printWindow = window.open('', '_blank');
-        printWindow.document.write(printContent);
-        printWindow.document.close();
-        printWindow.print();
+            // Create a hidden iframe and print
+            const iframe = document.createElement('iframe');
+            iframe.style.position = 'absolute';
+            iframe.style.left = '-9999px';
+            iframe.style.width = '210mm';
+            iframe.style.height = '297mm';
+            document.body.appendChild(iframe);
+
+            // Write content to iframe
+            iframe.contentDocument.open();
+            iframe.contentDocument.write(printContent);
+            iframe.contentDocument.close();
+
+            // Wait for content to load then print
+            setTimeout(() => {
+                iframe.contentWindow.focus();
+                iframe.contentWindow.print();
+
+                // Clean up after print dialog
+                setTimeout(() => {
+                    document.body.removeChild(iframe);
+                }, 1000);
+            }, 500);
+        } catch (error) {
+            console.error('Error generating report with parameters:', error);
+            alert('An error occurred while generating the report.');
+        }
     };
 
     const createPrintableReport = ({ group, term, subjects, lecturers, totalClasses, schedules, batchNumber, preparedBy }) => {
@@ -486,13 +502,17 @@ export default function ClassSchedule() {
 
         function getOrdinalSuffix(day) {
             if (day % 100 >= 11 && day % 100 <= 13) {
-                return "th";
+                return 'th';
             }
             switch (day % 10) {
-                case 1: return "st";
-                case 2: return "nd";
-                case 3: return "rd";
-                default: return "th";
+                case 1:
+                    return 'st';
+                case 2:
+                    return 'nd';
+                case 3:
+                    return 'rd';
+                default:
+                    return 'th';
             }
         }
 
@@ -500,12 +520,22 @@ export default function ClassSchedule() {
             const date = new Date(dateInput);
 
             const day = date.getDate();
-            const dayFormatted = (day < 10 ? "0" : "") + day;
+            const dayFormatted = (day < 10 ? '0' : '') + day;
             const ordinal = getOrdinalSuffix(day);
 
             const monthNames = [
-                "January", "February", "March", "April", "May", "June",
-                "July", "August", "September", "October", "November", "December"
+                'January',
+                'February',
+                'March',
+                'April',
+                'May',
+                'June',
+                'July',
+                'August',
+                'September',
+                'October',
+                'November',
+                'December',
             ];
             const month = monthNames[date.getMonth()];
 
@@ -854,7 +884,7 @@ export default function ClassSchedule() {
             </div>
             <div class="info-section">
                 <div>
-                    <strong>Program: <u>${group.prog_code + " " + batchNumber}</u><br></strong>
+                    <strong>Program: <u>${group.prog_code + ' ' + batchNumber}</u><br></strong>
                     <strong>Subjects: <u>${subjects.join(', ')}</u></strong>
                 </div>
                 <div style="margin-right: 35px;">
@@ -937,16 +967,14 @@ export default function ClassSchedule() {
 
                                 <Select value={selectedGroup} onValueChange={setSelectedGroup} disabled={!selectedProgram}>
                                     <SelectTrigger className="w-full md:w-[200px]">
-                                        <SelectValue placeholder={selectedProgram ? "Select Group/Class *" : "Select Program First"} />
+                                        <SelectValue placeholder={selectedProgram ? 'Select Group/Class *' : 'Select Program First'} />
                                     </SelectTrigger>
                                     <SelectContent>
                                         {groups.map((group) => (
                                             <SelectItem key={group.id} value={group.id.toString()}>
                                                 <div className="flex items-center gap-2">
                                                     <Users className="h-4 w-4" />
-                                                    <span>
-                                                        {group.name}
-                                                    </span>
+                                                    <span>{group.name}</span>
                                                 </div>
                                             </SelectItem>
                                         ))}
@@ -992,7 +1020,7 @@ export default function ClassSchedule() {
                 isOpen={isReportDialogOpen}
                 onClose={() => setIsReportDialogOpen(false)}
                 onGenerate={handleGenerateReportWithParams}
-                program_type={programs.find(p => p.code === selectedProgram)?.type || ''}
+                program_type={programs.find((p) => p.code === selectedProgram)?.type || ''}
             />
         </AppLayout>
     );

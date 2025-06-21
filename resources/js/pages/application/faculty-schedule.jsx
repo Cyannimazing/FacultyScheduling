@@ -2,8 +2,8 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -126,7 +126,7 @@ function ScheduleGrid({ schedules }) {
             };
         });
     });
-    console.log(schedules)
+    console.log(schedules);
     // Place schedules in the grid
     schedules.forEach((schedule) => {
         const day = schedule.day;
@@ -213,7 +213,9 @@ function ScheduleGrid({ schedules }) {
                                                 >
                                                     <div className="text-xs font-semibold">({schedule.program_subject.prog_subj_code})</div>
                                                     <div className="mb-1 text-sm font-semibold">{schedule.program_subject.subject?.name}</div>
-                                                    <div className="mb-1 text-xs opacity-75">Class: {schedule.group.prog_code}({schedule.group?.name})</div>
+                                                    <div className="mb-1 text-xs opacity-75">
+                                                        Class: {schedule.group.prog_code}({schedule.group?.name})
+                                                    </div>
                                                     <div className="mb-1 text-xs opacity-75">Room: {schedule.room_code}</div>
                                                     <div className="text-xs opacity-75">
                                                         <div>{formatTime(schedule.start_time)}</div>
@@ -325,7 +327,7 @@ function ScheduleDialog({ isOpen, onClose, schedule = null, onSave, lecturers, a
     };
 
     const loadClassesForExistingSubject = async (progSubjId) => {
-        console.log(progSubjId)
+        console.log(progSubjId);
         // Find the program subject in the current availableSubjects to get its program code
         const selectedProgramSubject = availableSubjects.find((programSubject) => programSubject.id === parseInt(progSubjId));
 
@@ -355,9 +357,7 @@ function ScheduleDialog({ isOpen, onClose, schedule = null, onSave, lecturers, a
         }
 
         // Find the selected program subject from availableSubjects
-        const selectedProgramSubject = availableSubjects.find((programSubject) =>
-            programSubject.id === parseInt(progSubjId)
-        );
+        const selectedProgramSubject = availableSubjects.find((programSubject) => programSubject.id === parseInt(progSubjId));
 
         if (selectedProgramSubject) {
             console.log('Selected Program Subject:', {
@@ -388,7 +388,7 @@ function ScheduleDialog({ isOpen, onClose, schedule = null, onSave, lecturers, a
             // Set the selectedSubjectValue for the current program subject
             const matchingProgramSubject = availableSubjects.find((ps) => ps.id === parseInt(formData.prog_subj_id));
             if (matchingProgramSubject) {
-                setFormData(prev => ({ ...prev, selectedSubjectValue: formData.prog_subj_id }));
+                setFormData((prev) => ({ ...prev, selectedSubjectValue: formData.prog_subj_id }));
             }
 
             // Load classes if not already loaded
@@ -462,7 +462,7 @@ function ScheduleDialog({ isOpen, onClose, schedule = null, onSave, lecturers, a
                                 <SelectTrigger className="w-full">
                                     <SelectValue placeholder="Select lecturer" />
                                 </SelectTrigger>
-                                <SelectContent >
+                                <SelectContent>
                                     {lecturers.map((lecturer) => (
                                         <SelectItem key={lecturer.id} value={lecturer.id.toString()}>
                                             <div className="flex items-center gap-2">
@@ -668,9 +668,7 @@ function ReportDialog({ isOpen, onClose, onGenerate }) {
             <DialogContent className="sm:max-w-[500px]">
                 <DialogHeader>
                     <DialogTitle>Generate Report</DialogTitle>
-                    <DialogDescription>
-                        Please enter the batch number and prepared by information for the report.
-                    </DialogDescription>
+                    <DialogDescription>Please enter the batch number and prepared by information for the report.</DialogDescription>
                 </DialogHeader>
                 <div className="grid gap-4 py-4">
                     <div className="grid grid-cols-4 items-center gap-4">
@@ -690,7 +688,7 @@ function ReportDialog({ isOpen, onClose, onGenerate }) {
                     <Button variant="outline" onClick={onClose}>
                         Cancel
                     </Button>
-                    <Button onClick={handleGenerate} disabled={ !formData.preparedBy}>
+                    <Button onClick={handleGenerate} disabled={!formData.preparedBy}>
                         Generate Report
                     </Button>
                 </DialogFooter>
@@ -741,9 +739,8 @@ export default function FacultySchedule() {
     };
 
     toBase64('/PDFLogo.svg').then((base64) => {
-        setLogo(base64)
+        setLogo(base64);
     });
-
 
     // Use statistics from backend (independent of current filters)
     const { totalSchedules, totalActiveLecturers, totalRoomsInUse } = statistics;
@@ -754,7 +751,7 @@ export default function FacultySchedule() {
 
         let totalMinutes = 0;
 
-        schedules.forEach(schedule => {
+        schedules.forEach((schedule) => {
             const startTime = schedule.start_time;
             const endTime = schedule.end_time;
 
@@ -897,31 +894,54 @@ export default function FacultySchedule() {
         }
         setIsReportDialogOpen(true);
     };
+
     const handleGenerateReportWithParams = (reportData) => {
-        // Get lecturer details
-        const selectedLecturerData = lecturers.find((l) => l.id.toString() === selectedLecturer);
-        const selectedTermData = academicCalendars.find((c) => c.id.toString() === selectedCalendar);
+        try {
+            // Get lecturer details
+            const selectedLecturerData = lecturers.find((l) => l.id.toString() === selectedLecturer);
+            const selectedTermData = academicCalendars.find((c) => c.id.toString() === selectedCalendar);
 
-        // Get unique subjects taught
-        const uniqueSubjects = [...new Set(schedules.map((s) => s.program_subject.prog_subj_code))];
-        const teachingLoad =  calculateTotalOccupiedHours(schedules);
-        console.log(teachingLoad)
+            // Get unique subjects taught
+            const uniqueSubjects = [...new Set(schedules.map((s) => s.program_subject.prog_subj_code))];
+            const teachingLoad = calculateTotalOccupiedHours(schedules);
 
-        // Create print content
-        const printContent = createPrintableReport({
-            lecturer: selectedLecturerData,
-            term: selectedTermData,
-            subjects: uniqueSubjects,
-            teachingLoad: teachingLoad,
-            schedules: schedules,
-            preparedBy: reportData.preparedBy,
-        });
+            // Create print content
+            const printContent = createPrintableReport({
+                lecturer: selectedLecturerData,
+                term: selectedTermData,
+                subjects: uniqueSubjects,
+                teachingLoad: teachingLoad,
+                schedules: schedules,
+                preparedBy: reportData.preparedBy,
+            });
 
-        // Open print dialog
-        const printWindow = window.open('', '_blank');
-        printWindow.document.write(printContent);
-        printWindow.document.close();
-        printWindow.print();
+            // Create a hidden iframe and print
+            const iframe = document.createElement('iframe');
+            iframe.style.position = 'absolute';
+            iframe.style.left = '-9999px';
+            iframe.style.width = '210mm';
+            iframe.style.height = '297mm';
+            document.body.appendChild(iframe);
+
+            // Write content to iframe
+            iframe.contentDocument.open();
+            iframe.contentDocument.write(printContent);
+            iframe.contentDocument.close();
+
+            // Wait for content to load then print
+            setTimeout(() => {
+                iframe.contentWindow.focus();
+                iframe.contentWindow.print();
+
+                // Clean up after print dialog
+                setTimeout(() => {
+                    document.body.removeChild(iframe);
+                }, 1000);
+            }, 500);
+        } catch (error) {
+            console.error('Error generating report with parameters:', error);
+            alert('An error occurred while generating the report.');
+        }
     };
 
     const createPrintableReport = ({ lecturer, term, subjects, teachingLoad, schedules, preparedBy }) => {
@@ -932,13 +952,17 @@ export default function FacultySchedule() {
 
         function getOrdinalSuffix(day) {
             if (day % 100 >= 11 && day % 100 <= 13) {
-                return "th";
+                return 'th';
             }
             switch (day % 10) {
-                case 1: return "st";
-                case 2: return "nd";
-                case 3: return "rd";
-                default: return "th";
+                case 1:
+                    return 'st';
+                case 2:
+                    return 'nd';
+                case 3:
+                    return 'rd';
+                default:
+                    return 'th';
             }
         }
 
@@ -946,12 +970,22 @@ export default function FacultySchedule() {
             const date = new Date(dateInput);
 
             const day = date.getDate();
-            const dayFormatted = (day < 10 ? "0" : "") + day;
+            const dayFormatted = (day < 10 ? '0' : '') + day;
             const ordinal = getOrdinalSuffix(day);
 
             const monthNames = [
-                "January", "February", "March", "April", "May", "June",
-                "July", "August", "September", "October", "November", "December"
+                'January',
+                'February',
+                'March',
+                'April',
+                'May',
+                'June',
+                'July',
+                'August',
+                'September',
+                'October',
+                'November',
+                'December',
             ];
             const month = monthNames[date.getMonth()];
 
@@ -1079,7 +1113,7 @@ export default function FacultySchedule() {
                     <div class="schedule-card ${colorClass}" style="height: ${spanHeight}px;">
                     <div class="subject-name" style="font-size:6px; font-weight: normal;">(${schedule.program_subject?.prog_subj_code})</div>
                         <div class="subject-name">${schedule.program_subject.subject?.name}</div>
-                        <div class="class-name">Class: ${schedule.group.prog_code + "("+ schedule.group?.name+")"}</div>
+                        <div class="class-name">Class: ${schedule.group.prog_code + '(' + schedule.group?.name + ')'}</div>
                         <div class="room-info">Room: ${schedule.room_code}</div>
                         <div class="time-info">
                             <div>${TIME_SLOTS[schedule.start_time]}</div>
@@ -1314,9 +1348,9 @@ export default function FacultySchedule() {
                         <h1 className="text-3xl font-bold tracking-tight">Faculty Schedule</h1>
                         <p className="text-muted-foreground mt-2">Manage faculty class schedules and time slots</p>
                     </div>
-                    <Button onClick={handleAddSchedule} className="w-full md:w-auto">
+                    <Button onClick={handleAddSchedule} className="w-full md:w-auto" disabled={schedules.length >= 5}>
                         <Plus className="mr-2 h-4 w-4" />
-                        Add Schedule
+                        Add Schedule {schedules.length >= 5 && '(Limit Reached)'}
                     </Button>
                 </div>
 
@@ -1576,14 +1610,7 @@ export default function FacultySchedule() {
                 </DialogContent>
             </Dialog>
 
-
-            <ReportDialog
-                isOpen={isReportDialogOpen}
-                onClose={() => setIsReportDialogOpen(false)}
-                onGenerate={handleGenerateReportWithParams}
-            />
+            <ReportDialog isOpen={isReportDialogOpen} onClose={() => setIsReportDialogOpen(false)} onGenerate={handleGenerateReportWithParams} />
         </AppLayout>
-
-
     );
 }
