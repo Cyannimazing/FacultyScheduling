@@ -13,7 +13,7 @@ class ProgramSubject extends Model
     use HasFactory;
 
     // PRIMARY KEY (prog_code, subj_code, term_id),
-    protected $fillable = ['prog_code', 'subj_code', 'year_level', 'term_id', 'created_at', 'updated_at'];
+    protected $fillable = ['prog_subj_code' ,'prog_code', 'subj_id', 'year_level', 'term_id', 'created_at', 'updated_at'];
 
     /**
      * Get the program that owns the program subject.
@@ -28,7 +28,7 @@ class ProgramSubject extends Model
      */
     public function subject(): BelongsTo
     {
-        return $this->belongsTo(Subject::class, 'subj_code', 'code');
+        return $this->belongsTo(Subject::class, 'subj_id', 'id');
     }
 
     /**

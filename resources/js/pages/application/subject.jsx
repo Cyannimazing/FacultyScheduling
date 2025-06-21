@@ -41,7 +41,6 @@ function LoadingSkeleton() {
 
 function SubjectDialog({ isOpen, onClose, subjectData = null, onSave, errors = null }) {
     const [formData, setFormData] = useState({
-        code: '',
         name: '',
         unit: '',
         is_gen_ed: false,
@@ -53,7 +52,6 @@ function SubjectDialog({ isOpen, onClose, subjectData = null, onSave, errors = n
             if (subjectData) {
                 // Only populate form data when editing (subjectData exists)
                 setFormData({
-                    code: subjectData.code || '',
                     name: subjectData.name || '',
                     unit: subjectData.unit || '',
                     is_gen_ed: subjectData.is_gen_ed || false,
@@ -66,7 +64,7 @@ function SubjectDialog({ isOpen, onClose, subjectData = null, onSave, errors = n
     }, [subjectData, isOpen]);
 
     const handleSave = () => {
-        if (formData.code && formData.name && formData.unit) {
+        if (formData.name && formData.unit) {
             onSave({
                 ...formData,
                 unit: parseInt(formData.unit),
@@ -95,18 +93,6 @@ function SubjectDialog({ isOpen, onClose, subjectData = null, onSave, errors = n
                             </ul>
                         </div>
                     )}
-                    <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="code" className="text-right text-sm font-medium">
-                            Subject Code
-                        </Label>
-                        <Input
-                            id="code"
-                            value={formData.code}
-                            onChange={(e) => setFormData({ ...formData, code: e.target.value.toUpperCase() })}
-                            className="col-span-3"
-                            placeholder="e.g., CS101"
-                        />
-                    </div>
                     <div className="grid grid-cols-4 items-center gap-4">
                         <Label htmlFor="name" className="text-right text-sm font-medium">
                             Subject Name
@@ -157,7 +143,7 @@ function SubjectDialog({ isOpen, onClose, subjectData = null, onSave, errors = n
                     <Button variant="outline" onClick={onClose}>
                         Cancel
                     </Button>
-                    <Button onClick={handleSave} disabled={!formData.code || !formData.name || !formData.unit}>
+                    <Button onClick={handleSave} disabled={!formData.name || !formData.unit}>
                         {subjectData ? 'Update' : 'Create'} Subject
                     </Button>
                 </DialogFooter>
@@ -355,7 +341,7 @@ export default function Subject() {
                                 <Table>
                                     <TableHeader>
                                         <TableRow>
-                                            <TableHead>Code</TableHead>
+                                            <TableHead>Id</TableHead>
                                             <TableHead>Subject Name</TableHead>
                                             <TableHead className="text-center">Units</TableHead>
                                             <TableHead className="text-center">Type</TableHead>
@@ -369,7 +355,7 @@ export default function Subject() {
                                                 <TableCell>
                                                     <div className="flex items-center gap-2">
                                                         <Code className="text-muted-foreground h-4 w-4" />
-                                                        <span className="font-mono text-sm font-medium">{subject.code}</span>
+                                                        <span className="font-mono text-sm font-medium">{subject.id}</span>
                                                     </div>
                                                 </TableCell>
                                                 <TableCell>

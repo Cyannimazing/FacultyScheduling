@@ -11,7 +11,7 @@ return new class extends Migration
         Schema::create('lecturer_schedules', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('lecturer_id');
-            $table->string('subj_code');
+            $table->string('prog_subj_id');
             $table->string('room_code');
             $table->unsignedBigInteger('class_id');
             $table->unsignedBigInteger('sy_term_id');
@@ -24,7 +24,7 @@ return new class extends Migration
 
             // Define your foreign keys as needed...
             $table->foreign('lecturer_id')->references('id')->on('lecturers')->onDelete('cascade');
-            $table->foreign('subj_code')->references('code')->on('subjects')->onDelete('cascade');
+            $table->foreign('prog_subj_id')->references('id')->on('program_subjects')->onDelete('cascade');
             $table->foreign('room_code')->references('name')->on('rooms')->onDelete('cascade');
             $table->foreign('class_id')->references('id')->on('groups')->onDelete('cascade');
             $table->foreign('sy_term_id')->references('id')->on('academic_calendars')->onDelete('cascade');

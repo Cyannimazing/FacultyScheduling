@@ -47,7 +47,7 @@ class UpdateLecturerScheduleRequest extends FormRequest
                     }
                 },
             ],
-            'subj_code' => 'required|string|exists:subjects,code',
+            'prog_subj_id' => 'required|integer|exists:program_subjects,id',
             'room_code' => [
                 'required',
                 'string',
@@ -113,8 +113,8 @@ class UpdateLecturerScheduleRequest extends FormRequest
         return [
             'lecturer_id.required' => 'Lecturer is required.',
             'lecturer_id.exists' => 'Selected lecturer does not exist.',
-            'subj_code.required' => 'Subject code is required.',
-            'subj_code.exists' => 'Selected subject does not exist.',
+            'prog_subj_id.required' => 'Program Subject ID is required.',
+            'prog_subj_id.exists' => 'Selected program subject does not exist.',
             'room_code.required' => 'Room is required.',
             'room_code.exists' => 'Selected room does not exist.',
             'day.required' => 'Day is required.',
@@ -138,7 +138,7 @@ class UpdateLecturerScheduleRequest extends FormRequest
     {
         return [
             'lecturer_id' => 'lecturer',
-            'subj_code' => 'subject',
+            'prog_subj_id' => 'program subject',
             'room_code' => 'room',
             'day' => 'day',
             'start_time' => 'start time',

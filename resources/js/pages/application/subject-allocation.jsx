@@ -411,11 +411,11 @@ function SubjectAllocationSheet({ isOpen, onClose, allocation = null, onSave, ex
                                             )
                                             .map((programSubject) => {
                                             if (!programSubject || !programSubject.subject) return null;
-                                            const subject = programSubject.subject;
+                                            const subject = programSubject;
                                             return (
                                                 <SelectItem key={programSubject.id} value={programSubject.id.toString()}>
                                                     <div className="flex items-center gap-2">
-                                                        <span className="font-medium">{subject.code} - {subject.name}</span>
+                                                        <span className="font-medium">{subject.prog_subj_code} - {subject.subject.name}</span>
                                                         <Badge variant="outline" className="text-xs">
                                                             {subject.unit || 0} unit{(subject.unit || 0) !== 1 ? 's' : ''}
                                                         </Badge>
@@ -544,10 +544,10 @@ function SubjectAllocationSheet({ isOpen, onClose, allocation = null, onSave, ex
                                                 <p className="text-muted-foreground text-sm">You are assigning:</p>
                                                 <div className="space-y-1">
                                                     <div className="text-foreground text-xs font-medium">
-                                                        {subject.code} - {subject.name}
+                                                        {programSubject.prog_subj_code} - {subject.name}
                                                     </div>
                                                     <div className="text-foreground text-xs font-medium">
-                                                        For: {program?.code} - {program?.name}
+                                                        For: {program?.code} - {program?.description}
                                                     </div>
                                                     {formData.lecturer_id && (() => {
                                                         const selectedLecturer = lecturers.find(l => l.id.toString() === formData.lecturer_id);
@@ -997,7 +997,7 @@ export default function SubjectAllocation() {
                                                         <div className="space-y-1">
                                                             <div className="flex items-center gap-2">
                                                                 <BookOpen className="text-muted-foreground h-4 w-4" />
-                                                                <span className="font-mono text-sm font-medium">{subject?.code || 'Unknown'}</span>
+                                                                <span className="font-mono text-sm font-medium">{allocation.program_subject.prog_subj_code || 'Unknown'}</span>
                                                             </div>
                                                             <div className="text-sm">{subject?.name || 'Unknown Subject'}</div>
                                                             <div className="flex items-center gap-1">

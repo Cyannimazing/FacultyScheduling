@@ -22,7 +22,7 @@ class SubjectController extends Controller
 
         $subjects = Subject::where(function ($query) use ($search) {
                             $query->where('name', 'LIKE', "%$search%")
-                                ->orWhere('code', 'LIKE', "%$search%");
+                                ->orWhere('id', 'LIKE', "%$search%");
                         })->where('is_gen_ed', "LIKE", "%$isGenEdFilter%")
                         ->orderBy('name')
                         ->paginate($perPage, ['*'], 'page', $page);
@@ -65,7 +65,6 @@ class SubjectController extends Controller
         $subject = Subject::find($id);
         if($subject){
             $subject->update([
-                'code' => $request->code,
                 'name' => $request->name,
                 'unit' => $request->unit,
                 'is_gen_ed' => $request->is_gen_ed

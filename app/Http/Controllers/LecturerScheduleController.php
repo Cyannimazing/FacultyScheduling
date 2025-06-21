@@ -35,7 +35,7 @@ class LecturerScheduleController extends Controller
             // Get schedules with relationships
             $schedulesQuery = LecturerSchedule::with([
                 'lecturer',
-                'subject',
+                'programSubject.subject',
                 'room',
                 'group',
                 'academicCalendar.term'
@@ -159,7 +159,7 @@ class LecturerScheduleController extends Controller
         if($lecturerSchedule){
             $lecturerSchedule->update([
                 'lecturer_id' => $request->lecturer_id,
-                'subj_code' => $request->subj_code,
+                'subj_id' => $request->subj_id,
                 'room_code' => $request->room_code,
                 'start_time' => $request->start_time,
                 'end_time' => $request->end_time,
@@ -216,7 +216,7 @@ class LecturerScheduleController extends Controller
         if ($classFilter && $termFilter) {
             $schedulesQuery = LecturerSchedule::with([
                 'lecturer',
-                'subject',
+                'programSubject.subject',
                 'room',
                 'group',
                 'academicCalendar.term'

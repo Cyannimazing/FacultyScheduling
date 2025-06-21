@@ -245,8 +245,8 @@ function ClassScheduleGrid({ schedules }) {
                                                             borderLeft: '4px solid',
                                                         }}
                                                     >
-                                                        <div className="text-xs font-semibold">({schedule.subj_code})</div>
-                                                        <div className="mb-1 text-sm font-semibold">{schedule.subject?.name}</div>
+                                                        <div className="text-xs font-semibold">({schedule.program_subject.prog_subj_code})</div>
+                                                        <div className="mb-1 text-sm font-semibold">{schedule.program_subject.subject?.name}</div>
                                                         <div className="mb-1 text-xs opacity-75">
                                                             {schedule.lecturer?.title} {schedule.lecturer?.fname} {schedule.lecturer?.lname}
                                                         </div>
@@ -292,10 +292,10 @@ function ReportDialog({ isOpen, onClose, onGenerate, program_type }) {
     const handleGenerate = () => {
         // For Vocational Foundation Program, both fields are required
         // For other programs, only preparedBy is required
-        const isValid = program_type === "Vocational Foundation Program" 
+        const isValid = program_type === "Vocational Foundation Program"
             ? (formData.batchNumber && formData.preparedBy)
             : formData.preparedBy;
-            
+
         if (isValid) {
             onGenerate(formData);
             onClose();
@@ -343,10 +343,10 @@ function ReportDialog({ isOpen, onClose, onGenerate, program_type }) {
                     <Button variant="outline" onClick={onClose}>
                         Cancel
                     </Button>
-                    <Button 
-                        onClick={handleGenerate} 
+                    <Button
+                        onClick={handleGenerate}
                         disabled={
-                            program_type === "Vocational Foundation Program" 
+                            program_type === "Vocational Foundation Program"
                                 ? (!formData.batchNumber || !formData.preparedBy)
                                 : !formData.preparedBy
                         }
@@ -455,7 +455,7 @@ export default function ClassSchedule() {
         const selectedTermData = academicCalendars.find((c) => c.id.toString() === selectedTerm);
 
         // Get unique subjects and lecturers
-        const uniqueSubjects = [...new Set(schedules.map((s) => s.subj_code))];
+        const uniqueSubjects = [...new Set(schedules.map((s) => s.program_subject.prog_subj_code))];
         const uniqueLecturers = [
             ...new Set(schedules.map((s) => `${s.lecturer?.title || ''} ${s.lecturer?.fname || ''} ${s.lecturer?.lname || ''}`.trim())),
         ];
@@ -652,8 +652,8 @@ export default function ClassSchedule() {
                                 right: 0;
                                 z-index: 10;
                             ">
-                            <div class="subject-name" style="font-size:6px; font-weight: normal;">(${schedule.subject?.code})</div>
-                            <div class="subject-name">${schedule.subject?.name}</div>
+                                <div class="subject-name" style="font-size:6px; font-weight: normal;">(${schedule.program_subject?.prog_subj_code})</div>
+                                <div class="subject-name">${schedule.program_subject.subject?.name}</div>
                                 <div class="lecturer-name">${schedule.lecturer?.title || ''} ${schedule.lecturer?.fname || ''} ${schedule.lecturer?.lname || ''}</div>
                                 <div class="room-info">Room: ${schedule.room_code}</div>
                                 <div class="time-info">

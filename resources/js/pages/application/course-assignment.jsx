@@ -40,7 +40,7 @@ function SubjectItem({ subject, onDragStart }) {
                 <GripVertical className="text-muted-foreground h-4 w-4" />
                 <div className="flex items-center gap-2">
                     <Code className="text-muted-foreground h-4 w-4" />
-                    <span className="font-mono text-sm font-medium">{subject.code}</span>
+                    <span className="font-mono text-sm font-medium">{subject.id}</span>
                 </div>
                 <div>
                     <div className="text-sm font-medium">{subject.name}</div>
@@ -169,16 +169,16 @@ function ProgramDropZone({ program, assignments, onDrop, onRemoveAssignment, ter
                                     </h4>
                                     <div className="space-y-1">
                                         {yearTermAssignments.map((assignment) => {
-                                            const subject = assignment.subject;
-                                            return subject ? (
+                                            const prog_subj = assignment;
+                                            return prog_subj ? (
                                                 <div
                                                     key={assignment.id}
                                                     className="border-border bg-muted flex items-center justify-between rounded-md border p-2"
                                                 >
                                                     <div className="flex items-center gap-2">
                                                         <Code className="text-muted-foreground h-3 w-3" />
-                                                        <span className="font-mono text-xs">{subject.code}</span>
-                                                        <span className="text-xs">{subject.name}</span>
+                                                        <span className="font-mono text-xs">{prog_subj.prog_subj_code}</span>
+                                                        <span className="text-xs">{prog_subj.subject.name}</span>
                                                     </div>
                                                     <Button
                                                         variant="ghost"
@@ -208,6 +208,7 @@ function ProgramDropZone({ program, assignments, onDrop, onRemoveAssignment, ter
 // Drag and drop assignment dialog
 function DropAssignmentDialog({ isOpen, onClose, onSave, subject, program, terms, errors }) {
     const [formData, setFormData] = useState({
+        code: '',
         year_level: '',
         term_id: '',
     });
@@ -251,6 +252,18 @@ function DropAssignmentDialog({ isOpen, onClose, onSave, subject, program, terms
                             </ul>
                         </div>
                     )}
+                    <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="subject" className="text-right text-sm font-medium">
+                            Subject Code
+                        </Label>
+                        <Input
+                            id="code"
+                            value={formData.code}
+                            onChange={(e) => setFormData({ ...formData, code: e.target.value })}
+                            className="col-span-3"
+                            placeholder="Enter subject code"
+                        />
+                    </div>
                     <div className="grid grid-cols-4 items-center gap-4">
                         <Label htmlFor="year" className="text-right text-sm font-medium">
                             Year Level
@@ -302,6 +315,7 @@ function DropAssignmentDialog({ isOpen, onClose, onSave, subject, program, terms
 // Assignment dialog for manual entry
 function AssignmentDialog({ isOpen, onClose, onSave, programs, subjects, terms, errors = null }) {
     const [formData, setFormData] = useState({
+        prog_subj_code: '',
         program_id: '',
         subject_id: '',
         year_level: '',
@@ -318,7 +332,7 @@ function AssignmentDialog({ isOpen, onClose, onSave, programs, subjects, terms, 
     };
 
     const handleSave = () => {
-        if (formData.program_id && formData.subject_id && formData.year_level && formData.term_id) {
+        if (formData.prog_subj_code && formData.program_id && formData.subject_id && formData.year_level && formData.term_id) {
             onSave(formData);
         }
     };
@@ -355,7 +369,7 @@ function AssignmentDialog({ isOpen, onClose, onSave, programs, subjects, terms, 
                             <SelectContent>
                                 {programs.map((program) => (
                                     <SelectItem key={program.id} value={program.id}>
-                                        {program.code} - {program.department}
+                                        {program.code} - {program.description}
                                     </SelectItem>
                                 ))}
                             </SelectContent>
@@ -372,11 +386,23 @@ function AssignmentDialog({ isOpen, onClose, onSave, programs, subjects, terms, 
                             <SelectContent>
                                 {subjects.map((subject) => (
                                     <SelectItem key={subject.id} value={subject.id}>
-                                        {subject.code} - {subject.name}
+                                        {subject.id} - {subject.name}
                                     </SelectItem>
                                 ))}
                             </SelectContent>
                         </Select>
+                    </div>
+                    <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="subject" className="text-right text-sm font-medium">
+                            Subject Code
+                        </Label>
+                        <Input
+                            id="prog_subj_code"
+                            value={formData.prog_subj_code}
+                            onChange={(e) => setFormData({ ...formData, prog_subj_code: e.target.value })}
+                            className="col-span-3"
+                            placeholder="Enter subject code"
+                        />
                     </div>
                     <div className="grid grid-cols-4 items-center gap-4">
                         <Label htmlFor="year" className="text-right text-sm font-medium">
@@ -470,7 +496,7 @@ export default function CourseAssignment() {
 
     // Filter subjects based on search
     const filteredSubjects = subjects.filter(
-        (subject) => subject.code.toLowerCase().includes(searchTerm.toLowerCase()) || subject.name.toLowerCase().includes(searchTerm.toLowerCase()),
+        (subject) => subject.name.toLowerCase().includes(searchTerm.toLowerCase()),
     );
 
     // Filter programs based on selection
@@ -511,19 +537,12 @@ export default function CourseAssignment() {
 
     const handleDropAssignment = (yearTerm) => {
         if (!draggedSubject || !dropTarget) return;
-
-        const newAssignment = {
-            program_id: dropTarget.id,
-            subject_id: draggedSubject.id,
-            year_level: parseInt(yearTerm.year_level),
-            term_id: parseInt(yearTerm.term_id),
-        };
-
         // Check if assignment already exists
         const existingAssignment = assignments.find(
             (a) =>
+                a.prog_subj_code === yearTerm.code &&
                 a.prog_code === dropTarget.code &&
-                a.subj_code === draggedSubject.code &&
+                a.subj_id === draggedSubject.code &&
                 a.year_level === parseInt(yearTerm.year_level) &&
                 a.term_id === parseInt(yearTerm.term_id),
         );
@@ -534,8 +553,9 @@ export default function CourseAssignment() {
 
             // Create new assignment using Inertia router
             router.post('/course-assignment', {
+                prog_subj_code: yearTerm.code,
                 prog_code: dropTarget.code,
-                subj_code: draggedSubject.code,
+                subj_id: draggedSubject.id,
                 year_level: parseInt(yearTerm.year_level),
                 term_id: parseInt(yearTerm.term_id)
             }, {
@@ -588,12 +608,6 @@ export default function CourseAssignment() {
     };
 
     const handleAddAssignment = (formData) => {
-        const newAssignment = {
-            program_id: parseInt(formData.program_id),
-            subject_id: parseInt(formData.subject_id),
-            year_level: parseInt(formData.year_level),
-            term_id: parseInt(formData.term_id),
-        };
         setAssignmentErrors(null);
 
         // Get the selected program and subject to send codes instead of IDs
@@ -602,8 +616,9 @@ export default function CourseAssignment() {
 
         // Create new assignment using Inertia router
         router.post('/course-assignment', {
+            prog_subj_code: formData.prog_subj_code,
             prog_code: selectedProgram.code,
-            subj_code: selectedSubject.code,
+            subj_id: selectedSubject.id,
             year_level: parseInt(formData.year_level),
             term_id: parseInt(formData.term_id)
         }, {

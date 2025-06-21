@@ -23,7 +23,7 @@ class ProgramSubjectController extends Controller
 
         $totalAssignment = ProgramSubject::all()->count();
         $totalProgramWithSubject = ProgramSubject::distinct('prog_code')->count();
-        $totalSubjectAssigned = ProgramSubject::distinct('subj_code')->count();
+        $totalSubjectAssigned = ProgramSubject::distinct('subj_id')->count();
 
         $programs = Program::all();
         $subjects = Subject::where(function ($query) use ($search) {

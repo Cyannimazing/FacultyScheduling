@@ -14,13 +14,13 @@ class ProgramSeeder extends Seeder
                 'code' => 'BTEA',
                 'number_of_year' => 4,
                 'description' => 'Bachelor of Technology (HONS) in Automotive (BTEA)',
-                'type' => 'Academic Programme',
+                'type' => 'Academic Program',
             ],
             [
                 'code' => 'CBT',
                 'number_of_year' => 2,
                 'description' => 'Competency Based Training Programme',
-                'type' => 'Vocational',
+                'type' => 'Vocational Foundation Program',
             ],
         ];
 

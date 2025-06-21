@@ -14,14 +14,14 @@ class Subject extends Model
     use HasFactory;
 
     // Unique(code)
-    protected $fillable = ['code', 'name', 'unit', 'is_gen_ed', 'created_at', 'updated_at'];
+    protected $fillable = ['name', 'unit', 'is_gen_ed', 'created_at', 'updated_at'];
 
     /**
      * Get the programs that belong to the subject.
      */
     public function programs(): BelongsToMany
     {
-        return $this->belongsToMany(Program::class, 'program_subjects', 'subj_code', 'prog_code', 'code', 'code')
+        return $this->belongsToMany(Program::class, 'program_subjects', 'subj_id', 'prog_code', 'id', 'code')
                     ->withPivot('year_level', 'term_id')
                     ->withTimestamps();
     }
@@ -31,7 +31,7 @@ class Subject extends Model
      */
     public function programSubjects(): HasMany
     {
-        return $this->hasMany(ProgramSubject::class, 'subj_code', 'code');
+        return $this->hasMany(ProgramSubject::class, 'subj_id', 'id');
     }
 
     /**
@@ -39,6 +39,6 @@ class Subject extends Model
      */
     public function lecturerSchedules(): HasMany
     {
-        return $this->hasMany(LecturerSchedule::class, 'subj_code', 'code');
+        return $this->hasMany(LecturerSchedule::class, 'subj_id', 'id');
     }
 }
