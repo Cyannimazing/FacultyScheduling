@@ -1,3 +1,4 @@
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
@@ -9,8 +10,9 @@ import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetT
 import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import AppLayout from '@/layouts/app-layout';
-import { Head, router } from '@inertiajs/react';
+import { Head, router, usePage } from '@inertiajs/react';
 import {
+    AlertCircle,
     BookOpen,
     Calendar as CalendarIcon,
     ChevronLeft,
@@ -22,6 +24,7 @@ import {
     Search,
     Trash2,
     User,
+    X,
 } from 'lucide-react';
 import React, { useState } from 'react';
 
@@ -32,351 +35,14 @@ const breadcrumbs = [
     },
 ];
 
-const sampleCalendars = [
-    {
-        id: 1,
-        term_id: 1,
-        school_year: '2025-2026',
-        start_date: '2025-08-15',
-        end_date: '2025-12-15',
-        created_at: '2025-07-01 09:00',
-        updated_at: '2025-07-02 14:30',
-    },
-    {
-        id: 2,
-        term_id: 2,
-        school_year: '2025-2026',
-        start_date: '2026-01-08',
-        end_date: '2026-05-15',
-        created_at: '2025-07-01 09:30',
-        updated_at: '2025-07-03 10:15',
-    },
-];
-
-const sampleTerms = [
-    { id: 1, name: '1st Term' },
-    { id: 2, name: '2nd Term' },
-];
-
-const samplePrograms = [
-    {
-        id: 1,
-        unique_code: 'PROG001',
-        name: 'Computer Science',
-        description: 'Bachelor of Science in Computer Science',
-        year_length: 4,
-        created_at: '2025-06-10 09:00',
-        updated_at: '2025-06-11 14:30',
-    },
-    {
-        id: 2,
-        unique_code: 'PROG002',
-        name: 'Information Technology',
-        description: 'Bachelor of Science in Information Technology',
-        year_length: 4,
-        created_at: '2025-06-10 09:00',
-        updated_at: '2025-06-11 14:30',
-    },
-    {
-        id: 3,
-        unique_code: 'PROG003',
-        name: 'Information Systems',
-        description: 'Bachelor of Science in Information Systems',
-        year_length: 4,
-        created_at: '2025-06-10 09:00',
-        updated_at: '2025-06-11 14:30',
-    },
-    {
-        id: 4,
-        unique_code: 'PROG004',
-        name: 'Master in Information Technology',
-        description: 'Master of Science in Information Technology',
-        year_length: 2,
-        created_at: '2025-06-10 09:00',
-        updated_at: '2025-06-11 14:30',
-    },
-];
-
-const getYearLevelsForProgram = (yearLength) => {
-    if (!yearLength) return [];
-    return Array.from({ length: yearLength }, (_, index) => ({
-        id: index + 1,
-        name: `${index + 1}${index === 0 ? 'st' : index === 1 ? 'nd' : index === 2 ? 'rd' : 'th'} Year`,
-    }));
-};
-
-const sampleLecturers = [
-    { id: 1, title: 'Dr.', fname: 'John', lname: 'Smith', created_at: '2025-06-01 09:00', updated_at: '2025-06-02 14:30' },
-    { id: 2, title: 'Prof.', fname: 'Jane', lname: 'Johnson', created_at: '2025-06-03 11:00', updated_at: '2025-06-04 10:15' },
-    { id: 3, title: 'Ms.', fname: 'Emily', lname: 'Davis', created_at: '2025-06-05 13:00', updated_at: '2025-06-06 16:45' },
-    { id: 4, title: 'Dr.', fname: 'Michael', lname: 'Brown', created_at: '2025-06-07 15:30', updated_at: '2025-06-08 09:20' },
-    { id: 5, title: 'Prof.', fname: 'Sarah', lname: 'Wilson', created_at: '2025-06-09 10:45', updated_at: '2025-06-10 16:15' },
-];
-
-const sampleSubjects = [
-    {
-        id: 1,
-        code: 'CS101',
-        name: 'Introduction to Computer Science',
-        unit: 3,
-        isGeneralEducation: false,
-        created_at: '2025-06-10 09:00',
-        updated_at: '2025-06-11 14:30',
-    },
-    {
-        id: 2,
-        code: 'MATH101',
-        name: 'College Algebra',
-        unit: 3,
-        isGeneralEducation: true,
-        created_at: '2025-06-09 11:00',
-        updated_at: '2025-06-12 10:15',
-    },
-    {
-        id: 3,
-        code: 'ENG101',
-        name: 'English Composition',
-        unit: 3,
-        isGeneralEducation: true,
-        created_at: '2025-06-08 13:00',
-        updated_at: '2025-06-11 16:45',
-    },
-    {
-        id: 4,
-        code: 'CS201',
-        name: 'Data Structures and Algorithms',
-        unit: 4,
-        isGeneralEducation: false,
-        created_at: '2025-06-07 15:30',
-        updated_at: '2025-06-10 09:20',
-    },
-    {
-        id: 5,
-        code: 'PHIL101',
-        name: 'Introduction to Philosophy',
-        unit: 3,
-        isGeneralEducation: true,
-        created_at: '2025-06-06 10:45',
-        updated_at: '2025-06-09 16:15',
-    },
-    {
-        id: 6,
-        code: 'CS301',
-        name: 'Database Management Systems',
-        unit: 3,
-        isGeneralEducation: false,
-        created_at: '2025-06-05 14:20',
-        updated_at: '2025-06-08 11:30',
-    },
-];
-
-const sampleCourseAssignments = [
-    {
-        id: 1,
-        program_code: 'PROG001',
-        subject_code: 'MATH101',
-        year_level: 1,
-        term_id: 1,
-        created_at: '2025-06-01 09:00',
-        updated_at: '2025-06-02 14:30',
-    },
-    {
-        id: 2,
-        program_code: 'PROG001',
-        subject_code: 'ENG101',
-        year_level: 1,
-        term_id: 1,
-        created_at: '2025-06-01 09:30',
-        updated_at: '2025-06-02 14:45',
-    },
-    {
-        id: 3,
-        program_code: 'PROG001',
-        subject_code: 'PHIL101',
-        year_level: 1,
-        term_id: 2,
-        created_at: '2025-06-01 10:00',
-        updated_at: '2025-06-02 15:00',
-    },
-    {
-        id: 4,
-        program_code: 'PROG001',
-        subject_code: 'CS101',
-        year_level: 2,
-        term_id: 1,
-        created_at: '2025-06-01 10:30',
-        updated_at: '2025-06-02 15:15',
-    },
-    {
-        id: 5,
-        program_code: 'PROG001',
-        subject_code: 'CS201',
-        year_level: 2,
-        term_id: 2,
-        created_at: '2025-06-01 11:00',
-        updated_at: '2025-06-02 15:30',
-    },
-    {
-        id: 6,
-        program_code: 'PROG001',
-        subject_code: 'CS301',
-        year_level: 3,
-        term_id: 1,
-        created_at: '2025-06-01 11:30',
-        updated_at: '2025-06-02 15:45',
-    },
-    {
-        id: 7,
-        program_code: 'PROG002',
-        subject_code: 'MATH101',
-        year_level: 1,
-        term_id: 1,
-        created_at: '2025-06-01 12:00',
-        updated_at: '2025-06-02 16:00',
-    },
-    {
-        id: 8,
-        program_code: 'PROG002',
-        subject_code: 'ENG101',
-        year_level: 1,
-        term_id: 2,
-        created_at: '2025-06-01 12:30',
-        updated_at: '2025-06-02 16:15',
-    },
-    {
-        id: 9,
-        program_code: 'PROG002',
-        subject_code: 'CS101',
-        year_level: 1,
-        term_id: 2,
-        created_at: '2025-06-01 13:00',
-        updated_at: '2025-06-02 16:30',
-    },
-    {
-        id: 10,
-        program_code: 'PROG002',
-        subject_code: 'PHIL101',
-        year_level: 2,
-        term_id: 1,
-        created_at: '2025-06-01 13:30',
-        updated_at: '2025-06-02 16:45',
-    },
-    {
-        id: 11,
-        program_code: 'PROG002',
-        subject_code: 'CS201',
-        year_level: 3,
-        term_id: 1,
-        created_at: '2025-06-01 14:00',
-        updated_at: '2025-06-02 17:00',
-    },
-    {
-        id: 12,
-        program_code: 'PROG003',
-        subject_code: 'MATH101',
-        year_level: 1,
-        term_id: 1,
-        created_at: '2025-06-01 15:00',
-        updated_at: '2025-06-02 17:30',
-    },
-    {
-        id: 13,
-        program_code: 'PROG003',
-        subject_code: 'ENG101',
-        year_level: 1,
-        term_id: 2,
-        created_at: '2025-06-01 15:30',
-        updated_at: '2025-06-02 17:45',
-    },
-    {
-        id: 14,
-        program_code: 'PROG003',
-        subject_code: 'CS301',
-        year_level: 2,
-        term_id: 1,
-        created_at: '2025-06-01 16:00',
-        updated_at: '2025-06-02 18:00',
-    },
-    {
-        id: 15,
-        program_code: 'PROG004',
-        subject_code: 'CS201',
-        year_level: 1,
-        term_id: 1,
-        created_at: '2025-06-01 16:30',
-        updated_at: '2025-06-02 18:15',
-    },
-    {
-        id: 16,
-        program_code: 'PROG004',
-        subject_code: 'CS301',
-        year_level: 2,
-        term_id: 1,
-        created_at: '2025-06-01 17:00',
-        updated_at: '2025-06-02 18:30',
-    },
-];
-
-const initialLecturerSubjects = [
-    {
-        id: 1,
-        lecturer_id: 1,
-        course_assignment_id: 4,
-        calendar_id: 2,
-        created_at: '2025-06-01 09:00',
-        updated_at: '2025-06-02 14:30',
-    },
-    {
-        id: 2,
-        lecturer_id: 2,
-        course_assignment_id: 1,
-        calendar_id: 2,
-        created_at: '2025-06-03 11:00',
-        updated_at: '2025-06-04 10:15',
-    },
-    {
-        id: 3,
-        lecturer_id: 3,
-        course_assignment_id: 8,
-        calendar_id: 2,
-        created_at: '2025-06-05 13:00',
-        updated_at: '2025-06-06 16:45',
-    },
-    {
-        id: 4,
-        lecturer_id: 1,
-        course_assignment_id: 5,
-        calendar_id: 2,
-        created_at: '2025-06-07 15:30',
-        updated_at: '2025-06-08 09:20',
-    },
-    {
-        id: 5,
-        lecturer_id: 4,
-        course_assignment_id: 10,
-        calendar_id: 2,
-        created_at: '2025-06-09 10:45',
-        updated_at: '2025-06-10 16:15',
-    },
-    {
-        id: 6,
-        lecturer_id: 5,
-        course_assignment_id: 14,
-        calendar_id: 2,
-        created_at: '2025-06-11 14:20',
-        updated_at: '2025-06-12 11:30',
-    },
-];
-
 function LoadingSkeleton() {
     return (
         <div className="space-y-4">
             {[1, 2, 3].map((i) => (
                 <div key={i} className="flex items-center space-x-4 p-4">
-                    <Skeleton className="h-4 w-8" />
-                    <Skeleton className="h-4 w-32" />
+                    <Skeleton className="h-4 w-16" />
                     <Skeleton className="h-4 w-48" />
-                    <Skeleton className="h-4 w-24" />
+                    <Skeleton className="h-4 w-12" />
                     <Skeleton className="h-4 w-24" />
                     <Skeleton className="h-4 w-20" />
                 </div>
@@ -385,117 +51,182 @@ function LoadingSkeleton() {
     );
 }
 
-function SubjectAllocationSheet({ isOpen, onClose, allocation = null, onSave, existingAllocations = [] }) {
+function SubjectAllocationSheet({ isOpen, onClose, allocation = null, onSave, existingAllocations = [], lecturers = [], programs = [], academicCalendars = [], onShowError }) {
     const [formData, setFormData] = useState({
         lecturer_id: '',
-        course_assignment_id: '',
-        calendar_id: '',
+        prog_subj_id: '',
+        sy_term_id: '',
         program_code: '',
+        year_level: '',
+        term_id: '',
     });
     const [validationError, setValidationError] = useState('');
+    const [availableSubjects, setAvailableSubjects] = useState([]);
+    const [filteredAcademicCalendars, setFilteredAcademicCalendars] = useState(academicCalendars);
+    const [isLoadingSubjects, setIsLoadingSubjects] = useState(false);
+    const [isLoadingCalendars, setIsLoadingCalendars] = useState(false);
+    const [availableTerms, setAvailableTerms] = useState([]);
 
     React.useEffect(() => {
         if (allocation) {
-            const courseAssignment = sampleCourseAssignments.find((ca) => ca.id === allocation.course_assignment_id);
+            const programCode = allocation.program_subject?.program?.code || '';
             setFormData({
                 lecturer_id: allocation.lecturer_id?.toString() || '',
-                course_assignment_id: allocation.course_assignment_id?.toString() || '',
-                calendar_id: allocation.calendar_id?.toString() || '',
-                program_code: courseAssignment?.program_code || '',
+                prog_subj_id: allocation.prog_subj_id?.toString() || '',
+                sy_term_id: allocation.sy_term_id?.toString() || '',
+                program_code: programCode,
+                year_level: allocation.program_subject?.year_level?.toString() || '',
+                term_id: allocation.program_subject?.term_id?.toString() || '',
             });
+
+            // Load subjects for the program if editing
+            if (programCode) {
+                setIsLoadingSubjects(true);
+                fetch(`/api/subjects-by-program/${programCode}`)
+                    .then(response => response.json())
+                    .then(programSubjects => {
+                        setAvailableSubjects(programSubjects);
+
+                        // Load academic calendars if we have a selected subject
+                        const currentProgSubjId = allocation.prog_subj_id?.toString();
+                        if (currentProgSubjId) {
+                            const selectedSubject = programSubjects.find(ps => ps.id.toString() === currentProgSubjId);
+                            if (selectedSubject && selectedSubject.term_id) {
+                                setIsLoadingCalendars(true);
+                                fetch(`/api/academic-calendars-by-term/${selectedSubject.term_id}`)
+                                    .then(response => response.json())
+                                    .then(filteredCalendars => {
+                                        setFilteredAcademicCalendars(filteredCalendars);
+                                    })
+                                    .catch(error => {
+                                        console.error('Error fetching academic calendars:', error);
+                                        setFilteredAcademicCalendars([]);
+                                    })
+                                    .finally(() => setIsLoadingCalendars(false));
+                            }
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error fetching subjects:', error);
+                        setAvailableSubjects([]);
+                    })
+                    .finally(() => setIsLoadingSubjects(false));
+            }
         } else {
-            setFormData({ lecturer_id: '', course_assignment_id: '', calendar_id: '2', program_code: '' });
+            setFormData({ lecturer_id: '', prog_subj_id: '', sy_term_id: '', program_code: '', year_level: '', term_id: '' });
+            setAvailableSubjects([]);
+            setFilteredAcademicCalendars(academicCalendars);
+            setAvailableTerms([]);
         }
         setValidationError('');
-    }, [allocation]);
-
+    }, [allocation, academicCalendars]);
     const handleSave = () => {
-        if (!formData.lecturer_id || !formData.course_assignment_id || !formData.calendar_id || !formData.program_code) {
+        if (!formData.lecturer_id || !formData.prog_subj_id || !formData.sy_term_id) {
             setValidationError('Please fill all required fields');
-            return;
-        }
-
-        const courseAssignment = sampleCourseAssignments.find((ca) => ca.id === parseInt(formData.course_assignment_id));
-        if (!courseAssignment) {
-            setValidationError('Invalid course assignment');
             return;
         }
 
         // Check for duplicate allocation
         const isDuplicate = existingAllocations.some((alloc) => {
-            const allocCourseAssignment = sampleCourseAssignments.find((ca) => ca.id === alloc.course_assignment_id);
             return (
-                allocCourseAssignment &&
-                allocCourseAssignment.subject_code === courseAssignment.subject_code &&
-                allocCourseAssignment.program_code === courseAssignment.program_code &&
-                alloc.calendar_id === parseInt(formData.calendar_id) &&
+                alloc.lecturer_id === parseInt(formData.lecturer_id) &&
+                alloc.prog_subj_id === parseInt(formData.prog_subj_id) &&
+                alloc.sy_term_id === parseInt(formData.sy_term_id) &&
                 alloc.id !== allocation?.id
             );
         });
 
         if (isDuplicate) {
-            setValidationError('This subject is already allocated to this program in the selected term');
+            if (onShowError) {
+                onShowError('Duplicate Allocation', 'This lecturer is already assigned to this subject in the selected term');
+            } else {
+                setValidationError('This lecturer is already assigned to this subject in the selected term');
+            }
             return;
         }
 
         onSave({
             lecturer_id: parseInt(formData.lecturer_id),
-            course_assignment_id: parseInt(formData.course_assignment_id),
-            calendar_id: parseInt(formData.calendar_id),
+            prog_subj_id: parseInt(formData.prog_subj_id),
+            sy_term_id: parseInt(formData.sy_term_id),
         });
         onClose();
     };
 
-    const getSubjectsForProgram = (programCode) => {
-        if (!programCode) return [];
-        const subjectCodes = sampleCourseAssignments.filter((ca) => ca.program_code === programCode).map((ca) => ca.subject_code);
-        return sampleSubjects.filter((subject) => subjectCodes.includes(subject.code));
-    };
-
-    const getAvailableSubjects = () => {
-        const programSubjects = getSubjectsForProgram(formData.program_code);
-        if (!programSubjects.length || !formData.calendar_id) return programSubjects;
-
-        // Get current calendar term
-        const calendar = sampleCalendars.find((c) => c.id === parseInt(formData.calendar_id));
-        if (!calendar) return programSubjects;
-
-        return programSubjects.filter((subject) => {
-            // Check if this subject is already allocated to this program in this term
-            const isAlreadyAllocated = existingAllocations.some((alloc) => {
-                const allocCourseAssignment = sampleCourseAssignments.find((ca) => ca.id === alloc.course_assignment_id);
-                return (
-                    allocCourseAssignment &&
-                    allocCourseAssignment.subject_code === subject.code &&
-                    allocCourseAssignment.program_code === formData.program_code &&
-                    alloc.calendar_id === parseInt(formData.calendar_id) &&
-                    alloc.id !== allocation?.id
-                );
-            });
-
-            return !isAlreadyAllocated;
-        });
-    };
-
-    const availableSubjects = getAvailableSubjects();
-    const programCodes = samplePrograms.map((p) => p.unique_code);
+    const programCodes = programs.map((p) => p.code);
 
     const getProgram = (programCode) => {
-        return samplePrograms.find((p) => p.unique_code === programCode);
+        return programs.find((p) => p.code === programCode);
     };
 
     const getCalendarInfo = (calendarId) => {
-        return sampleCalendars.find((c) => c.id === parseInt(calendarId));
+        return academicCalendars.find((c) => c.id === parseInt(calendarId));
     };
 
-    const handleProgramChange = (value) => {
-        setFormData({ ...formData, program_code: value, course_assignment_id: '' });
+    const handleProgramChange = async (value) => {
+        setFormData({ ...formData, program_code: value, prog_subj_id: '', sy_term_id: '', year_level: '', term_id: '' });
         setValidationError('');
+        setAvailableSubjects([]);
+        setFilteredAcademicCalendars(academicCalendars);
+        setAvailableTerms([]);
+
+        if (value) {
+            setIsLoadingSubjects(true);
+            try {
+                const response = await fetch(`/api/subjects-by-program/${value}`);
+                const programSubjects = await response.json();
+                setAvailableSubjects(programSubjects);
+
+                // Get unique terms from the program subjects
+                const uniqueTerms = programSubjects.reduce((acc, ps) => {
+                    if (ps.term && !acc.find(t => t.id === ps.term.id)) {
+                        acc.push(ps.term);
+                    }
+                    return acc;
+                }, []);
+                setAvailableTerms(uniqueTerms);
+            } catch (error) {
+                console.error('Error fetching subjects:', error);
+                setAvailableSubjects([]);
+                setAvailableTerms([]);
+            } finally {
+                setIsLoadingSubjects(false);
+            }
+        }
     };
 
-    const handleCalendarChange = (value) => {
-        setFormData({ ...formData, calendar_id: value });
+    const handleYearLevelChange = async (value) => {
+        setFormData({ ...formData, year_level: value, prog_subj_id: '', sy_term_id: '' });
         setValidationError('');
+        setFilteredAcademicCalendars([]);
+    };
+
+    const handleTermChange = async (value) => {
+        setFormData({ ...formData, term_id: value, prog_subj_id: '', sy_term_id: '' });
+        setValidationError('');
+        setFilteredAcademicCalendars([]);
+    };
+
+    const handleSubjectChange = async (value) => {
+        setFormData({ ...formData, prog_subj_id: value, sy_term_id: '' });
+        setValidationError('');
+        setFilteredAcademicCalendars([]);
+
+        // Find the selected program subject to get its term_id
+        const selectedSubject = availableSubjects.find(ps => ps.id === parseInt(value));
+        if (selectedSubject && selectedSubject.term_id) {
+            setIsLoadingCalendars(true);
+            try {
+                const response = await fetch(`/api/academic-calendars-by-term/${selectedSubject.term_id}`);
+                const filteredCalendars = await response.json();
+                setFilteredAcademicCalendars(filteredCalendars);
+            } catch (error) {
+                console.error('Error fetching academic calendars:', error);
+                setFilteredAcademicCalendars([]);
+            } finally {
+                setIsLoadingCalendars(false);
+            }
+        }
     };
 
     return (
@@ -524,7 +255,7 @@ function SubjectAllocationSheet({ isOpen, onClose, allocation = null, onSave, ex
                                     <SelectValue placeholder="Select a lecturer" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    {sampleLecturers.map((lecturer) => (
+                                    {lecturers.map((lecturer) => (
                                         <SelectItem key={lecturer.id} value={lecturer.id.toString()}>
                                             <div className="flex items-center gap-2">
                                                 <User className="h-4 w-4" />
@@ -550,18 +281,93 @@ function SubjectAllocationSheet({ isOpen, onClose, allocation = null, onSave, ex
                                     <SelectValue placeholder="Select a program" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    {samplePrograms.map((program) => (
-                                        <SelectItem key={program.unique_code} value={program.unique_code}>
-                                            <div className="flex items-center gap-2">
-                                                <GraduationCap className="h-4 w-4" />
-                                                <span>
-                                                    {program.unique_code} - {program.name}
-                                                </span>
-                                            </div>
-                                        </SelectItem>
-                                    ))}
+                                        {programs.map((program) => (
+                                            <SelectItem key={program.code} value={program.code}>
+                                                <div className="flex items-center gap-2">
+                                                    <GraduationCap className="h-4 w-4" />
+                                                    <span>
+                                                        {program.code} - {program.description}
+                                                    </span>
+                                                </div>
+                                            </SelectItem>
+                                        ))}
                                 </SelectContent>
                             </Select>
+                        </div>
+                        <div className='flex gap-4'>
+                            <div className="space-y-2 w-full">
+                                <label
+                                    htmlFor="year_level"
+                                    className="text-sm leading-none font-medium peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                                >
+                                    Year Level *
+                                </label>
+                                <Select
+                                    value={formData.year_level}
+                                    onValueChange={handleYearLevelChange}
+                                    disabled={!formData.program_code}
+                                >
+                                    <SelectTrigger className="w-full">
+                                        <SelectValue
+                                            placeholder={
+                                                !formData.program_code
+                                                    ? 'Select a program first'
+                                                    : 'Select year level'
+                                            }
+                                        />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {formData.program_code && (() => {
+                                            const selectedProgram = programs.find(p => p.code === formData.program_code);
+                                            const numberOfYears = selectedProgram?.number_of_year || 0;
+                                            return Array.from({ length: numberOfYears }, (_, i) => i + 1).map(year => (
+                                                <SelectItem key={year} value={year.toString()}>
+                                                    <div className="flex items-center gap-2">
+                                                        <span>
+                                                            {year}{year === 1 ? 'st' : year === 2 ? 'nd' : year === 3 ? 'rd' : 'th'} Year
+                                                        </span>
+                                                    </div>
+                                                </SelectItem>
+                                            ));
+                                        })()}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+
+                            <div className="space-y-2 w-full">
+                                <label
+                                    htmlFor="term_id"
+                                    className="text-sm leading-none font-medium peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                                >
+                                    Term *
+                                </label>
+                                <Select
+                                    value={formData.term_id}
+                                    onValueChange={handleTermChange}
+                                    disabled={!formData.program_code || availableTerms.length === 0}
+                                >
+                                    <SelectTrigger className="w-full">
+                                        <SelectValue
+                                            placeholder={
+                                                !formData.program_code
+                                                    ? 'Select a program first'
+                                                    : availableTerms.length === 0
+                                                    ? 'No terms available'
+                                                    : 'Select a term'
+                                            }
+                                        />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {availableTerms.map((term) => (
+                                            <SelectItem key={term.id} value={term.id.toString()}>
+                                                <div className="flex items-center gap-2">
+                                                    <span>{term.name}</span>
+                                                </div>
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
                         </div>
 
                         <div className="space-y-2">
@@ -572,39 +378,47 @@ function SubjectAllocationSheet({ isOpen, onClose, allocation = null, onSave, ex
                                 Subject *
                             </label>
                             <Select
-                                value={formData.course_assignment_id}
-                                onValueChange={(value) => setFormData({ ...formData, course_assignment_id: value })}
-                                disabled={!formData.program_code || !formData.calendar_id}
+                                value={formData.prog_subj_id}
+                                onValueChange={handleSubjectChange}
+                                disabled={!formData.program_code || !formData.year_level || !formData.term_id || isLoadingSubjects}
                             >
                                 <SelectTrigger className="w-full">
                                     <SelectValue
                                         placeholder={
                                             !formData.program_code
                                                 ? 'Select a program first'
-                                                : !formData.calendar_id
-                                                  ? 'Select a term first'
-                                                  : 'Select a subject'
+                                                : !formData.year_level
+                                                ? 'Select year level first'
+                                                : !formData.term_id
+                                                ? 'Select term first'
+                                                : isLoadingSubjects
+                                                ? 'Loading subjects...'
+                                                : 'Select a subject'
                                         }
                                     />
                                 </SelectTrigger>
+
                                 <SelectContent className="!max-h-[250px] overflow-y-auto">
-                                    {availableSubjects.length > 0 ? (
-                                        availableSubjects.map((subject) => {
-                                            const courseAssignment = sampleCourseAssignments.find(
-                                                (ca) => ca.subject_code === subject.code && ca.program_code === formData.program_code,
-                                            );
+                                    {isLoadingSubjects ? (
+                                        <div className="text-muted-foreground p-2 text-center text-sm">
+                                            Loading subjects...
+                                        </div>
+                                    ) : formData.program_code && formData.year_level && formData.term_id && availableSubjects.length > 0 ? (
+                                        availableSubjects
+                                            .filter(ps =>
+                                                ps.year_level.toString() === formData.year_level &&
+                                                ps.term_id.toString() === formData.term_id
+                                            )
+                                            .map((programSubject) => {
+                                            if (!programSubject || !programSubject.subject) return null;
+                                            const subject = programSubject;
                                             return (
-                                                <SelectItem key={courseAssignment?.id} value={courseAssignment?.id.toString()}>
+                                                <SelectItem key={programSubject.id} value={programSubject.id.toString()}>
                                                     <div className="flex items-center gap-2">
-                                                        <span className="font-medium">{subject.name}</span>
+                                                        <span className="font-medium">{subject.prog_subj_code} - {subject.subject.name}</span>
                                                         <Badge variant="outline" className="text-xs">
-                                                            {subject.unit} unit{subject.unit !== 1 ? 's' : ''}
+                                                            {subject.unit || 0} unit{(subject.unit || 0) !== 1 ? 's' : ''}
                                                         </Badge>
-                                                        {subject.isGeneralEducation && (
-                                                            <Badge variant="secondary" className="bg-green-100 text-xs text-green-800">
-                                                                GE
-                                                            </Badge>
-                                                        )}
                                                     </div>
                                                 </SelectItem>
                                             );
@@ -613,9 +427,11 @@ function SubjectAllocationSheet({ isOpen, onClose, allocation = null, onSave, ex
                                         <div className="text-muted-foreground p-2 text-center text-sm">
                                             {!formData.program_code
                                                 ? 'Select a program first'
-                                                : !formData.calendar_id
-                                                  ? 'Select a term first'
-                                                  : 'No available subjects for this program and term'}
+                                                : !formData.year_level
+                                                ? 'Select year level first'
+                                                : !formData.term_id
+                                                ? 'Select term first'
+                                                : 'No available subjects for this combination'}
                                         </div>
                                     )}
                                 </SelectContent>
@@ -629,38 +445,62 @@ function SubjectAllocationSheet({ isOpen, onClose, allocation = null, onSave, ex
                             >
                                 Academic Term *
                             </label>
-                            <Select value={formData.calendar_id} onValueChange={handleCalendarChange}>
+                            <Select
+                                value={formData.sy_term_id}
+                                onValueChange={(value) => setFormData({ ...formData, sy_term_id: value })}
+                                disabled={!formData.prog_subj_id || isLoadingCalendars}
+                            >
                                 <SelectTrigger className="w-full">
-                                    <SelectValue placeholder="Select a term" />
+                                    <SelectValue
+                                        placeholder={
+                                            !formData.prog_subj_id
+                                                ? 'Select a subject first'
+                                                : isLoadingCalendars
+                                                ? 'Loading terms...'
+                                                : 'Select a term'
+                                        }
+                                    />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    {sampleCalendars.map((calendar) => {
-                                        const term = sampleTerms.find((t) => t.id === calendar.term_id);
-                                        return (
-                                            <SelectItem key={calendar.id} value={calendar.id.toString()}>
-                                                <div className="flex items-center gap-2">
-                                                    <GraduationCap className="h-4 w-4" />
-                                                    <span>
-                                                        {term?.name || 'Unknown Term'} - {calendar.school_year}
-                                                    </span>
-                                                </div>
-                                            </SelectItem>
-                                        );
-                                    })}
+                                    {isLoadingCalendars ? (
+                                        <div className="text-muted-foreground p-2 text-center text-sm">
+                                            Loading terms...
+                                        </div>
+                                    ) : filteredAcademicCalendars.length > 0 ? (
+                                        filteredAcademicCalendars.map((calendar) => {
+                                            const term = calendar.term;
+                                            return (
+                                                <SelectItem key={calendar.id} value={calendar.id.toString()}>
+                                                    <div className="flex items-center gap-2">
+                                                        <GraduationCap className="h-4 w-4" />
+                                                        <span>
+                                                            {term?.name || 'Unknown Term'} - {calendar.school_year}
+                                                        </span>
+                                                    </div>
+                                                </SelectItem>
+                                            );
+                                        })
+                                    ) : (
+                                        <div className="text-muted-foreground p-2 text-center text-sm">
+                                            {!formData.prog_subj_id
+                                                ? 'Select a subject first'
+                                                : 'No academic terms available for this subject'}
+                                        </div>
+                                    )}
                                 </SelectContent>
                             </Select>
                         </div>
 
-                        {formData.calendar_id && (
+                        {formData.sy_term_id && (
                             <div className="bg-muted/50 rounded-lg border p-4">
                                 <h4 className="mb-2 flex items-center gap-2 font-medium">
                                     <CalendarIcon className="h-4 w-4" />
                                     Term Schedule
                                 </h4>
                                 {(() => {
-                                    const calendar = getCalendarInfo(formData.calendar_id);
+                                    const calendar = getCalendarInfo(formData.sy_term_id);
                                     if (calendar) {
-                                        const term = sampleTerms.find((t) => t.id === calendar.term_id);
+                                        const term = calendar.term;
                                         return (
                                             <div className="space-y-2 text-sm">
                                                 <div className="flex justify-between">
@@ -687,42 +527,47 @@ function SubjectAllocationSheet({ isOpen, onClose, allocation = null, onSave, ex
                             </div>
                         )}
 
-                        {formData.course_assignment_id && formData.program_code && (
+                        {formData.prog_subj_id && formData.program_code && (
                             <div className="rounded-lg border bg-blue-50/50 p-4">
                                 <h4 className="mb-2 flex items-center gap-2 font-medium">
                                     <BookOpen className="h-4 w-4" />
                                     Assignment Details
                                 </h4>
                                 {(() => {
-                                    const assignment = sampleCourseAssignments.find((ca) => ca.id === parseInt(formData.course_assignment_id));
-                                    const subject = sampleSubjects.find((s) => s.code === assignment?.subject_code);
-                                    const program = getProgram(assignment?.program_code);
+                                    const programSubject = availableSubjects.find((ps) => ps.id === parseInt(formData.prog_subj_id));
+                                    const subject = programSubject?.subject;
+                                    const program = getProgram(formData.program_code);
 
-                                    if (assignment) {
-                                        const yearLevels = getYearLevelsForProgram(program?.year_length);
-                                        const yearLevel = yearLevels.find((y) => y.id === assignment.year_level);
-                                        const term = sampleTerms.find((t) => t.id === assignment.term_id);
-
+                                    if (programSubject && subject) {
                                         return (
                                             <div className="space-y-2">
                                                 <p className="text-muted-foreground text-sm">You are assigning:</p>
                                                 <div className="space-y-1">
                                                     <div className="text-foreground text-xs font-medium">
-                                                        {subject?.code} - {subject?.name}
+                                                        {programSubject.prog_subj_code} - {subject.name}
                                                     </div>
                                                     <div className="text-foreground text-xs font-medium">
-                                                        For: {program?.unique_code} - {program?.name}
+                                                        For: {program?.code} - {program?.description}
                                                     </div>
+                                                    {formData.lecturer_id && (() => {
+                                                        const selectedLecturer = lecturers.find(l => l.id.toString() === formData.lecturer_id);
+                                                        return selectedLecturer && (
+                                                            <div className="text-foreground text-xs font-medium">
+                                                                To: {selectedLecturer.title} {selectedLecturer.fname} {selectedLecturer.lname}
+                                                            </div>
+                                                        );
+                                                    })()}
                                                     <div className="flex flex-wrap gap-1 text-xs">
-                                                        <Badge variant="secondary">{yearLevel?.name || `${assignment.year_level} Year`}</Badge>
-                                                        <Badge variant="outline">{term?.name || 'Unknown Term'}</Badge>
+                                                        <Badge variant="secondary">{programSubject.year_level}{programSubject.year_level === 1 ? 'st' : programSubject.year_level === 2 ? 'nd' : programSubject.year_level === 3 ? 'rd' : 'th'} Year</Badge>
+                                                        <Badge variant="outline">{subject.unit} unit{subject.unit !== 1 ? 's' : ''}</Badge>
+                                                        <Badge variant="outline" className="bg-gray-100 text-gray-800">{programSubject.term?.name || 'Unknown Term'}</Badge>
                                                     </div>
                                                 </div>
                                             </div>
                                         );
                                     }
 
-                                    return <p className="text-muted-foreground text-sm">No assignment found for this subject-program combination.</p>;
+                                    return <p className="text-muted-foreground text-sm">No subject found for this program combination.</p>;
                                 })()}
                             </div>
                         )}
@@ -735,7 +580,7 @@ function SubjectAllocationSheet({ isOpen, onClose, allocation = null, onSave, ex
                     </Button>
                     <Button
                         onClick={handleSave}
-                        disabled={!formData.lecturer_id || !formData.course_assignment_id || !formData.calendar_id || !formData.program_code}
+                        disabled={!formData.lecturer_id || !formData.prog_subj_id || !formData.sy_term_id}
                         className="flex-1"
                     >
                         {allocation ? 'Update' : 'Create'} Allocation
@@ -747,103 +592,141 @@ function SubjectAllocationSheet({ isOpen, onClose, allocation = null, onSave, ex
 }
 
 export default function SubjectAllocation() {
-    // TODO: BACKEND REQUEST - Initialize data using Inertia.js
-    // Replace sample data with props from backend controller:
-    // 
-    // const { data } = usePage().props;
-    // const { 
-    //     lecturerSubjects = [], 
-    //     lecturers = [], 
-    //     academicCalendars = [], 
-    //     programs = [], 
-    //     programSubjects = [], 
-    //     subjects = [], 
-    //     terms = [] 
-    // } = data;
-    // 
-    // Backend controller should return all necessary data via Inertia::render()
-    // Example: LecturerSubjectController@index should return:
-    // return Inertia::render('application/subject-allocation', [
-    //     'data' => [
-    //         'lecturerSubjects' => LecturerSubject::with(['lecturer', 'programSubject', 'academicCalendar'])->get(),
-    //         'lecturers' => Lecturer::all(),
-    //         'academicCalendars' => AcademicCalendar::with('term')->get(),
-    //         'programs' => Program::all(),
-    //         'programSubjects' => ProgramSubject::with(['program', 'subject'])->get(),
-    //         'subjects' => Subject::all(),
-    //         'terms' => Term::all()
-    //     ]
-    // ]);
+    // Get data from backend controller
+    const { data } = usePage().props;
+    const {
+        lecturerSubjects = [],
+        lecturers = [],
+        academicCalendars = [],
+        programs = [],
+        academicCalendarFilterOption = [],
+        programFilterOption = [],
+        lecturerFilterOption = []
+    } = data;
 
-    const [currentPage, setCurrentPage] = useState(1);
+    // Handle pagination data structure from Laravel
+    const lecturerSubjectsData = lecturerSubjects.data ? lecturerSubjects.data : (Array.isArray(lecturerSubjects) ? lecturerSubjects : []);
+    const paginationInfo = lecturerSubjects.current_page ? {
+        currentPage: lecturerSubjects.current_page,
+        lastPage: lecturerSubjects.last_page,
+        perPage: lecturerSubjects.per_page,
+        total: lecturerSubjects.total
+    } : null;
+
+    const [currentPage, setCurrentPage] = useState(paginationInfo?.currentPage || 1);
     const [isLoading, setIsLoading] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
-    const [schoolYearFilter, setSchoolYearFilter] = useState('2025-2026');
+    const [schoolYearFilter, setSchoolYearFilter] = useState('');
     const [termFilter, setTermFilter] = useState('all');
     const [programFilter, setProgramFilter] = useState('all');
     const [lecturerFilter, setLecturerFilter] = useState('all');
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [editingAllocation, setEditingAllocation] = useState(null);
-    const [allocationsData, setAllocationsData] = useState(initialLecturerSubjects);
+    const [allocationsData, setAllocationsData] = useState(lecturerSubjectsData);
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [allocationToDelete, setAllocationToDelete] = useState(null);
     const [isDeleting, setIsDeleting] = useState(false);
+    const [errorDialogOpen, setErrorDialogOpen] = useState(false);
+    const [errorMessage, setErrorMessage] = useState('');
+    const [errorTitle, setErrorTitle] = useState('');
 
     const itemsPerPage = 5;
 
-    const getLecturer = (lecturerId) => sampleLecturers.find((l) => l.id === lecturerId);
-    const getSubject = (subjectCode) => sampleSubjects.find((s) => s.code === subjectCode);
-    const getCalendar = (calendarId) => sampleCalendars.find((c) => c.id === calendarId);
-    const getProgram = (programCode) => samplePrograms.find((p) => p.unique_code === programCode);
-    const getCourseAssignment = (courseAssignmentId) => sampleCourseAssignments.find((ca) => ca.id === courseAssignmentId);
+    // Initialize school year filter with the first available year
+    React.useEffect(() => {
+        if (!schoolYearFilter && academicCalendars.length > 0) {
+            const uniqueSchoolYears = [...new Set(academicCalendars.map((c) => c.school_year))];
+            setSchoolYearFilter(uniqueSchoolYears[0] || '');
+        }
+    }, [academicCalendars, schoolYearFilter]);
 
-    const transformedData = allocationsData.map((allocation) => {
-        const lecturer = getLecturer(allocation.lecturer_id);
-        const courseAssignment = getCourseAssignment(allocation.course_assignment_id);
-        const subject = getSubject(courseAssignment?.subject_code);
-        const program = getProgram(courseAssignment?.program_code);
-        const calendar = getCalendar(allocation.calendar_id);
+    // Update allocations data when backend data changes
+    React.useEffect(() => {
+        setAllocationsData(lecturerSubjectsData);
+    }, [lecturerSubjectsData]);
 
+    // Send filter changes to backend
+    const applyFilters = React.useCallback(() => {
+        const params = new URLSearchParams();
+
+        if (searchTerm) params.append('search', searchTerm);
+        if (schoolYearFilter) params.append('syFilter', schoolYearFilter);
+        if (termFilter && termFilter !== 'all') params.append('termFilter', termFilter);
+        if (programFilter && programFilter !== 'all') params.append('progCodeFilter', programFilter);
+        if (lecturerFilter && lecturerFilter !== 'all') params.append('lecturerFilter', lecturerFilter);
+
+        // Reset to page 1 when applying filters
+        params.append('page', '1');
+
+        setIsLoading(true);
+        router.get('/subject-allocation', Object.fromEntries(params), {
+            preserveState: true,
+            preserveScroll: true,
+            onFinish: () => {
+                setIsLoading(false);
+                setCurrentPage(1);
+            },
+        });
+    }, [searchTerm, schoolYearFilter, termFilter, programFilter, lecturerFilter]);
+
+    // Debounced filter application for search
+    React.useEffect(() => {
+        const timeoutId = setTimeout(() => {
+            if (searchTerm !== '') {
+                applyFilters();
+            }
+        }, 500); // 500ms debounce
+
+        return () => clearTimeout(timeoutId);
+    }, [searchTerm, applyFilters]);
+
+    // Immediate filter application for dropdowns
+    React.useEffect(() => {
+        // Only apply filters if the school year filter is set (prevents initial load issues)
+        if (schoolYearFilter) {
+            applyFilters();
+        }
+    }, [schoolYearFilter, termFilter, programFilter, lecturerFilter, applyFilters]);
+
+    const getLecturer = (lecturerId) => lecturers.find((l) => l.id === lecturerId);
+    const getCalendar = (calendarId) => academicCalendars.find((c) => c.id === calendarId);
+    const getProgram = (programCode) => programs.find((p) => p.code === programCode);
+
+    const transformedData = (allocationsData || []).map((allocation) => {
+        // Data is already loaded from backend with relationships
         return {
             ...allocation,
-            lecturer,
-            subject,
-            program,
-            courseAssignment,
-            calendar,
+            lecturer: allocation.lecturer,
+            subject: allocation.program_subject?.subject,
+            program: allocation.program_subject?.program,
+            calendar: allocation.academic_calendar,
+            term: allocation.academic_calendar?.term,
         };
     });
 
-    const filteredData = transformedData.filter((allocation) => {
-        if (!allocation.lecturer || !allocation.subject || !allocation.calendar) {
-            return false;
-        }
-
-        const matchesSearch =
-            allocation.lecturer.fname.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            allocation.lecturer.lname.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            allocation.subject.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            allocation.subject.name.toLowerCase().includes(searchTerm.toLowerCase());
-
-        const matchesSchoolYear = allocation.calendar.school_year === schoolYearFilter;
-        const term = sampleTerms.find((t) => t.id === allocation.calendar.term_id);
-        const matchesTerm = termFilter === 'all' || term?.name === termFilter;
-        const matchesProgram = programFilter === 'all' || allocation.program?.unique_code === programFilter;
-        const matchesLecturer = lecturerFilter === 'all' || allocation.lecturer_id.toString() === lecturerFilter;
-
-        return matchesSearch && matchesSchoolYear && matchesTerm && matchesProgram && matchesLecturer;
-    });
-
-    const totalPages = Math.ceil(filteredData.length / itemsPerPage);
-    const paginatedData = filteredData.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+    // Use the backend-filtered data directly (no client-side filtering)
+    const paginatedData = transformedData;
 
     const handlePageChange = (page) => {
-        if (page > 0 && page <= totalPages) {
+        if (page > 0 && page <= (paginationInfo?.lastPage || 1)) {
             setIsLoading(true);
-            setTimeout(() => {
-                setCurrentPage(page);
-                setIsLoading(false);
-            }, 800);
+            const params = new URLSearchParams();
+
+            if (searchTerm) params.append('search', searchTerm);
+            if (schoolYearFilter) params.append('syFilter', schoolYearFilter);
+            if (termFilter && termFilter !== 'all') params.append('termFilter', termFilter);
+            if (programFilter && programFilter !== 'all') params.append('progCodeFilter', programFilter);
+            if (lecturerFilter && lecturerFilter !== 'all') params.append('lecturerFilter', lecturerFilter);
+            params.append('page', page.toString());
+
+            router.get('/subject-allocation', Object.fromEntries(params), {
+                preserveState: true,
+                preserveScroll: true,
+                onFinish: () => {
+                    setIsLoading(false);
+                    setCurrentPage(page);
+                },
+            });
         }
     };
 
@@ -857,83 +740,62 @@ export default function SubjectAllocation() {
         setIsDialogOpen(true);
     };
 
-    const handleSaveAllocation = (formData) => {
-        const courseAssignment = sampleCourseAssignments.find((ca) => ca.id === formData.course_assignment_id);
-        if (!courseAssignment) return;
+    const showError = (title, message) => {
+        setErrorTitle(title);
+        setErrorMessage(message);
+        setErrorDialogOpen(true);
+    };
 
-        // Check for duplicate allocation
+    const handleSaveAllocation = (formData) => {
+        // Check for duplicate allocation by looking at existing allocations
         const existingAllocation = allocationsData.find((alloc) => {
-            const allocCourseAssignment = sampleCourseAssignments.find((ca) => ca.id === alloc.course_assignment_id);
             return (
-                allocCourseAssignment &&
-                allocCourseAssignment.subject_code === courseAssignment.subject_code &&
-                allocCourseAssignment.program_code === courseAssignment.program_code &&
-                alloc.calendar_id === formData.calendar_id &&
+                alloc.lecturer_id === formData.lecturer_id &&
+                alloc.prog_subj_id === formData.prog_subj_id &&
+                alloc.sy_term_id === formData.sy_term_id &&
                 alloc.id !== editingAllocation?.id
             );
         });
 
         if (existingAllocation) {
-            alert('This subject is already allocated to this program in the selected term.');
+            showError('Duplicate Allocation', 'This lecturer is already assigned to this subject in the selected term.');
             return;
         }
 
-        // TODO: BACKEND REQUEST - Store/Update subject allocation
+        // Backend request to store/update subject allocation
         if (editingAllocation) {
             // UPDATE: Edit existing allocation
-            // router.put(`/subject-allocation/${editingAllocation.id}`, {
-            //     lecturer_id: formData.lecturer_id,
-            //     prog_subj_id: formData.course_assignment_id,
-            //     sy_term_id: formData.calendar_id
-            // }, {
-            //     preserveScroll: true,
-            //     onSuccess: () => {
-            //         console.log('Allocation updated successfully');
-            //         setIsDialogOpen(false);
-            //     },
-            //     onError: (errors) => {
-            //         console.error('Error updating allocation:', errors);
-            //     }
-            // });
-            
-            // TEMPORARY: Local state update (remove when backend is implemented)
-            setAllocationsData((prevData) =>
-                prevData.map((allocation) =>
-                    allocation.id === editingAllocation.id
-                        ? {
-                              ...allocation,
-                              ...formData,
-                              updated_at: new Date().toISOString().slice(0, 19).replace('T', ' '),
-                          }
-                        : allocation,
-                ),
-            );
+            router.put(`/subject-allocation/${editingAllocation.id}`, {
+                lecturer_id: formData.lecturer_id,
+                prog_subj_id: formData.prog_subj_id,
+                sy_term_id: formData.sy_term_id
+            }, {
+                preserveScroll: true,
+                onSuccess: () => {
+                    console.log('Allocation updated successfully');
+                    setIsDialogOpen(false);
+                },
+                onError: (errors) => {
+                    showError('Update Failed', errors.message || Object.values(errors).flat().join('\n'));
+                }
+            });
         } else {
             // CREATE: Add new allocation
-            // router.post('/subject-allocation', {
-            //     lecturer_id: formData.lecturer_id,
-            //     prog_subj_id: formData.course_assignment_id,
-            //     sy_term_id: formData.calendar_id
-            // }, {
-            //     preserveScroll: true,
-            //     onSuccess: () => {
-            //         console.log('Allocation created successfully');
-            //         setCurrentPage(1);
-            //         setIsDialogOpen(false);
-            //     },
-            //     onError: (errors) => {
-            //         console.error('Error creating allocation:', errors);
-            //     }
-            // });
-            
-            // TEMPORARY: Local state update (remove when backend is implemented)
-            const newAllocation = {
-                id: Math.max(...allocationsData.map((a) => a.id), 0) + 1,
-                ...formData,
-                created_at: new Date().toISOString().slice(0, 19).replace('T', ' '),
-                updated_at: new Date().toISOString().slice(0, 19).replace('T', ' '),
-            };
-            setAllocationsData((prevData) => [...prevData, newAllocation]);
+            router.post('/subject-allocation', {
+                lecturer_id: formData.lecturer_id,
+                prog_subj_id: formData.prog_subj_id,
+                sy_term_id: formData.sy_term_id
+            }, {
+                preserveScroll: true,
+                onSuccess: () => {
+                    console.log('Allocation created successfully');
+                    setCurrentPage(1);
+                    setIsDialogOpen(false);
+                },
+                onError: (errors) => {
+                    showError('Save Failed', errors.message || Object.values(errors).flat().join('\n'));
+                }
+            });
         }
 
         if (!editingAllocation) {
@@ -951,51 +813,31 @@ export default function SubjectAllocation() {
         if (allocationToDelete && !isDeleting) {
             setIsDeleting(true);
 
-            // TODO: BACKEND REQUEST - Delete subject allocation
-            // DELETE: Remove existing allocation
-            // router.delete(`/subject-allocation/${allocationToDelete.id}`, {
-            //     preserveScroll: true,
-            //     onSuccess: () => {
-            //         console.log('Allocation deleted successfully');
-            //         
-            //         // Adjust current page if necessary
-            //         const newTotalPages = Math.ceil((filteredData.length - 1) / itemsPerPage);
-            //         if (currentPage > newTotalPages && newTotalPages > 0) {
-            //             setCurrentPage(newTotalPages);
-            //         } else if (filteredData.length === 1) {
-            //             setCurrentPage(1);
-            //         }
-            //         
-            //         setIsDeleting(false);
-            //         setDeleteDialogOpen(false);
-            //         setAllocationToDelete(null);
-            //     },
-            //     onError: (errors) => {
-            //         console.error('Error deleting allocation:', errors);
-            //         setIsDeleting(false);
-            //         setDeleteDialogOpen(false);
-            //         setAllocationToDelete(null);
-            //     }
-            // });
+            // Backend request to delete subject allocation
+            router.delete(`/subject-allocation/${allocationToDelete.id}`, {
+                preserveScroll: true,
+                onSuccess: () => {
 
-            try {
-                // TEMPORARY: Simulate API call (remove when backend is implemented)
-                await new Promise((resolve) => setTimeout(resolve, 1000));
+                    // Check if we need to adjust the current page
+                    const totalItems = paginationInfo?.total || paginatedData.length;
+                    const newTotalPages = Math.ceil((totalItems - 1) / itemsPerPage);
+                    if (currentPage > newTotalPages && newTotalPages > 0) {
+                        setCurrentPage(newTotalPages);
+                    } else if (totalItems === 1) {
+                        setCurrentPage(1);
+                    }
 
-                setAllocationsData((prevData) => prevData.filter((allocation) => allocation.id !== allocationToDelete.id));
-
-                // Adjust current page if necessary
-                const newTotalPages = Math.ceil((filteredData.length - 1) / itemsPerPage);
-                if (currentPage > newTotalPages && newTotalPages > 0) {
-                    setCurrentPage(newTotalPages);
-                } else if (filteredData.length === 1) {
-                    setCurrentPage(1);
+                    setIsDeleting(false);
+                    setDeleteDialogOpen(false);
+                    setAllocationToDelete(null);
+                },
+                onError: (errors) => {
+                    console.error('Error deleting allocation:', errors);
+                    setIsDeleting(false);
+                    setDeleteDialogOpen(false);
+                    setAllocationToDelete(null);
                 }
-            } finally {
-                setIsDeleting(false);
-                setDeleteDialogOpen(false);
-                setAllocationToDelete(null);
-            }
+            });
         }
     };
 
@@ -1009,18 +851,15 @@ export default function SubjectAllocation() {
         });
     };
 
-    const schoolYears = [...new Set(sampleCalendars.map((c) => c.school_year))];
+    const schoolYears = [...new Set(academicCalendars.map((c) => c.school_year))];
     const termNames = [
         ...new Set(
-            sampleCalendars
-                .map((c) => {
-                    const term = sampleTerms.find((t) => t.id === c.term_id);
-                    return term?.name;
-                })
+            academicCalendars
+                .map((c) => c.term?.name)
                 .filter(Boolean),
         ),
     ];
-    const programCodes = samplePrograms.map((p) => p.unique_code);
+    const programCodes = programs.map((p) => p.code);
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
@@ -1044,7 +883,7 @@ export default function SubjectAllocation() {
                                 <div className="relative flex-1 md:max-w-sm">
                                     <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
                                     <Input
-                                        placeholder="Search allocations..."
+                                        placeholder="Search by lecturer, subject, program, term, or school year..."
                                         value={searchTerm}
                                         onChange={(e) => setSearchTerm(e.target.value)}
                                         className="pl-9"
@@ -1068,24 +907,29 @@ export default function SubjectAllocation() {
                                     </SelectTrigger>
                                     <SelectContent>
                                         <SelectItem value="all">All Terms</SelectItem>
-                                        {termNames.map((term) => (
-                                            <SelectItem key={term} value={term}>
-                                                {term}
-                                            </SelectItem>
-                                        ))}
+                                        {academicCalendarFilterOption.map((item) => {
+                                            const term = item.academic_calendar?.term;
+                                            if (!term) return null;
+                                            return (
+                                                <SelectItem key={term.id} value={term.id.toString()}>
+                                                    {term.name}
+                                                </SelectItem>
+                                            );
+                                        })}
                                     </SelectContent>
                                 </Select>
                                 <Select value={programFilter} onValueChange={setProgramFilter}>
-                                    <SelectTrigger className="w-full md:w-[140px]">
+                                    <SelectTrigger>
                                         <SelectValue placeholder="Program" />
                                     </SelectTrigger>
                                     <SelectContent>
                                         <SelectItem value="all">All Programs</SelectItem>
-                                        {samplePrograms.map((program) => (
-                                            <SelectItem key={program.unique_code} value={program.unique_code}>
-                                                {program.unique_code} - {program.name}
+                                        {programFilterOption.map((program) => (
+                                            <SelectItem key={program.code} value={program.code}>
+                                                {program.code} - {program.description}
                                             </SelectItem>
-                                        ))}
+                                        ))
+                                        }
                                     </SelectContent>
                                 </Select>
                                 <Select value={lecturerFilter} onValueChange={setLecturerFilter}>
@@ -1094,12 +938,12 @@ export default function SubjectAllocation() {
                                     </SelectTrigger>
                                     <SelectContent>
                                         <SelectItem value="all">All Lecturers</SelectItem>
-                                        {sampleLecturers.map((lecturer) => (
-                                            <SelectItem key={lecturer.id} value={lecturer.id.toString()}>
+                                        {lecturerFilterOption.map((lecturer) => (
+                                            <SelectItem key={lecturer.lecturer.id} value={lecturer.lecturer.id.toString()}>
                                                 <div className="flex items-center gap-2">
                                                     <User className="h-4 w-4" />
                                                     <span>
-                                                        {lecturer.title} {lecturer.fname} {lecturer.lname}
+                                                        {lecturer.lecturer.title} {lecturer.lecturer.fname} {lecturer.lecturer?.lname}
                                                     </span>
                                                 </div>
                                             </SelectItem>
@@ -1108,7 +952,7 @@ export default function SubjectAllocation() {
                                 </Select>
                             </div>
                             <div className="text-muted-foreground text-sm">
-                                Showing {paginatedData.length} of {filteredData.length} allocations
+                                Showing {paginatedData.length} of {paginationInfo?.total || paginatedData.length} allocations
                             </div>
                         </div>
                     </CardHeader>
@@ -1130,21 +974,20 @@ export default function SubjectAllocation() {
                                     </TableHeader>
                                     <TableBody>
                                         {paginatedData.map((allocation) => {
-                                            const lecturer = getLecturer(allocation.lecturer_id);
-                                            const courseAssignment = getCourseAssignment(allocation.course_assignment_id);
-                                            const subject = getSubject(courseAssignment?.subject_code);
-                                            const calendar = getCalendar(allocation.calendar_id);
-                                            const program = getProgram(courseAssignment?.program_code);
-
+                                            const lecturer = allocation.lecturer;
+                                            const subject = allocation.subject;
+                                            const calendar = allocation.calendar;
+                                            const program = allocation.program;
+                                            const term = allocation.term;
                                             return (
-                                                <TableRow key={allocation.id} className="hover:bg-muted/50">
+                                                <TableRow key={allocation.lecturer_id + '' + allocation.prog_subj_id + '' + allocation.sy_term_id} className="hover:bg-muted/50">
                                                     <TableCell>
                                                         <div className="flex items-center gap-2">
                                                             <User className="text-muted-foreground h-4 w-4" />
                                                             <div>
                                                                 <div className="font-medium">
                                                                     {lecturer
-                                                                        ? `${lecturer.title} ${lecturer.fname} ${lecturer.lname}`
+                                                                        ? `${lecturer.title} ${lecturer.fname} ${(lecturer.lname) ? lecturer.lname : ''}`
                                                                         : 'Unknown Lecturer'}
                                                                 </div>
                                                             </div>
@@ -1154,48 +997,33 @@ export default function SubjectAllocation() {
                                                         <div className="space-y-1">
                                                             <div className="flex items-center gap-2">
                                                                 <BookOpen className="text-muted-foreground h-4 w-4" />
-                                                                <span className="font-mono text-sm font-medium">{subject?.code || 'Unknown'}</span>
+                                                                <span className="font-mono text-sm font-medium">{allocation.program_subject.prog_subj_code || 'Unknown'}</span>
                                                             </div>
                                                             <div className="text-sm">{subject?.name || 'Unknown Subject'}</div>
                                                             <div className="flex items-center gap-1">
                                                                 <Badge variant="outline" className="text-xs">
                                                                     {subject?.unit || 0} unit{(subject?.unit || 0) !== 1 ? 's' : ''}
                                                                 </Badge>
-                                                                {subject?.isGeneralEducation && (
+                                                                {subject?.is_general_education && (
                                                                     <Badge variant="secondary" className="bg-green-100 text-xs text-green-800">
                                                                         GE
                                                                     </Badge>
                                                                 )}
-                                                                {(() => {
-                                                                    const assignments = sampleCourseAssignments.filter(
-                                                                        (ca) => ca.subject_code === subject?.code,
-                                                                    );
-                                                                    if (assignments.length > 0) {
-                                                                        const uniqueYearLevels = [...new Set(assignments.map((a) => a.year_level))];
-                                                                        return uniqueYearLevels.map((yearLevel, index) => {
-                                                                            const yearLevelName =
-                                                                                getYearLevelsForProgram(4).find((y) => y.id === yearLevel)?.name ||
-                                                                                `${yearLevel} Year`;
-                                                                            return (
-                                                                                <Badge
-                                                                                    key={index}
-                                                                                    variant="default"
-                                                                                    className="bg-blue-100 text-xs text-blue-800"
-                                                                                >
-                                                                                    {yearLevelName}
-                                                                                </Badge>
-                                                                            );
-                                                                        });
-                                                                    }
-                                                                    return null;
-                                                                })()}
+                                                                {allocation.program_subject?.year_level && (
+                                                                    <Badge
+                                                                        variant="default"
+                                                                        className="bg-blue-100 text-xs text-blue-800"
+                                                                    >
+                                                                        {allocation.program_subject.year_level}{allocation.program_subject.year_level === 1 ? 'st' : allocation.program_subject.year_level === 2 ? 'nd' : allocation.program_subject.year_level === 3 ? 'rd' : 'th'} Year
+                                                                    </Badge>
+                                                                )}
                                                             </div>
                                                         </div>
                                                     </TableCell>
                                                     <TableCell>
                                                         <div className="text-xs">
                                                             <Badge variant="outline" className="text-xs">
-                                                                {program?.unique_code || 'Unknown'} - {program?.name || 'Unknown Program'}
+                                                                {program?.code || 'Unknown'} - {program?.description || 'Unknown Program'}
                                                             </Badge>
                                                         </div>
                                                     </TableCell>
@@ -1203,10 +1031,7 @@ export default function SubjectAllocation() {
                                                         <div className="flex items-center justify-center gap-1">
                                                             <GraduationCap className="text-muted-foreground h-4 w-4" />
                                                             <span className="font-medium">
-                                                                {(() => {
-                                                                    const term = sampleTerms.find((t) => t.id === calendar?.term_id);
-                                                                    return term?.name || 'Unknown Term';
-                                                                })()}
+                                                                {term?.name || 'Unknown Term'}
                                                             </span>
                                                         </div>
                                                     </TableCell>
@@ -1276,21 +1101,21 @@ export default function SubjectAllocation() {
                     </CardContent>
                 </Card>
 
-                {!isLoading && filteredData.length > itemsPerPage && (
+                {!isLoading && paginationInfo && paginationInfo.lastPage > 1 && (
                     <div className="flex items-center justify-between">
                         <div className="text-muted-foreground text-sm">
-                            Page {currentPage} of {totalPages}
+                            Page {paginationInfo.currentPage} of {paginationInfo.lastPage}
                         </div>
                         <div className="flex items-center space-x-2">
-                            <Button variant="outline" size="sm" onClick={() => handlePageChange(currentPage - 1)} disabled={currentPage === 1}>
+                            <Button variant="outline" size="sm" onClick={() => handlePageChange(paginationInfo.currentPage - 1)} disabled={paginationInfo.currentPage === 1}>
                                 <ChevronLeft className="h-4 w-4" />
                                 Previous
                             </Button>
                             <Button
                                 variant="outline"
                                 size="sm"
-                                onClick={() => handlePageChange(currentPage + 1)}
-                                disabled={currentPage === totalPages}
+                                onClick={() => handlePageChange(paginationInfo.currentPage + 1)}
+                                disabled={paginationInfo.currentPage === paginationInfo.lastPage}
                             >
                                 Next
                                 <ChevronRight className="h-4 w-4" />
@@ -1299,14 +1124,17 @@ export default function SubjectAllocation() {
                     </div>
                 )}
             </div>
-
             <SubjectAllocationSheet
                 isOpen={isDialogOpen}
                 onClose={() => setIsDialogOpen(false)}
                 allocation={editingAllocation}
                 onSave={handleSaveAllocation}
                 existingAllocations={allocationsData}
-            />
+                lecturers={lecturers}
+                programs={programs}
+                academicCalendars={academicCalendars}
+                onShowError={showError}
+                />
 
             <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
                 <DialogContent className="sm:max-w-[400px]">
@@ -1320,6 +1148,36 @@ export default function SubjectAllocation() {
                         </Button>
                         <Button variant="destructive" onClick={confirmDeleteAllocation} disabled={isDeleting}>
                             {isDeleting ? 'Deleting...' : 'Delete Allocation'}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Error Dialog */}
+            <Dialog open={errorDialogOpen} onOpenChange={setErrorDialogOpen}>
+                <DialogContent className="sm:max-w-[500px]">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2 text-destructive">
+                            <AlertCircle className="h-5 w-5" />
+                            {errorTitle}
+                        </DialogTitle>
+                        <DialogDescription>
+                            An error occurred while processing your request. Please review the details below.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="py-4">
+                        <Alert variant="destructive">
+                            <AlertCircle className="h-4 w-4" />
+                            <AlertTitle>Error Details</AlertTitle>
+                            <AlertDescription>
+                                {errorMessage}
+                            </AlertDescription>
+                        </Alert>
+                    </div>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setErrorDialogOpen(false)}>
+                            <X className="h-4 w-4 mr-2" />
+                            Close
                         </Button>
                     </DialogFooter>
                 </DialogContent>

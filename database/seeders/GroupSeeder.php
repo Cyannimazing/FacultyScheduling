@@ -14,7 +14,7 @@ class GroupSeeder extends Seeder
         foreach ($groups as $name) {
             Group::create([
                 'name'      => $name,
-                'prog_code' => 'CBT 29',  // make sure this program code exists
+                'prog_code' => 'CBT',  // make sure this program code exists
             ]);
         }
     }

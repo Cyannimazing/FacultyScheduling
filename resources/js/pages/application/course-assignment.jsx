@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import AppLayout from '@/layouts/app-layout';
 import { Head, usePage, router } from '@inertiajs/react';
-import { BookOpen, ChevronLeft, ChevronRight, Code, GripVertical, Plus, Search, Trash2, Users } from 'lucide-react';
+import { BookOpen, ChevronLeft, ChevronRight, Code, GripVertical, Plus, Search, Trash2, Users, AlertCircle } from 'lucide-react';
 import { useState } from 'react';
 
 const breadcrumbs = [
@@ -40,7 +40,7 @@ function SubjectItem({ subject, onDragStart }) {
                 <GripVertical className="text-muted-foreground h-4 w-4" />
                 <div className="flex items-center gap-2">
                     <Code className="text-muted-foreground h-4 w-4" />
-                    <span className="font-mono text-sm font-medium">{subject.code}</span>
+                    <span className="font-mono text-sm font-medium">{subject.id}</span>
                 </div>
                 <div>
                     <div className="text-sm font-medium">{subject.name}</div>
@@ -62,6 +62,8 @@ function SubjectItem({ subject, onDragStart }) {
 // Program drop zone component
 function ProgramDropZone({ program, assignments, onDrop, onRemoveAssignment, terms }) {
     const [dragOver, setDragOver] = useState(false);
+    const [selectedYear, setSelectedYear] = useState('all');
+    const [selectedTerm, setSelectedTerm] = useState('all');
 
     const handleDragOver = (e) => {
         e.preventDefault();
@@ -81,8 +83,15 @@ function ProgramDropZone({ program, assignments, onDrop, onRemoveAssignment, ter
 
     const programAssignments = assignments.filter((a) => a.prog_code === program.code);
 
-    // Group assignments by year and term
-    const groupedAssignments = programAssignments.reduce((acc, assignment) => {
+    // Apply frontend filtering based on year and term
+    const filteredAssignments = programAssignments.filter((assignment) => {
+        const yearMatch = selectedYear === 'all' || assignment.year_level.toString() === selectedYear;
+        const termMatch = selectedTerm === 'all' || assignment.term_id.toString() === selectedTerm;
+        return yearMatch && termMatch;
+    });
+
+    // Group filtered assignments by year and term
+    const groupedAssignments = filteredAssignments.reduce((acc, assignment) => {
         const key = `${assignment.year_level}-${assignment.term_id}`;
         if (!acc[key]) {
             acc[key] = [];
@@ -96,10 +105,40 @@ function ProgramDropZone({ program, assignments, onDrop, onRemoveAssignment, ter
             <CardHeader>
                 <div className="flex items-center justify-between">
                     <div>
-                        <CardTitle className="text-lg">{program.name}</CardTitle>
+                        <CardTitle className="text-lg">{program.description}</CardTitle>
                         <p className="text-muted-foreground text-sm">{program.code}</p>
                     </div>
                     <Badge variant="outline">{programAssignments.length} subjects</Badge>
+                </div>
+
+                {/* Program-specific filters */}
+                <div className="flex flex-wrap gap-2 mt-4">
+                    <Select value={selectedYear} onValueChange={setSelectedYear}>
+                        <SelectTrigger className="w-[130px]">
+                            <SelectValue placeholder="Year" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">All Years</SelectItem>
+                            {getAvailableYearLevels(program.number_of_year).map((year) => (
+                                <SelectItem key={year.id} value={year.id.toString()}>
+                                    {year.name}
+                                </SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                    <Select value={selectedTerm} onValueChange={setSelectedTerm}>
+                        <SelectTrigger className="w-[130px]">
+                            <SelectValue placeholder="Term" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">All Terms</SelectItem>
+                            {terms.map((term) => (
+                                <SelectItem key={term.id} value={term.id.toString()}>
+                                    {term.name}
+                                </SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
                 </div>
             </CardHeader>
             <CardContent
@@ -130,16 +169,16 @@ function ProgramDropZone({ program, assignments, onDrop, onRemoveAssignment, ter
                                     </h4>
                                     <div className="space-y-1">
                                         {yearTermAssignments.map((assignment) => {
-                                            const subject = assignment.subject;
-                                            return subject ? (
+                                            const prog_subj = assignment;
+                                            return prog_subj ? (
                                                 <div
                                                     key={assignment.id}
                                                     className="border-border bg-muted flex items-center justify-between rounded-md border p-2"
                                                 >
                                                     <div className="flex items-center gap-2">
                                                         <Code className="text-muted-foreground h-3 w-3" />
-                                                        <span className="font-mono text-xs">{subject.code}</span>
-                                                        <span className="text-xs">{subject.name}</span>
+                                                        <span className="font-mono text-xs">{prog_subj.prog_subj_code}</span>
+                                                        <span className="text-xs">{prog_subj.subject.name}</span>
                                                     </div>
                                                     <Button
                                                         variant="ghost"
@@ -158,7 +197,7 @@ function ProgramDropZone({ program, assignments, onDrop, onRemoveAssignment, ter
                         })
                 ) : (
                     <div className="border-border text-muted-foreground flex h-32 items-center justify-center rounded-lg border-2 border-dashed text-sm">
-                        Drop subjects here to assign to {program.name}
+                        Drop subjects here to assign to {program.description}
                     </div>
                 )}
             </CardContent>
@@ -167,8 +206,9 @@ function ProgramDropZone({ program, assignments, onDrop, onRemoveAssignment, ter
 }
 
 // Drag and drop assignment dialog
-function DropAssignmentDialog({ isOpen, onClose, onSave, subject, program, terms }) {
+function DropAssignmentDialog({ isOpen, onClose, onSave, subject, program, terms, errors }) {
     const [formData, setFormData] = useState({
+        code: '',
         year_level: '',
         term_id: '',
     });
@@ -176,8 +216,7 @@ function DropAssignmentDialog({ isOpen, onClose, onSave, subject, program, terms
     const handleSave = () => {
         if (formData.year_level && formData.term_id) {
             onSave(formData);
-            setFormData({ year_level: '', term_id: '' });
-            onClose();
+            // Don't close dialog here - let parent handle closing on success
         }
     };
 
@@ -196,10 +235,35 @@ function DropAssignmentDialog({ isOpen, onClose, onSave, subject, program, terms
                         <strong>
                             {subject?.code} - {subject?.name}
                         </strong>{' '}
-                        to <strong>{program?.name}</strong>
+                        to <strong>{program?.department}</strong>
                     </DialogDescription>
                 </DialogHeader>
                 <div className="grid gap-4 py-4">
+                    {errors && (
+                        <div className="rounded-md border border-red-200 bg-red-50 p-3 text-red-600">
+                            <div className="mb-2 font-semibold">⚠️ Please fix the following errors:</div>
+                            <ul className="list-inside list-disc space-y-1">
+                                {Object.entries(errors).map(([field, messages]) => (
+                                    <li key={field}>
+                                        <span className="font-medium capitalize">{field.replace('_', ' ')}:</span>{' '}
+                                        {Array.isArray(messages) ? messages[0] : messages}
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
+                    )}
+                    <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="subject" className="text-right text-sm font-medium">
+                            Subject Code
+                        </Label>
+                        <Input
+                            id="code"
+                            value={formData.code}
+                            onChange={(e) => setFormData({ ...formData, code: e.target.value })}
+                            className="col-span-3"
+                            placeholder="Enter subject code"
+                        />
+                    </div>
                     <div className="grid grid-cols-4 items-center gap-4">
                         <Label htmlFor="year" className="text-right text-sm font-medium">
                             Year Level
@@ -249,8 +313,9 @@ function DropAssignmentDialog({ isOpen, onClose, onSave, subject, program, terms
 }
 
 // Assignment dialog for manual entry
-function AssignmentDialog({ isOpen, onClose, onSave, programs, subjects, terms }) {
+function AssignmentDialog({ isOpen, onClose, onSave, programs, subjects, terms, errors = null }) {
     const [formData, setFormData] = useState({
+        prog_subj_code: '',
         program_id: '',
         subject_id: '',
         year_level: '',
@@ -267,10 +332,8 @@ function AssignmentDialog({ isOpen, onClose, onSave, programs, subjects, terms }
     };
 
     const handleSave = () => {
-        if (formData.program_id && formData.subject_id && formData.year_level && formData.term_id) {
+        if (formData.prog_subj_code && formData.program_id && formData.subject_id && formData.year_level && formData.term_id) {
             onSave(formData);
-            setFormData({ program_id: '', subject_id: '', year_level: '', term_id: '' });
-            onClose();
         }
     };
 
@@ -282,6 +345,19 @@ function AssignmentDialog({ isOpen, onClose, onSave, programs, subjects, terms }
                     <DialogDescription>Assign a subject to a specific program and academic term.</DialogDescription>
                 </DialogHeader>
                 <div className="grid gap-4 py-4">
+                    {errors && (
+                        <div className="rounded-md border border-red-200 bg-red-50 p-3 text-red-600">
+                            <div className="mb-2 font-semibold">⚠️ Please fix the following errors:</div>
+                            <ul className="list-inside list-disc space-y-1">
+                                {Object.entries(errors).map(([field, messages]) => (
+                                    <li key={field}>
+                                        <span className="font-medium capitalize">{field.replace('_', ' ')}:</span>{' '}
+                                        {Array.isArray(messages) ? messages[0] : messages}
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
+                    )}
                     <div className="grid grid-cols-4 items-center gap-4">
                         <Label htmlFor="program" className="text-right text-sm font-medium">
                             Program
@@ -293,7 +369,7 @@ function AssignmentDialog({ isOpen, onClose, onSave, programs, subjects, terms }
                             <SelectContent>
                                 {programs.map((program) => (
                                     <SelectItem key={program.id} value={program.id}>
-                                        {program.code} - {program.name}
+                                        {program.code} - {program.description}
                                     </SelectItem>
                                 ))}
                             </SelectContent>
@@ -310,11 +386,23 @@ function AssignmentDialog({ isOpen, onClose, onSave, programs, subjects, terms }
                             <SelectContent>
                                 {subjects.map((subject) => (
                                     <SelectItem key={subject.id} value={subject.id}>
-                                        {subject.code} - {subject.name}
+                                        {subject.name}
                                     </SelectItem>
                                 ))}
                             </SelectContent>
                         </Select>
+                    </div>
+                    <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="subject" className="text-right text-sm font-medium">
+                            Subject Code
+                        </Label>
+                        <Input
+                            id="prog_subj_code"
+                            value={formData.prog_subj_code}
+                            onChange={(e) => setFormData({ ...formData, prog_subj_code: e.target.value })}
+                            className="col-span-3"
+                            placeholder="Enter subject code"
+                        />
                     </div>
                     <div className="grid grid-cols-4 items-center gap-4">
                         <Label htmlFor="year" className="text-right text-sm font-medium">
@@ -368,9 +456,16 @@ export default function CourseAssignment() {
     const { data } = usePage().props;
     const { programSubjects: assignments = [], programs = [], subjects = [], terms = [], totalAssignment, totalProgramWithSubject, totalSubjectAssigned } = data;
 
-    console.log(data);
+    // Initialize filter states from URL parameters
+    const urlParams = new URLSearchParams(window.location.search);
+    const programFilterFromUrl = urlParams.get('programFilter');
+
+    // Find program ID from code if exists
+    const initialProgram = programFilterFromUrl ?
+        programs.find(p => p.code === programFilterFromUrl)?.id || 'all' : 'all';
+
     const [searchTerm, setSearchTerm] = useState('');
-    const [selectedProgram, setSelectedProgram] = useState('all');
+    const [selectedProgram, setSelectedProgram] = useState(initialProgram);
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [draggedSubject, setDraggedSubject] = useState(null);
     const [showAssignmentForm, setShowAssignmentForm] = useState(false);
@@ -379,6 +474,8 @@ export default function CourseAssignment() {
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [assignmentToDelete, setAssignmentToDelete] = useState(null);
     const [currentPage, setCurrentPage] = useState(1);
+    const [assignmentErrors, setAssignmentErrors] = useState(null);
+    const [deleteErrors, setDeleteErrors] = useState(null);
 
     // Pagination settings
     const itemsPerPage = 5;
@@ -399,11 +496,31 @@ export default function CourseAssignment() {
 
     // Filter subjects based on search
     const filteredSubjects = subjects.filter(
-        (subject) => subject.code.toLowerCase().includes(searchTerm.toLowerCase()) || subject.name.toLowerCase().includes(searchTerm.toLowerCase()),
+        (subject) => subject.name.toLowerCase().includes(searchTerm.toLowerCase()),
     );
 
     // Filter programs based on selection
     const filteredPrograms = selectedProgram === 'all' ? programs : programs.filter((p) => p.id == selectedProgram);
+
+    // Handle program filter change - only for program selection
+    const handleProgramFilterChange = (value) => {
+        setSelectedProgram(value);
+        const params = new URLSearchParams(window.location.search);
+
+        if (value === 'all') {
+            params.delete('programFilter');
+        } else {
+            const programCode = programs.find(p => p.id == value)?.code || '';
+            params.set('programFilter', programCode);
+        }
+
+        // Update the URL for program filter only
+        router.get(`/course-assignment?${params.toString()}`, {}, {
+            preserveState: true,
+            preserveScroll: true,
+            replace: true
+        });
+    };
 
     const handleDragStart = (e, subject) => {
         setDraggedSubject(subject);
@@ -420,47 +537,46 @@ export default function CourseAssignment() {
 
     const handleDropAssignment = (yearTerm) => {
         if (!draggedSubject || !dropTarget) return;
-
-        const newAssignment = {
-            program_id: dropTarget.id,
-            subject_id: draggedSubject.id,
-            year_level: parseInt(yearTerm.year_level),
-            term_id: parseInt(yearTerm.term_id),
-        };
-
         // Check if assignment already exists
         const existingAssignment = assignments.find(
             (a) =>
+                a.prog_subj_code === yearTerm.code &&
                 a.prog_code === dropTarget.code &&
-                a.subj_code === draggedSubject.code &&
+                a.subj_id === draggedSubject.code &&
                 a.year_level === parseInt(yearTerm.year_level) &&
                 a.term_id === parseInt(yearTerm.term_id),
         );
 
         if (!existingAssignment) {
+            // Clear any previous errors
+            setAssignmentErrors(null);
+
             // Create new assignment using Inertia router
             router.post('/course-assignment', {
+                prog_subj_code: yearTerm.code,
                 prog_code: dropTarget.code,
-                subj_code: draggedSubject.code,
+                subj_id: draggedSubject.id,
                 year_level: parseInt(yearTerm.year_level),
                 term_id: parseInt(yearTerm.term_id)
             }, {
                 preserveScroll: true,
                 onSuccess: () => {
-                    console.log('Assignment created successfully');
+                    setAssignmentErrors(null);
+                    // Reset state
+                    setDraggedSubject(null);
+                    setDropTarget(null);
+                    setShowDropDialog(false);
                 },
                 onError: (errors) => {
                     console.error('Error creating assignment:', errors);
+                    setAssignmentErrors(errors);
                 }
             });
         } else {
-            console.log('Assignment already exists');
+            setDraggedSubject(null);
+            setDropTarget(null);
+            setShowDropDialog(false);
         }
-
-        // Reset state
-        setDraggedSubject(null);
-        setDropTarget(null);
-        setShowDropDialog(false);
     };
 
     const handleRemoveAssignment = (assignment) => {
@@ -470,18 +586,19 @@ export default function CourseAssignment() {
 
     const confirmDeleteAssignment = () => {
         if (assignmentToDelete) {
+            // Clear any previous errors
+            setDeleteErrors(null);
+
             // Delete assignment using Inertia router
             router.delete(`/course-assignment/${assignmentToDelete.id}`, {
                 preserveScroll: true,
                 onSuccess: () => {
-                    console.log('Assignment deleted successfully');
+                    setDeleteErrors(null);
                     setDeleteDialogOpen(false);
                     setAssignmentToDelete(null);
                 },
                 onError: (errors) => {
-                    console.error('Error deleting assignment:', errors);
-                    setDeleteDialogOpen(false);
-                    setAssignmentToDelete(null);
+                    setDeleteErrors(errors);
                 }
             });
         } else {
@@ -491,49 +608,30 @@ export default function CourseAssignment() {
     };
 
     const handleAddAssignment = (formData) => {
-        const newAssignment = {
-            program_id: parseInt(formData.program_id),
-            subject_id: parseInt(formData.subject_id),
-            year_level: parseInt(formData.year_level),
-            term_id: parseInt(formData.term_id),
-        };
+        setAssignmentErrors(null);
 
-        // Get the selected program and subject to check by codes
+        // Get the selected program and subject to send codes instead of IDs
         const selectedProgram = programs.find(p => p.id == formData.program_id);
         const selectedSubject = subjects.find(s => s.id == formData.subject_id);
-        
-        // Check if assignment already exists
-        const existingAssignment = assignments.find(
-            (a) =>
-                a.prog_code === selectedProgram.code &&
-                a.subj_code === selectedSubject.code &&
-                a.year_level === parseInt(formData.year_level) &&
-                a.term_id === parseInt(formData.term_id),
-        );
 
-        if (!existingAssignment) {
-            // Get the selected program and subject to send codes instead of IDs
-            const selectedProgram = programs.find(p => p.id == formData.program_id);
-            const selectedSubject = subjects.find(s => s.id == formData.subject_id);
-            
-            // Create new assignment using Inertia router
-            router.post('/course-assignment', {
-                prog_code: selectedProgram.code,
-                subj_code: selectedSubject.code,
-                year_level: parseInt(formData.year_level),
-                term_id: parseInt(formData.term_id)
-            }, {
-                preserveScroll: true,
-                onSuccess: () => {
-                    console.log('Manual assignment created successfully');
-                },
-                onError: (errors) => {
-                    console.error('Error creating manual assignment:', errors);
-                }
-            });
-        } else {
-            console.log('Assignment already exists');
-        }
+        // Create new assignment using Inertia router
+        router.post('/course-assignment', {
+            prog_subj_code: formData.prog_subj_code,
+            prog_code: selectedProgram.code,
+            subj_id: selectedSubject.id,
+            year_level: parseInt(formData.year_level),
+            term_id: parseInt(formData.term_id)
+        }, {
+            preserveScroll: true,
+            onSuccess: () => {
+                setAssignmentErrors(null);
+                setShowAssignmentForm(false);
+            },
+            onError: (errors) => {
+                console.error('Error creating manual assignment:', errors);
+                setAssignmentErrors(errors);
+            }
+        });
     };
 
     return (
@@ -631,21 +729,23 @@ export default function CourseAssignment() {
                     {/* Programs Panel */}
                     <div className="lg:col-span-8">
                         <div className="space-y-4">
-                            <div className="flex items-center justify-between">
+                            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                                 <h3 className="text-lg font-semibold">Programs</h3>
-                                <Select value={selectedProgram} onValueChange={setSelectedProgram}>
-                                    <SelectTrigger className="w-[250px]">
-                                        <SelectValue placeholder="Select program" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="all">All Programs</SelectItem>
-                                        {programs.map((program) => (
-                                            <SelectItem key={program.id} value={program.id}>
-                                                {program.code} - {program.name}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
+                                <div className="flex flex-wrap gap-2">
+                                    <Select value={selectedProgram} onValueChange={handleProgramFilterChange}>
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="Select program" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="all">All Programs</SelectItem>
+                                            {programs.map((program) => (
+                                                <SelectItem key={program.id} value={program.id}>
+                                                    {program.code} - {program.description}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
                             </div>
 
                             <div className="grid gap-4">
@@ -696,7 +796,7 @@ export default function CourseAssignment() {
                                                 <TableRow key={assignment.id}>
                                                     <TableCell>
                                                         <div>
-                                                            <div className="font-medium">{program?.name}</div>
+                                                            <div className="font-medium">{program?.department}</div>
                                                             <div className="text-muted-foreground text-sm">{program?.code}</div>
                                                         </div>
                                                     </TableCell>
@@ -779,11 +879,15 @@ export default function CourseAssignment() {
                 {/* Manual Assignment Dialog */}
                 <AssignmentDialog
                     isOpen={showAssignmentForm}
-                    onClose={() => setShowAssignmentForm(false)}
+                    onClose={() => {
+                        setShowAssignmentForm(false)
+                        setAssignmentErrors(null)
+                    } }
                     onSave={handleAddAssignment}
                     programs={programs}
                     subjects={subjects}
                     terms={terms}
+                    errors={assignmentErrors}
                 />
 
                 {/* Drag and Drop Assignment Dialog */}
@@ -793,11 +897,13 @@ export default function CourseAssignment() {
                         setShowDropDialog(false);
                         setDraggedSubject(null);
                         setDropTarget(null);
+                        setAssignmentErrors(null);
                     }}
                     onSave={handleDropAssignment}
                     subject={draggedSubject}
                     program={dropTarget}
                     terms={terms}
+                    errors={assignmentErrors}
                 />
 
                 {/* Delete Confirmation Dialog */}
@@ -809,9 +915,10 @@ export default function CourseAssignment() {
                                 Are you sure you want to delete this assignment? This action cannot be undone.
                                 {assignmentToDelete && (
                                     <div className="bg-muted mt-2 rounded border p-2">
-                                        <strong>Assignment Details:</strong>
-                                        <br />
-                                        <strong>Program:</strong> {assignmentToDelete.program?.name}
+                                        <div className='border-b border-black/50 mb-1 text-center'>
+                                            <strong>Assignment Details</strong>
+                                        </div>
+                                        <strong>Program:</strong> {assignmentToDelete.program?.description}
                                         <br />
                                         <strong>Subject:</strong> {assignmentToDelete.subject?.name}
                                         <br />
@@ -826,6 +933,21 @@ export default function CourseAssignment() {
                                 )}
                             </DialogDescription>
                         </DialogHeader>
+                        <div className="grid gap-4 py-4">
+                            {deleteErrors && (
+                                <div className="rounded-md border border-red-200 bg-red-50 p-3 text-red-600">
+                                    <div className="mb-2 font-semibold">⚠️ Please fix the following errors:</div>
+                                    <ul className="list-inside list-disc space-y-1">
+                                        {Object.entries(deleteErrors).map(([field, messages]) => (
+                                            <li key={field}>
+                                                <span className="font-medium capitalize">{field.replace('_', ' ')}:</span>{' '}
+                                                {Array.isArray(messages) ? messages[0] : messages}
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </div>
+                            )}
+                        </div>
                         <DialogFooter>
                             <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>
                                 Cancel

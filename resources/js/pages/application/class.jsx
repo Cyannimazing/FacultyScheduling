@@ -1,3 +1,4 @@
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
@@ -10,7 +11,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import AppLayout from '@/layouts/app-layout';
 import { Head, router, usePage } from '@inertiajs/react';
-import { Calendar, ChevronLeft, ChevronRight, Edit, GraduationCap, MoreHorizontal, Plus, Search, Trash2 } from 'lucide-react';
+import { AlertCircle, Calendar, ChevronLeft, ChevronRight, Edit, GraduationCap, MoreHorizontal, Plus, Search, Trash2, X } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
 
 const breadcrumbs = [
@@ -38,12 +39,12 @@ function LoadingSkeleton() {
     );
 }
 
-function ClassDialog({ isOpen, onClose, classData = null, onSave }) {
+function ClassDialog({ isOpen, onClose, classData = null, onSave, errors = null }) {
     const [formData, setFormData] = useState({
         name: '',
         prog_code: '',
         description: '',
-        prog_name: ''
+        prog_type: ''
     });
 
     const handleProgramChange = (progCode) => {
@@ -53,11 +54,11 @@ function ClassDialog({ isOpen, onClose, classData = null, onSave }) {
                 ...prevState,
                 prog_code: selectedProgram.code,
                 description: selectedProgram.description,
-                prog_name: selectedProgram.name
+                prog_type: selectedProgram.type
             }));
         }
     };
-    
+
     React.useEffect(() => {
         if (isOpen) {
             if (classData) {
@@ -65,10 +66,10 @@ function ClassDialog({ isOpen, onClose, classData = null, onSave }) {
                     name: classData.name || '',
                     prog_code: classData.prog_code || '',
                     description: classData.program?.description || '',
-                    prog_name: classData.program?.name || ''
+                    prog_type: classData.program?.name || ''
                 });
             } else {
-                setFormData({ name: '', prog_code: '', description: '', prog_name: '' });
+                setFormData({ name: '', prog_code: '', description: '', prog_type: '' });
             }
         }
     }, [isOpen, classData]);
@@ -76,7 +77,6 @@ function ClassDialog({ isOpen, onClose, classData = null, onSave }) {
     const handleSave = () => {
         if (formData.name && formData.prog_code && formData.description) {
             onSave(formData);
-            onClose();
         }
     };
 
@@ -88,6 +88,19 @@ function ClassDialog({ isOpen, onClose, classData = null, onSave }) {
                     <DialogDescription>{classData ? 'Update the class details below.' : 'Create a new academic class.'}</DialogDescription>
                 </DialogHeader>
                 <div className="grid gap-4 py-4">
+                    {errors && (
+                        <div className="rounded-md border border-red-200 bg-red-50 p-3 text-red-600">
+                            <div className="mb-2 font-semibold">⚠️ Please fix the following errors:</div>
+                            <ul className="list-inside list-disc space-y-1">
+                                {Object.entries(errors).map(([field, messages]) => (
+                                    <li key={field}>
+                                        <span className="font-medium capitalize">{field.replace('_', ' ')}:</span>{' '}
+                                        {Array.isArray(messages) ? messages[0] : messages}
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
+                    )}
                     <div className="grid grid-cols-4 items-center gap-4">
                         <Label htmlFor="name" className="text-right text-sm font-medium">
                             Class Name
@@ -111,7 +124,7 @@ function ClassDialog({ isOpen, onClose, classData = null, onSave }) {
                             <SelectContent>
                                 {availablePrograms.map((program) => (
                                     <SelectItem key={program.id} value={program.code}>
-                                        {program.name}
+                                        {program.description}
                                     </SelectItem>
                                 ))}
                             </SelectContent>
@@ -123,7 +136,7 @@ function ClassDialog({ isOpen, onClose, classData = null, onSave }) {
                         </Label>
                         <Input
                             id="program_details"
-                            value={formData.description}
+                            value={formData.prog_type}
                             readOnly
                             className="bg-muted col-span-3"
                             placeholder="Program details will auto-populate when you select a program"
@@ -153,6 +166,7 @@ export default function Class() {
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [classToDelete, setClassToDelete] = useState(null);
     const [isDeleting, setIsDeleting] = useState(false);
+    const [saveErrors, setSaveErrors] = useState(null);
     const itemsPerPage = data.groups.per_page;
     const uniquePrograms = data.programs
     availablePrograms = data.programs
@@ -202,25 +216,39 @@ export default function Class() {
 
     const handleAddClass = () => {
         setEditingClass(null);
+        setSaveErrors(null); // Clear any previous errors
         setIsDialogOpen(true);
     };
 
     const handleEditClass = (classItem) => {
         setEditingClass(classItem);
+        setSaveErrors(null); // Clear any previous errors
         setIsDialogOpen(true);
     };
 
     const handleSaveClass = (formData) => {
+        setSaveErrors(null); // Clear previous errors
+
         if (editingClass) {
             router.put(`/class/${editingClass.id}`, formData, {
                 onSuccess: () => {
                     setIsDialogOpen(false);
+                    setSaveErrors(null);
+                },
+                onError: (errors) => {
+                    console.error('Error updating class:', errors);
+                    setSaveErrors(errors);
                 },
             });
         } else {
             router.post('/class', formData, {
                 onSuccess: () => {
                     setIsDialogOpen(false);
+                    setSaveErrors(null);
+                },
+                onError: (errors) => {
+                    console.error('Error creating class:', errors);
+                    setSaveErrors(errors);
                 },
             });
         }
@@ -285,7 +313,7 @@ export default function Class() {
                                     />
                                 </div>
                                 <Select value={programFilter} onValueChange={handleProgramFilter}>
-                                    <SelectTrigger className="w-full md:w-[200px]">
+                                    <SelectTrigger>
                                         <SelectValue placeholder="Filter by program" />
                                     </SelectTrigger>
                                     <SelectContent>
@@ -328,8 +356,8 @@ export default function Class() {
                                                 </TableCell>
                                                 <TableCell>
                                                     <div className="space-y-1">
-                                                        <Badge variant="secondary">{classItem.program.name}</Badge>
-                                                        <div className="text-muted-foreground text-sm">{classItem.program.description}</div>
+                                                        <Badge variant="secondary">{classItem.program.description}</Badge>
+                                                        <div className="text-muted-foreground text-sm">{classItem.program.type}</div>
                                                     </div>
                                                 </TableCell>
                                                 <TableCell className="text-center">
@@ -410,7 +438,7 @@ export default function Class() {
                 )}
             </div>
 
-            <ClassDialog isOpen={isDialogOpen} onClose={() => setIsDialogOpen(false)} classData={editingClass} onSave={handleSaveClass} />
+            <ClassDialog isOpen={isDialogOpen} onClose={() => setIsDialogOpen(false)} classData={editingClass} onSave={handleSaveClass} errors={saveErrors} />
 
             <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
                 <DialogContent className="sm:max-w-[400px]">
@@ -428,6 +456,7 @@ export default function Class() {
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
+
         </AppLayout>
     );
 }

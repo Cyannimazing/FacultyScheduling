@@ -20,12 +20,10 @@ class ProgramSubjectController extends Controller
     {
         $search = $request->input('search');
         $programFilter = $request->input('programFilter');
-        $page = $request->input('page', 1);
-        $perPage = 5;
 
         $totalAssignment = ProgramSubject::all()->count();
         $totalProgramWithSubject = ProgramSubject::distinct('prog_code')->count();
-        $totalSubjectAssigned = ProgramSubject::distinct('subj_code')->count();
+        $totalSubjectAssigned = ProgramSubject::distinct('subj_id')->count();
 
         $programs = Program::all();
         $subjects = Subject::where(function ($query) use ($search) {

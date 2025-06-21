@@ -22,7 +22,7 @@ class UpdateLecturerRequest extends FormRequest
     public function rules(): array
     {
         $lecturerId = $this->route('lecturer'); // Assuming the route parameter is 'lecturer'
-        
+
         return [
             'title' => 'nullable|string|max:255',
             'fname' => [
@@ -35,9 +35,9 @@ class UpdateLecturerRequest extends FormRequest
                         ->where('lname', $this->input('lname'))
                         ->where('id', '!=', $lecturerId)
                         ->exists();
-                    
+
                     if ($exists) {
-                        $fail('A lecturer with this name combination already exists.');
+                        $fail('A lecturer with this name already exists.');
                     }
                 },
             ],

@@ -21,4 +21,3 @@ require __DIR__.'/programs.php';
 require __DIR__.'/rooms.php';
 require __DIR__.'/subjects.php';
 require __DIR__.'/terms.php';
-require __DIR__.'/time-slots.php';

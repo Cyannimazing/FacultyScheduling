@@ -1,3 +1,4 @@
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
@@ -10,6 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import AppLayout from '@/layouts/app-layout';
 import { Head, router, usePage } from '@inertiajs/react';
 import {
+    AlertCircle,
     CalendarDays,
     Calendar as CalendarIcon,
     ChevronLeft,
@@ -21,6 +23,7 @@ import {
     Plus,
     Search,
     Trash2,
+    X,
 } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
 
@@ -51,7 +54,7 @@ function LoadingSkeleton() {
     );
 }
 
-function CalendarDialog({ isOpen, onClose, calendar = null, onSave }) {
+function CalendarDialog({ isOpen, onClose, calendar = null, onSave, errors = null }) {
 
     const [formData, setFormData] = useState({
         term_id: '',
@@ -62,19 +65,22 @@ function CalendarDialog({ isOpen, onClose, calendar = null, onSave }) {
     });
 
     React.useEffect(() => {
-        if (calendar) {
-            console.log('Calendar data:', calendar); // Debug log
-            setFormData({
-                term_id: calendar.term_id ? calendar.term_id.toString() : '',
-                term_name: calendar.term?.name || '',
-                school_year: calendar.school_year || '',
-                start_date: calendar.start_date ? calendar.start_date.split('T')[0] : '',
-                end_date: calendar.end_date ? calendar.end_date.split('T')[0] : '',
-            });
-        } else {
-            setFormData({ term_id:'', term_name: '', school_year: '', start_date: '', end_date: '' });
+        if (isOpen) {
+            if (calendar) {
+                // Only populate form data when editing (calendar exists)
+                setFormData({
+                    term_id: calendar.term_id ? calendar.term_id.toString() : '',
+                    term_name: calendar.term?.name || '',
+                    school_year: calendar.school_year || '',
+                    start_date: calendar.start_date ? calendar.start_date.split('T')[0] : '',
+                    end_date: calendar.end_date ? calendar.end_date.split('T')[0] : '',
+                });
+            } else {
+                // Clear form data when adding new calendar
+                setFormData({ term_id:'', term_name: '', school_year: '', start_date: '', end_date: '' });
+            }
         }
-    }, [calendar]);
+    }, [calendar, isOpen]);
 
     const handleSave = () => {
         if (formData.term_id && formData.school_year && formData.start_date && formData.end_date) {
@@ -98,6 +104,20 @@ function CalendarDialog({ isOpen, onClose, calendar = null, onSave }) {
                     <DialogDescription>{calendar ? 'Update the calendar details below.' : 'Create a new academic calendar entry.'}</DialogDescription>
                 </DialogHeader>
                 <div className="grid gap-4 py-4">
+                    {errors && (
+                        <div className="rounded-md border border-red-200 bg-red-50 p-3 text-red-600">
+                            <div className="mb-2 font-semibold">⚠️ Please fix the following errors:</div>
+                            <ul className="list-inside list-disc space-y-1">
+                                {Object.entries(errors).map(([field, messages]) => (
+                                    <li key={field}>
+                                        <span className="font-medium capitalize">{field.replace('_', ' ')}:</span>{' '}
+                                        {Array.isArray(messages) ? messages[0] : messages}
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
+                    )}
+
                     <div className="grid grid-cols-4 items-center gap-4">
                         <label htmlFor="term" className="text-right text-sm font-medium">
                             Term
@@ -140,11 +160,15 @@ function CalendarDialog({ isOpen, onClose, calendar = null, onSave }) {
                             id="start_date"
                             type="date"
                             value={formData.start_date}
-                            onChange={(e) => setFormData({ ...formData, start_date: e.target.value })}
+                            onChange={(e) =>
+                            setFormData({ ...formData, start_date: e.target.value })
+                            }
                             className="col-span-3"
+                            min={formData.school_year.split('-').map(part => part.trim())[0] + "-01-01"}
+                            max={formData.school_year.split('-').map(part => part.trim())[1] + "-12-31"}
                         />
-                    </div>
-                    <div className="grid grid-cols-4 items-center gap-4">
+                        </div>
+                        <div className="grid grid-cols-4 items-center gap-4">
                         <label htmlFor="end_date" className="text-right text-sm font-medium">
                             End Date
                         </label>
@@ -152,8 +176,12 @@ function CalendarDialog({ isOpen, onClose, calendar = null, onSave }) {
                             id="end_date"
                             type="date"
                             value={formData.end_date}
-                            onChange={(e) => setFormData({ ...formData, end_date: e.target.value })}
+                            onChange={(e) =>
+                            setFormData({ ...formData, end_date: e.target.value })
+                            }
                             className="col-span-3"
+                            min={formData.school_year.split('-').map(part => part.trim())[0] + "-01-01"}
+                            max={formData.school_year.split('-').map(part => part.trim())[1] + "-12-31"}
                         />
                     </div>
                 </div>
@@ -179,6 +207,7 @@ export default function Calendar() {
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [calendarToDelete, setCalendarToDelete] = useState(null);
     const [isDeleting, setIsDeleting] = useState(false);
+    const [calendarErrors, setCalendarErrors] = useState(null);
     termOptions = data.terms
     const itemsPerPage = data.academicCalendars.per_page;
 
@@ -226,25 +255,39 @@ export default function Calendar() {
 
     const handleAddCalendar = () => {
         setEditingCalendar(null);
+        setCalendarErrors(null); // Clear any previous errors
         setIsDialogOpen(true);
     };
 
     const handleEditCalendar = (calendar) => {
         setEditingCalendar(calendar);
+        setCalendarErrors(null); // Clear any previous errors
         setIsDialogOpen(true);
     };
 
     const handleSaveCalendar = (formData) => {
+        setCalendarErrors(null); // Clear previous errors
+
         if (editingCalendar) {
             router.put(`/calendar/${editingCalendar.id}`, formData, {
                 onSuccess: () => {
                     setIsDialogOpen(false);
+                    setCalendarErrors(null);
+                },
+                onError: (errors) => {
+                    console.error('Error updating calendar:', errors);
+                    setCalendarErrors(errors);
                 },
             });
         } else {
             router.post('/calendar', formData, {
                 onSuccess: () => {
                     setIsDialogOpen(false);
+                    setCalendarErrors(null);
+                },
+                onError: (errors) => {
+                    console.error('Error creating calendar:', errors);
+                    setCalendarErrors(errors);
                 },
             });
         }
@@ -453,7 +496,7 @@ export default function Calendar() {
                 )}
             </div>
 
-            <CalendarDialog isOpen={isDialogOpen} onClose={() => setIsDialogOpen(false)} calendar={editingCalendar} onSave={handleSaveCalendar} />
+            <CalendarDialog isOpen={isDialogOpen} onClose={() => setIsDialogOpen(false)} calendar={editingCalendar} onSave={handleSaveCalendar} errors={calendarErrors} />
 
             <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
                 <DialogContent className="sm:max-w-[400px]">
@@ -474,6 +517,7 @@ export default function Calendar() {
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
+
         </AppLayout>
     );
 }

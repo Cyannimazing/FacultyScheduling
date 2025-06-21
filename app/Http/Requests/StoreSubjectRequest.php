@@ -22,7 +22,6 @@ class StoreSubjectRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'code' => 'required|string|max:255|unique:subjects,code',
             'name' => 'required|string|max:255',
             'unit' => 'required|integer|min:1|max:10',
             'is_gen_ed' => 'nullable|boolean',
@@ -35,8 +34,6 @@ class StoreSubjectRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'code.required' => 'Subject code is required.',
-            'code.unique' => 'Subject code must be unique.',
             'name.required' => 'Subject name is required.',
             'unit.required' => 'Unit is required.',
             'unit.integer' => 'Unit must be an integer.',

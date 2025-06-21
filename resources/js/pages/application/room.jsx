@@ -1,3 +1,4 @@
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -8,7 +9,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import AppLayout from '@/layouts/app-layout';
 import { Head, router, usePage } from '@inertiajs/react';
-import { Building, Calendar, ChevronLeft, ChevronRight, DoorOpen, Edit, MoreHorizontal, Plus, Search, Trash2 } from 'lucide-react';
+import { AlertCircle, Building, Calendar, ChevronLeft, ChevronRight, DoorOpen, Edit, MoreHorizontal, Plus, Search, Trash2, X } from 'lucide-react';
 import React, { useState } from 'react';
 
 const breadcrumbs = [
@@ -32,27 +33,29 @@ function LoadingSkeleton() {
     );
 }
 
-function RoomDialog({ isOpen, onClose, roomData = null, onSave }) {
+function RoomDialog({ isOpen, onClose, roomData = null, onSave, errors = null }) {
     const [formData, setFormData] = useState({
         name: '',
     });
 
     // Update form data when roomData prop changes (for edit mode)
     React.useEffect(() => {
-        if (roomData) {
-            setFormData({
-                name: roomData.name || '',
-            });
-        } else {
-            // Reset form for add mode
-            setFormData({ name: '' });
+        if (isOpen) {
+            if (roomData) {
+                // Only populate form data when editing (roomData exists)
+                setFormData({
+                    name: roomData.name || '',
+                });
+            } else {
+                // Clear form data when adding new room
+                setFormData({ name: '' });
+            }
         }
-    }, [roomData]);
+    }, [roomData, isOpen]);
 
     const handleSave = () => {
         if (formData.name) {
             onSave(formData);
-            onClose();
         }
     };
 
@@ -64,6 +67,19 @@ function RoomDialog({ isOpen, onClose, roomData = null, onSave }) {
                     <DialogDescription>{roomData ? 'Update the room details below.' : 'Create a new room.'}</DialogDescription>
                 </DialogHeader>
                 <div className="grid gap-4 py-4">
+                    {errors && (
+                        <div className="rounded-md border border-red-200 bg-red-50 p-3 text-red-600">
+                            <div className="mb-2 font-semibold">⚠️ Please fix the following errors:</div>
+                            <ul className="list-inside list-disc space-y-1">
+                                {Object.entries(errors).map(([field, messages]) => (
+                                    <li key={field}>
+                                        <span className="font-medium capitalize">{field.replace('_', ' ')}:</span>{' '}
+                                        {Array.isArray(messages) ? messages[0] : messages}
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
+                    )}
                     <div className="grid grid-cols-4 items-center gap-4">
                         <Label htmlFor="name" className="text-right text-sm font-medium">
                             Room Name
@@ -99,6 +115,7 @@ export default function Room() {
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [roomToDelete, setRoomToDelete] = useState(null);
     const [isProcessing, setIsProcessing] = useState(false); // Add processing state
+    const [saveErrors, setSaveErrors] = useState(null);
 
     const itemsPerPage = 5;
 
@@ -129,24 +146,31 @@ export default function Room() {
 
     const handleAddRoom = () => {
         setEditingRoom(null);
+        setSaveErrors(null); // Clear any previous errors
         setIsDialogOpen(true);
     };
 
     const handleEditRoom = (room) => {
         setEditingRoom(room);
+        setSaveErrors(null); // Clear any previous errors
         setIsDialogOpen(true);
     };
 
     const handleSaveRoom = (formData) => {
+        setSaveErrors(null); // Clear previous errors
         setIsProcessing(true);
+
         if (editingRoom) {
             router.put(`/room/${editingRoom.id}`, formData, {
                 onSuccess: () => {
                     setIsDialogOpen(false);
                     setIsProcessing(false);
+                    setSaveErrors(null);
                 },
-                onError: () => {
+                onError: (errors) => {
                     setIsProcessing(false);
+                    console.error('Error updating room:', errors);
+                    setSaveErrors(errors);
                 },
             });
         } else {
@@ -154,9 +178,12 @@ export default function Room() {
                 onSuccess: () => {
                     setIsDialogOpen(false);
                     setIsProcessing(false);
+                    setSaveErrors(null);
                 },
-                onError: () => {
+                onError: (errors) => {
                     setIsProcessing(false);
+                    console.error('Error creating room:', errors);
+                    setSaveErrors(errors);
                 },
             });
         }
@@ -191,7 +218,6 @@ export default function Room() {
             minute: '2-digit',
         });
     };
-    console.log(data.rooms)
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Rooms" />
@@ -330,7 +356,7 @@ export default function Room() {
             </div>
 
             {/* Add/Edit Room Dialog */}
-            <RoomDialog isOpen={isDialogOpen} onClose={() => setIsDialogOpen(false)} roomData={editingRoom} onSave={handleSaveRoom} />
+            <RoomDialog isOpen={isDialogOpen} onClose={() => setIsDialogOpen(false)} roomData={editingRoom} onSave={handleSaveRoom} errors={saveErrors} />
 
             {/* Delete Confirmation Dialog */}
             <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
@@ -349,6 +375,7 @@ export default function Room() {
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
+
         </AppLayout>
     );
 }

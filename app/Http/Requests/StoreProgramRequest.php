@@ -23,7 +23,7 @@ class StoreProgramRequest extends FormRequest
     {
         return [
             'code' => 'required|string|max:255|unique:programs,code',
-            'name' => 'required|string|max:255',
+            'type' => 'required|string|max:255',
             'description' => 'required|string',
             'number_of_year' => 'required|integer|min:1|max:10',
         ];
@@ -36,8 +36,8 @@ class StoreProgramRequest extends FormRequest
     {
         return [
             'code.required' => 'Program code is required.',
-            'code.unique' => 'Program code must be unique.',
-            'name.required' => 'Program name is required.',
+            'code.unique' => 'Program code already exists.',
+            'type.required' => 'Program type is required.',
             'number_of_year.required' => 'Number of years is required.',
             'number_of_year.integer' => 'Number of years must be an integer.',
             'number_of_year.min' => 'Number of years must be at least 1.',

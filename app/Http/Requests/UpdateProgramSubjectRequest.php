@@ -28,10 +28,10 @@ class UpdateProgramSubjectRequest extends FormRequest
                 'required',
                 'string',
                 'exists:programs,code',
-                // Unique validation for prog_code + subj_code combination excluding current record
+                // Unique validation for prog_code + subj_id combination excluding current record
                 function ($attribute, $value, $fail) use ($programSubjectId) {
                     $exists = \App\Models\ProgramSubject::where('prog_code', $value)
-                        ->where('subj_code', $this->input('subj_code'))
+                        ->where('subj_id', $this->input('subj_id'))
                         ->where('id', '!=', $programSubjectId)
                         ->exists();
                     
@@ -40,7 +40,7 @@ class UpdateProgramSubjectRequest extends FormRequest
                     }
                 },
             ],
-            'subj_code' => 'required|string|exists:subjects,code',
+            'subj_id' => 'required|integer|exists:subjects,id',
             'year_level' => [
                 'required',
                 'integer',
@@ -66,8 +66,8 @@ class UpdateProgramSubjectRequest extends FormRequest
         return [
             'prog_code.required' => 'Program code is required.',
             'prog_code.exists' => 'Selected program does not exist.',
-            'subj_code.required' => 'Subject code is required.',
-            'subj_code.exists' => 'Selected subject does not exist.',
+            'subj_id.required' => 'Subject ID is required.',
+            'subj_id.exists' => 'Selected subject does not exist.',
             'year_level.required' => 'Year level is required.',
             'year_level.integer' => 'Year level must be an integer.',
             'year_level.min' => 'Year level must be at least 1.',

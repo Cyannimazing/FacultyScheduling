@@ -1,3 +1,4 @@
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
@@ -9,7 +10,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import AppLayout from '@/layouts/app-layout';
 import { Head, router, usePage } from '@inertiajs/react';
-import { BookOpen, Calendar, ChevronLeft, ChevronRight, Code, Edit, MoreHorizontal, Plus, Search, Trash2 } from 'lucide-react';
+import { AlertCircle, BookOpen, Calendar, ChevronLeft, ChevronRight, Code, Edit, MoreHorizontal, Plus, Search, Trash2, X } from 'lucide-react';
 import React, { useState } from 'react';
 
 const breadcrumbs = [
@@ -36,10 +37,10 @@ function LoadingSkeleton() {
     );
 }
 
-function ProgramDialog({ isOpen, onClose, program = null, onSave }) {
+function ProgramDialog({ isOpen, onClose, program = null, onSave, errors = null }) {
     const [formData, setFormData] = useState({
         code: '',
-        name: '',
+        type: '',
         description: '',
         number_of_year: '',
     });
@@ -50,20 +51,19 @@ function ProgramDialog({ isOpen, onClose, program = null, onSave }) {
                 console.log('Program data:', program); // Debug log
                 setFormData({
                     code: program.code || '',
-                    name: program.name || '',
+                    type: program.type || '',
                     description: program.description || '',
                     number_of_year: program.number_of_year ? program.number_of_year.toString() : '',
                 });
             } else {
-                setFormData({ code: '', name: '', description: '', number_of_year: '' });
+                setFormData({ code: '', type: '', description: '', number_of_year: '' });
             }
         }
     }, [isOpen, program]);
 
     const handleSave = () => {
-        if (formData.code && formData.name && formData.description && formData.number_of_year) {
+        if (formData.code && formData.type && formData.description && formData.number_of_year) {
             onSave(formData);
-            onClose();
         }
     };
 
@@ -75,6 +75,19 @@ function ProgramDialog({ isOpen, onClose, program = null, onSave }) {
                     <DialogDescription>{program ? 'Update the program details below.' : 'Create a new academic program.'}</DialogDescription>
                 </DialogHeader>
                 <div className="grid gap-4 py-4">
+                    {errors && (
+                        <div className="rounded-md border border-red-200 bg-red-50 p-3 text-red-600">
+                            <div className="mb-2 font-semibold">⚠️ Please fix the following errors:</div>
+                            <ul className="list-inside list-disc space-y-1">
+                                {Object.entries(errors).map(([field, messages]) => (
+                                    <li key={field}>
+                                        <span className="font-medium capitalize">{field.replace('_', ' ')}:</span>{' '}
+                                        {Array.isArray(messages) ? messages[0] : messages}
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
+                    )}
                     <div className="grid grid-cols-4 items-center gap-4">
                         <label htmlFor="code" className="text-right text-sm font-medium">
                             Code
@@ -88,16 +101,22 @@ function ProgramDialog({ isOpen, onClose, program = null, onSave }) {
                         />
                     </div>
                     <div className="grid grid-cols-4 items-center gap-4">
-                        <label htmlFor="name" className="text-right text-sm font-medium">
-                            Name
+                        <label htmlFor="type" className="text-right text-sm font-medium">
+                            Program Type
                         </label>
-                        <Input
-                            id="name"
-                            value={formData.name}
-                            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                            className="col-span-3"
-                            placeholder="Program Name"
-                        />
+                        <Select
+                            value={formData.type}
+                            onValueChange={(value) => setFormData({ ...formData, type: value })}
+                        >
+                            <SelectTrigger className="col-span-3">
+                                <SelectValue placeholder="Select program type" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="Academic Program">Academic Program</SelectItem>
+                                <SelectItem value="General Foundation Program">General Foundation Program</SelectItem>
+                                <SelectItem value="Vocational Foundation Program">Vocational Foundation Program</SelectItem>
+                            </SelectContent>
+                        </Select>
                     </div>
                     <div className="grid grid-cols-4 items-center gap-4">
                         <label htmlFor="description" className="text-right text-sm font-medium">
@@ -135,7 +154,7 @@ function ProgramDialog({ isOpen, onClose, program = null, onSave }) {
                     <Button variant="outline" onClick={onClose}>
                         Cancel
                     </Button>
-                    <Button onClick={handleSave} disabled={!formData.code || !formData.name || !formData.description || !formData.number_of_year}>
+                    <Button onClick={handleSave} disabled={!formData.code || !formData.type || !formData.description || !formData.number_of_year}>
                         {program ? 'Update' : 'Create'} Program
                     </Button>
                 </DialogFooter>
@@ -154,12 +173,12 @@ export default function Program() {
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [programToDelete, setProgramToDelete] = useState(null);
     const [isDeleting, setIsDeleting] = useState(false);
+    const [saveErrors, setSaveErrors] = useState(null);
 
     const itemsPerPage = data.programs.per_page;
 
     const totalPages = data.programs.last_page;
     const paginatedData = data.programs.data;
-    console.log(paginatedData);
 
     const handlePageChange = (page) => {
         setIsLoading(true);
@@ -188,25 +207,39 @@ export default function Program() {
 
     const handleAddProgram = () => {
         setEditingProgram(null);
+        setSaveErrors(null); // Clear any previous errors
         setIsDialogOpen(true);
     };
 
     const handleEditProgram = (program) => {
         setEditingProgram(program);
+        setSaveErrors(null); // Clear any previous errors
         setIsDialogOpen(true);
     };
 
     const handleSaveProgram = (formData) => {
+        setSaveErrors(null); // Clear previous errors
+
         if (editingProgram) {
             router.put(`/program/${editingProgram.id}`, formData, {
                 onSuccess: () => {
                     setIsDialogOpen(false);
+                    setSaveErrors(null);
+                },
+                onError: (errors) => {
+                    console.error('Error updating program:', errors);
+                    setSaveErrors(errors);
                 },
             });
         } else {
             router.post('/program', formData, {
                 onSuccess: () => {
                     setIsDialogOpen(false);
+                    setSaveErrors(null);
+                },
+                onError: (errors) => {
+                    console.error('Error creating program:', errors);
+                    setSaveErrors(errors);
                 },
             });
         }
@@ -295,8 +328,8 @@ export default function Program() {
                                                 </TableCell>
                                                 <TableCell>
                                                     <div className="space-y-1">
-                                                        <div className="font-medium">{program.name}</div>
-                                                        <div className="text-muted-foreground text-sm">{program.description}</div>
+                                                        <div className="font-medium">{program.description}</div>
+                                                        <div className="text-muted-foreground text-sm">{program.type}</div>
                                                     </div>
                                                 </TableCell>
                                                 <TableCell className="text-center">
@@ -387,14 +420,14 @@ export default function Program() {
                 )}
             </div>
 
-            <ProgramDialog isOpen={isDialogOpen} onClose={() => setIsDialogOpen(false)} program={editingProgram} onSave={handleSaveProgram} />
+            <ProgramDialog isOpen={isDialogOpen} onClose={() => setIsDialogOpen(false)} program={editingProgram} onSave={handleSaveProgram} errors={saveErrors} />
 
             <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
                 <DialogContent className="sm:max-w-[400px]">
                     <DialogHeader>
                         <DialogTitle>Delete Program</DialogTitle>
                         <DialogDescription>
-                            Are you sure you want to delete "{programToDelete?.name}" ({programToDelete?.code})? This action cannot be undone.
+                            Are you sure you want to delete "{programToDelete?.type}" ({programToDelete?.code})? This action cannot be undone.
                         </DialogDescription>
                     </DialogHeader>
                     <DialogFooter>
@@ -407,6 +440,7 @@ export default function Program() {
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
+
         </AppLayout>
     );
 }

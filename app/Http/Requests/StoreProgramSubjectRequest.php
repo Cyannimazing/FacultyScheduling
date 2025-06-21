@@ -22,22 +22,28 @@ class StoreProgramSubjectRequest extends FormRequest
     public function rules(): array
     {
         return [
+            'prog_subj_code' => [
+                'required',
+                'string',
+                'max:255',
+                'unique:program_subjects,prog_subj_code',
+            ],
             'prog_code' => [
                 'required',
                 'string',
                 'exists:programs,code',
-                // Unique validation for prog_code + subj_code combination
+                // Unique validation for prog_code + subj_id combination
                 function ($attribute, $value, $fail) {
                     $exists = \App\Models\ProgramSubject::where('prog_code', $value)
-                        ->where('subj_code', $this->input('subj_code'))
+                        ->where('subj_id', $this->input('subj_id'))
                         ->exists();
-                    
+
                     if ($exists) {
                         $fail('This subject is already assigned to this program.');
                     }
                 },
             ],
-            'subj_code' => 'required|string|exists:subjects,code',
+            'subj_id' => 'required|integer|exists:subjects,id',
             'year_level' => [
                 'required',
                 'integer',
@@ -63,8 +69,8 @@ class StoreProgramSubjectRequest extends FormRequest
         return [
             'prog_code.required' => 'Program code is required.',
             'prog_code.exists' => 'Selected program does not exist.',
-            'subj_code.required' => 'Subject code is required.',
-            'subj_code.exists' => 'Selected subject does not exist.',
+            'subj_id.required' => 'Subject ID is required.',
+            'subj_id.exists' => 'Selected subject does not exist.',
             'year_level.required' => 'Year level is required.',
             'year_level.integer' => 'Year level must be an integer.',
             'year_level.min' => 'Year level must be at least 1.',

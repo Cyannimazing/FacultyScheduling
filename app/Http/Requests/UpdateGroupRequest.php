@@ -22,11 +22,11 @@ class UpdateGroupRequest extends FormRequest
     public function rules(): array
     {
         $groupId = $this->route('group'); // Assuming the route parameter is 'group'
-        
+
         return [
             'name' => [
                 'required',
-                'string', 
+                'string',
                 'max:255',
                 // Unique validation with composite key (name + prog_code) excluding current record
                 function ($attribute, $value, $fail) use ($groupId) {
@@ -34,9 +34,9 @@ class UpdateGroupRequest extends FormRequest
                         ->where('prog_code', $this->input('prog_code'))
                         ->where('id', '!=', $groupId)
                         ->exists();
-                    
+
                     if ($exists) {
-                        $fail('The combination of group name and program already exists.');
+                        $fail('The program already have this group.');
                     }
                 },
             ],

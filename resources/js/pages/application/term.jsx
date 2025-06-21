@@ -113,7 +113,6 @@ export default function Index() {
             },
         );
     };
-    console.log()
     const handlePageChange = (page) => {
         setIsLoading(true);
         router.get(

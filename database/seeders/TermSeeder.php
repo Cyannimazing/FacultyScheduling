@@ -14,8 +14,8 @@ class TermSeeder extends Seeder
     public function run(): void
     {
         $terms = [
-            ['name' => '1st Semester'],
-            ['name' => '2nd Semester'],
+            ['name' => '1st Term'],
+            ['name' => '2nd Term'],
             ['name' => 'Summer'],
         ];
 

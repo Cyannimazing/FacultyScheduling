@@ -18,11 +18,11 @@ class SubjectController extends Controller
         $search = $request->input('search');
         $isGenEdFilter = $request->input('isGenEdFilter');
         $page = $request->input('page', 1);
-        $perPage = 5;
+        $perPage = 10;
 
         $subjects = Subject::where(function ($query) use ($search) {
                             $query->where('name', 'LIKE', "%$search%")
-                                ->orWhere('code', 'LIKE', "%$search%");
+                                ->orWhere('id', 'LIKE', "%$search%");
                         })->where('is_gen_ed', "LIKE", "%$isGenEdFilter%")
                         ->orderBy('name')
                         ->paginate($perPage, ['*'], 'page', $page);
@@ -65,7 +65,6 @@ class SubjectController extends Controller
         $subject = Subject::find($id);
         if($subject){
             $subject->update([
-                'code' => $request->code,
                 'name' => $request->name,
                 'unit' => $request->unit,
                 'is_gen_ed' => $request->is_gen_ed

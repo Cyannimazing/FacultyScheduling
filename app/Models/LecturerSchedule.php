@@ -11,10 +11,10 @@ class LecturerSchedule extends Model
     /** @use HasFactory<\Database\Factories\LecturerScheduleFactory> */
     use HasFactory;
 
-    //UNIQUE (room_code, time_slot_id, sy_term_id),
-    // UNIQUE (lecturer_id, time_slot_id, sy_term_id),
-    // UNIQUE (class_id, time_slot_id, sy_term_id),
-    protected $fillable = ['lecturer_id', 'subj_code', 'room_code', 'time_slot_id', 'class_id', 'sy_term_id', 'created_at'];
+    //UNIQUE (room_code, day, start_time, end_time, sy_term_id),
+    // UNIQUE (lecturer_id, day, start_time, end_time, sy_term_id),
+    // UNIQUE (class_id, day, start_time, end_time, sy_term_id),
+    protected $fillable = ['lecturer_id', 'prog_subj_id', 'room_code', 'class_id', 'sy_term_id', 'day', 'start_time', 'end_time', 'created_at'];
 
     /**
      * Get the lecturer that owns the lecturer schedule.
@@ -25,11 +25,11 @@ class LecturerSchedule extends Model
     }
 
     /**
-     * Get the subject that owns the lecturer schedule.
+     * Get the program subject that owns the lecturer schedule.
      */
-    public function subject(): BelongsTo
+    public function programSubject(): BelongsTo
     {
-        return $this->belongsTo(Subject::class, 'subj_code', 'code');
+        return $this->belongsTo(ProgramSubject::class, 'prog_subj_id', 'id');
     }
 
     /**
@@ -40,13 +40,6 @@ class LecturerSchedule extends Model
         return $this->belongsTo(Room::class, 'room_code', 'name');
     }
 
-    /**
-     * Get the time slot that owns the lecturer schedule.
-     */
-    public function timeSlot(): BelongsTo
-    {
-        return $this->belongsTo(TimeSlot::class);
-    }
 
     /**
      * Get the group that owns the lecturer schedule.
