@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -654,6 +655,60 @@ function ScheduleDialog({ isOpen, onClose, schedule = null, onSave, lecturers, a
     );
 }
 
+function ReportDialog({ isOpen, onClose, onGenerate }) {
+    const [formData, setFormData] = useState({
+        preparedBy: '',
+    });
+
+    React.useEffect(() => {
+        if (isOpen) {
+            setFormData({ preparedBy: '' });
+        }
+    }, [isOpen]);
+
+    const handleGenerate = () => {
+        if (formData.preparedBy) {
+            onGenerate(formData);
+            onClose();
+        }
+    };
+
+    return (
+        <Dialog open={isOpen} onOpenChange={onClose}>
+            <DialogContent className="sm:max-w-[500px]">
+                <DialogHeader>
+                    <DialogTitle>Generate Report</DialogTitle>
+                    <DialogDescription>
+                        Please enter the batch number and prepared by information for the report.
+                    </DialogDescription>
+                </DialogHeader>
+                <div className="grid gap-4 py-4">
+                    <div className="grid grid-cols-4 items-center gap-4">
+                        <label htmlFor="preparedBy" className="text-right text-sm font-medium">
+                            Prepared By
+                        </label>
+                        <Input
+                            id="preparedBy"
+                            value={formData.preparedBy}
+                            onChange={(e) => setFormData({ ...formData, preparedBy: e.target.value })}
+                            className="col-span-3"
+                            placeholder="Enter prepared by"
+                        />
+                    </div>
+                </div>
+                <DialogFooter>
+                    <Button variant="outline" onClick={onClose}>
+                        Cancel
+                    </Button>
+                    <Button onClick={handleGenerate} disabled={ !formData.preparedBy}>
+                        Generate Report
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    );
+}
+
 export default function FacultySchedule() {
     const { data } = usePage().props;
     const {
@@ -679,6 +734,8 @@ export default function FacultySchedule() {
     const [isDeleting, setIsDeleting] = useState(false);
     const [viewMode, setViewMode] = useState('grid'); // 'grid' or 'table'
     const [scheduleErrors, setScheduleErrors] = useState(null);
+    const [isReportDialogOpen, setIsReportDialogOpen] = useState(false);
+
     const [logo, setLogo] = useState('');
 
     const toBase64 = async (url) => {
@@ -848,7 +905,9 @@ export default function FacultySchedule() {
             alert('Please select both lecturer and term before generating report.');
             return;
         }
-
+        setIsReportDialogOpen(true);
+    };
+    const handleGenerateReportWithParams = (reportData) => {
         // Get lecturer details
         const selectedLecturerData = lecturers.find((l) => l.id.toString() === selectedLecturer);
         const selectedTermData = academicCalendars.find((c) => c.id.toString() === selectedCalendar);
@@ -865,6 +924,7 @@ export default function FacultySchedule() {
             subjects: uniqueSubjects,
             teachingLoad: teachingLoad,
             schedules: schedules,
+            preparedBy: reportData.preparedBy,
         });
 
         // Open print dialog
@@ -874,9 +934,42 @@ export default function FacultySchedule() {
         printWindow.print();
     };
 
-    const createPrintableReport = ({ lecturer, term, subjects, teachingLoad, schedules }) => {
+    const createPrintableReport = ({ lecturer, term, subjects, teachingLoad, schedules, preparedBy }) => {
         const lecturerName = `${lecturer?.title || ''} ${lecturer?.fname || ''} ${lecturer?.lname || ''}`.trim();
         const termInfo = `${term?.term?.name || ''} - ${term?.school_year || ''}`;
+        const startDate = formatDate(term.start_date);
+        const endDate = formatDate(term.end_date);
+
+        function getOrdinalSuffix(day) {
+            if (day % 100 >= 11 && day % 100 <= 13) {
+                return "th";
+            }
+            switch (day % 10) {
+                case 1: return "st";
+                case 2: return "nd";
+                case 3: return "rd";
+                default: return "th";
+            }
+        }
+
+        function formatDate(dateInput) {
+            const date = new Date(dateInput);
+
+            const day = date.getDate();
+            const dayFormatted = (day < 10 ? "0" : "") + day;
+            const ordinal = getOrdinalSuffix(day);
+
+            const monthNames = [
+                "January", "February", "March", "April", "May", "June",
+                "July", "August", "September", "October", "November", "December"
+            ];
+            const month = monthNames[date.getMonth()];
+
+            const year = date.getFullYear();
+
+            return `${dayFormatted}${ordinal} ${month} ${year}`;
+        }
+
         const generateScheduleGrid = (schedules) => {
             const timeSlots = Object.keys(TIME_SLOTS);
             const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday'];
@@ -1172,6 +1265,19 @@ export default function FacultySchedule() {
             .thin-text {
                 font-weight: 100;
             }
+            .footer {
+                position: fixed;
+                bottom: 0;
+                left: 0;
+                width: 100%;
+                background-color: #f1f1f1;
+                padding: 10px 0;
+                font-style: italic;
+                font-weight: bold;
+                font-size: 11px;
+                z-index: 100;
+                font-family: 'Times New Roman', Times, serif;
+            }
         </style>
     </head>
     <body>
@@ -1182,7 +1288,7 @@ export default function FacultySchedule() {
         <div class="info-section">
             <div class="info-left">
                 <strong>Lecturer Name:</strong> <u>${lecturerName}</u><br>
-                <strong>Subjects Taught:</strong> ${subjects.join(', ')}
+                <strong>Subjects Assigned:</strong> ${subjects.join(', ')}
             </div>
             <div class="info-right">
                 <strong>No. of Teaching Load:</strong> ${teachingLoad}<br>
@@ -1190,14 +1296,20 @@ export default function FacultySchedule() {
         </div>
 
         ${generateScheduleGrid(schedules)}
-        <div >
+        <p style="margin: 0; font-family: 'Times New Roman', Times, serif;"><i>*Tentative: </i>${startDate} to ${endDate} </p>
+        <br/>
+        <div ">
+            <div style="margin-bottom: 20px" class="info-section">
+                <strong>Signed by: Lecturer/Instructor</strong>
+                <strong style="margin-right: 35px;">Prepared by: ${preparedBy}</strong>
+            </div>
             <br/>
             <br/>
             <br/>
-            <span class="signed-by">Signed By:</span>&emsp;_____________________________ <br/>
-            <span class="thin-text">&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&ensp;Lecturer</span>
+            <p style="font-size: 12px; margin-bottom: auto; text-align: center; font-family: 'Times New Roman', Times, serif;"><b>Reviewed and approved by:</b></p>
 
         </div>
+        <div class="footer">NCAT/${preparedBy}/Class Program / ${term.term.name}/ ${term.school_year}</div>
     </body>
     </html>
 `;
@@ -1474,6 +1586,15 @@ export default function FacultySchedule() {
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
+
+
+            <ReportDialog
+                isOpen={isReportDialogOpen}
+                onClose={() => setIsReportDialogOpen(false)}
+                onGenerate={handleGenerateReportWithParams}
+            />
         </AppLayout>
+
+
     );
 }

@@ -277,7 +277,7 @@ function ClassScheduleGrid({ schedules }) {
     );
 }
 
-function ReportDialog({ isOpen, onClose, onGenerate }) {
+function ReportDialog({ isOpen, onClose, onGenerate, program_type }) {
     const [formData, setFormData] = useState({
         batchNumber: '',
         preparedBy: '',
@@ -290,7 +290,13 @@ function ReportDialog({ isOpen, onClose, onGenerate }) {
     }, [isOpen]);
 
     const handleGenerate = () => {
-        if (formData.batchNumber && formData.preparedBy) {
+        // For Vocational Foundation Program, both fields are required
+        // For other programs, only preparedBy is required
+        const isValid = program_type === "Vocational Foundation Program" 
+            ? (formData.batchNumber && formData.preparedBy)
+            : formData.preparedBy;
+            
+        if (isValid) {
             onGenerate(formData);
             onClose();
         }
@@ -306,18 +312,20 @@ function ReportDialog({ isOpen, onClose, onGenerate }) {
                     </DialogDescription>
                 </DialogHeader>
                 <div className="grid gap-4 py-4">
-                    <div className="grid grid-cols-4 items-center gap-4">
-                        <label htmlFor="batchNumber" className="text-right text-sm font-medium">
-                            Batch Number
-                        </label>
-                        <Input
-                            id="batchNumber"
-                            value={formData.batchNumber}
-                            onChange={(e) => setFormData({ ...formData, batchNumber: e.target.value })}
-                            className="col-span-3"
-                            placeholder="Enter batch number"
-                        />
-                    </div>
+                    {program_type === "Vocational Foundation Program" && (
+                        <div className="grid grid-cols-4 items-center gap-4">
+                            <label htmlFor="batchNumber" className="text-right text-sm font-medium">
+                                Batch Number
+                            </label>
+                            <Input
+                                id="batchNumber"
+                                value={formData.batchNumber}
+                                onChange={(e) => setFormData({ ...formData, batchNumber: e.target.value })}
+                                className="col-span-3"
+                                placeholder="Enter batch number"
+                            />
+                        </div>
+                    )}
                     <div className="grid grid-cols-4 items-center gap-4">
                         <label htmlFor="preparedBy" className="text-right text-sm font-medium">
                             Prepared By
@@ -335,7 +343,14 @@ function ReportDialog({ isOpen, onClose, onGenerate }) {
                     <Button variant="outline" onClick={onClose}>
                         Cancel
                     </Button>
-                    <Button onClick={handleGenerate} disabled={!formData.batchNumber || !formData.preparedBy}>
+                    <Button 
+                        onClick={handleGenerate} 
+                        disabled={
+                            program_type === "Vocational Foundation Program" 
+                                ? (!formData.batchNumber || !formData.preparedBy)
+                                : !formData.preparedBy
+                        }
+                    >
                         Generate Report
                     </Button>
                 </DialogFooter>
@@ -347,7 +362,6 @@ function ReportDialog({ isOpen, onClose, onGenerate }) {
 export default function ClassSchedule() {
     const { data } = usePage().props;
     const { schedules = [], academicCalendars = [], groups = [], programs = [] } = data;
-
     const [isLoading, setIsLoading] = useState(false);
     const [selectedTerm, setSelectedTerm] = useState('');
     const [selectedGroup, setSelectedGroup] = useState('');
@@ -543,7 +557,6 @@ export default function ClassSchedule() {
             uniqueSubjectLecturers.forEach((key, index) => {
                 colorMap[key] = colors[index % colors.length];
             });
-
             // Calculate time slot spans for each schedule (exact same logic as main grid)
             const getTimeSlotSpan = (startTime, endTime) => {
                 const startIndex = timeSlots.indexOf(startTime);
@@ -853,7 +866,7 @@ export default function ClassSchedule() {
             <br/>
             <div ">
                 <div style="margin-bottom: 20px" class="info-section">
-                    <strong>Signed by: Skill Instructor</strong>
+                    <strong>Signed by: Lecturer/Instructor</strong>
                     <strong style="margin-right: 35px;">Prepared by: ${preparedBy}</strong>
                 </div>
                 <br/>
@@ -862,7 +875,7 @@ export default function ClassSchedule() {
                 <p style="font-size: 12px; margin-bottom: auto; text-align: center; font-family: 'Times New Roman', Times, serif;"><b>Reviewed and approved by:</b></p>
 
             </div>
-            <div class="footer">NCAT/GFP/Class Program / ${term.term.name}/ ${term.school_year}</div>
+            <div class="footer">NCAT/${preparedBy}/Class Program / ${term.term.name}/ ${term.school_year}</div>
         </body>
         </html>
     `;
@@ -979,6 +992,7 @@ export default function ClassSchedule() {
                 isOpen={isReportDialogOpen}
                 onClose={() => setIsReportDialogOpen(false)}
                 onGenerate={handleGenerateReportWithParams}
+                program_type={programs.find(p => p.code === selectedProgram)?.type || ''}
             />
         </AppLayout>
     );
