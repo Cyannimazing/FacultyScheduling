@@ -63,6 +63,7 @@ class LecturerScheduleController extends Controller
                                        ->get();
         }
 
+
         $academicCalendars = AcademicCalendar::with('term')
                                 ->orderBy('school_year', 'desc')
                                 ->orderBy('id')
@@ -92,7 +93,7 @@ class LecturerScheduleController extends Controller
                 'statistics' => [
                     'totalSchedules' => $totalSchedules,
                     'totalActiveLecturers' => $totalActiveLecturers,
-                    'totalRoomsInUse' => $totalRoomsInUse
+                    'totalRoomsInUse' => $totalRoomsInUse,
                 ]
             ]
         ]);

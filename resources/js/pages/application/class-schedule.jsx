@@ -449,7 +449,7 @@ export default function ClassSchedule() {
             const selectedTermData = academicCalendars.find((c) => c.id.toString() === selectedTerm);
 
             // Get unique subjects and lecturers
-            const uniqueSubjects = [...new Set(schedules.map((s) => s.subj_code))];
+            const uniqueSubjects = [...new Set(schedules.map((s) => s.program_subject.prog_subj_code))];
             const uniqueLecturers = [
                 ...new Set(schedules.map((s) => `${s.lecturer?.title || ''} ${s.lecturer?.fname || ''} ${s.lecturer?.lname || ''}`.trim())),
             ];

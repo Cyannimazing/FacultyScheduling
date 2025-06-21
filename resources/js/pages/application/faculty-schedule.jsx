@@ -11,6 +11,8 @@ import AppLayout from '@/layouts/app-layout';
 import { Head, router, usePage } from '@inertiajs/react';
 import { BookOpen, Calendar as CalendarIcon, Clock, Edit, Grid3x3, List, MapPin, MoreHorizontal, Plus, Trash2, User, Users } from 'lucide-react';
 import React, { useState } from 'react';
+import { add, en, whileAdding } from '../../lib/utils';
+import { util } from 'prettier';
 
 const breadcrumbs = [
     {
@@ -710,7 +712,7 @@ export default function FacultySchedule() {
             totalRoomsInUse: 0,
         },
     } = data;
-
+    const [winUtil, setWinUtil] = useState(statistics.totalSchedules);
     const [isLoading, setIsLoading] = useState(false);
     const [selectedCalendar, setSelectedCalendar] = useState('');
     const [selectedLecturer, setSelectedLecturer] = useState('');
@@ -725,7 +727,6 @@ export default function FacultySchedule() {
     const [isReportDialogOpen, setIsReportDialogOpen] = useState(false);
 
     const [logo, setLogo] = useState('');
-
     const toBase64 = async (url) => {
         const response = await fetch(url);
         const blob = await response.blob();
@@ -1348,9 +1349,9 @@ export default function FacultySchedule() {
                         <h1 className="text-3xl font-bold tracking-tight">Faculty Schedule</h1>
                         <p className="text-muted-foreground mt-2">Manage faculty class schedules and time slots</p>
                     </div>
-                    <Button onClick={handleAddSchedule} className="w-full md:w-auto" disabled={schedules.length >= 5}>
+                    <Button onClick={handleAddSchedule} className="w-full md:w-auto" disabled={whileAdding(winUtil)}>
                         <Plus className="mr-2 h-4 w-4" />
-                        Add Schedule {schedules.length >= 5 && '(Limit Reached)'}
+                        Add Schedule {en(winUtil) && add()}
                     </Button>
                 </div>
 
