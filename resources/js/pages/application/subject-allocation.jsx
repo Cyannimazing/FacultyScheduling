@@ -410,6 +410,7 @@ function SubjectAllocationSheet({ isOpen, onClose, allocation = null, onSave, ex
                                                 ps.term_id.toString() === formData.term_id
                                             )
                                             .map((programSubject) => {
+                                                console.log(programSubject)
                                             if (!programSubject || !programSubject.subject) return null;
                                             const subject = programSubject;
                                             return (
@@ -417,7 +418,7 @@ function SubjectAllocationSheet({ isOpen, onClose, allocation = null, onSave, ex
                                                     <div className="flex items-center gap-2">
                                                         <span className="font-medium">{subject.prog_subj_code} - {subject.subject.name}</span>
                                                         <Badge variant="outline" className="text-xs">
-                                                            {subject.unit || 0} unit{(subject.unit || 0) !== 1 ? 's' : ''}
+                                                            {subject.subject.unit || 0} unit{(subject.subject.unit || 0) !== 1 ? 's' : ''}
                                                         </Badge>
                                                     </div>
                                                 </SelectItem>
@@ -975,10 +976,11 @@ export default function SubjectAllocation() {
                                     <TableBody>
                                         {paginatedData.map((allocation) => {
                                             const lecturer = allocation.lecturer;
-                                            const subject = allocation.subject;
+                                            const subject = allocation.program_subject;
                                             const calendar = allocation.calendar;
                                             const program = allocation.program;
                                             const term = allocation.term;
+                                            console.log(subject)
                                             return (
                                                 <TableRow key={allocation.lecturer_id + '' + allocation.prog_subj_id + '' + allocation.sy_term_id} className="hover:bg-muted/50">
                                                     <TableCell>
@@ -999,10 +1001,10 @@ export default function SubjectAllocation() {
                                                                 <BookOpen className="text-muted-foreground h-4 w-4" />
                                                                 <span className="font-mono text-sm font-medium">{allocation.program_subject.prog_subj_code || 'Unknown'}</span>
                                                             </div>
-                                                            <div className="text-sm">{subject?.name || 'Unknown Subject'}</div>
+                                                            <div className="text-sm">{subject.subject?.name || 'Unknown Subject'}</div>
                                                             <div className="flex items-center gap-1">
                                                                 <Badge variant="outline" className="text-xs">
-                                                                    {subject?.unit || 0} unit{(subject?.unit || 0) !== 1 ? 's' : ''}
+                                                                    {subject.subject?.unit || 0} unit{(subject.subject?.unit || 0) !== 1 ? 's' : ''}
                                                                 </Badge>
                                                                 {subject?.is_general_education && (
                                                                     <Badge variant="secondary" className="bg-green-100 text-xs text-green-800">
