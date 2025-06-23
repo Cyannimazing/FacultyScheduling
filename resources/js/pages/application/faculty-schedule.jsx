@@ -648,16 +648,43 @@ function ScheduleDialog({ isOpen, onClose, schedule = null, onSave, lecturers, a
 function ReportDialog({ isOpen, onClose, onGenerate }) {
     const [formData, setFormData] = useState({
         preparedBy: '',
+        reviewerCount: 1,
+        reviewers: [''],
     });
 
     React.useEffect(() => {
         if (isOpen) {
-            setFormData({ preparedBy: '' });
+            setFormData({ 
+                preparedBy: '',
+                reviewerCount: 1,
+                reviewers: [''],
+            });
         }
     }, [isOpen]);
 
+    const handleReviewerCountChange = (count) => {
+        const newCount = parseInt(count);
+        const newReviewers = Array(newCount).fill('').map((_, index) => 
+            formData.reviewers[index] || ''
+        );
+        setFormData({ 
+            ...formData, 
+            reviewerCount: newCount,
+            reviewers: newReviewers
+        });
+    };
+
+    const handleReviewerChange = (index, value) => {
+        const newReviewers = [...formData.reviewers];
+        newReviewers[index] = value;
+        setFormData({ ...formData, reviewers: newReviewers });
+    };
+
     const handleGenerate = () => {
-        if (formData.preparedBy) {
+        const hasRequiredFields = formData.preparedBy && 
+            formData.reviewers.every(reviewer => reviewer.trim() !== '');
+        
+        if (hasRequiredFields) {
             onGenerate(formData);
             onClose();
         }
@@ -683,12 +710,43 @@ function ReportDialog({ isOpen, onClose, onGenerate }) {
                             placeholder="Enter prepared by"
                         />
                     </div>
+                    
+                    <div className="grid grid-cols-4 items-center gap-4">
+                        <label htmlFor="reviewerCount" className="text-right text-sm font-medium">
+                            Number of Reviewers
+                        </label>
+                        <Select value={formData.reviewerCount.toString()} onValueChange={handleReviewerCountChange}>
+                            <SelectTrigger className="col-span-3">
+                                <SelectValue placeholder="Select number of reviewers" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="1">1</SelectItem>
+                                <SelectItem value="2">2</SelectItem>
+                                <SelectItem value="3">3</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
+                    
+                    {formData.reviewers.map((reviewer, index) => (
+                        <div key={index} className="grid grid-cols-4 items-center gap-4">
+                            <label htmlFor={`reviewer${index}`} className="text-right text-sm font-medium">
+                                Reviewed and approved by {index + 1}:
+                            </label>
+                            <Input
+                                id={`reviewer${index}`}
+                                value={reviewer}
+                                onChange={(e) => handleReviewerChange(index, e.target.value)}
+                                className="col-span-3"
+                                placeholder={`Enter reviewer ${index + 1} name`}
+                            />
+                        </div>
+                    ))}
                 </div>
                 <DialogFooter>
                     <Button variant="outline" onClick={onClose}>
                         Cancel
                     </Button>
-                    <Button onClick={handleGenerate} disabled={!formData.preparedBy}>
+                    <Button onClick={handleGenerate} disabled={!formData.preparedBy || formData.reviewers.some(reviewer => reviewer.trim() === '')}>
                         Generate Report
                     </Button>
                 </DialogFooter>
@@ -911,6 +969,7 @@ export default function FacultySchedule() {
                 teachingLoad: teachingLoad,
                 schedules: schedules,
                 preparedBy: reportData.preparedBy,
+                reviewers: reportData.reviewers,
             });
 
             // Create a hidden iframe and print
@@ -942,7 +1001,7 @@ export default function FacultySchedule() {
         }
     };
 
-    const createPrintableReport = ({ lecturer, term, subjects, teachingLoad, schedules, preparedBy }) => {
+    const createPrintableReport = ({ lecturer, term, subjects, teachingLoad, schedules, preparedBy, reviewers }) => {
         const lecturerName = `${lecturer?.title || ''} ${lecturer?.fname || ''} ${lecturer?.lname || ''}`.trim();
         const termInfo = `${term?.term?.name || ''} - ${term?.school_year || ''}`;
         const startDate = formatDate(term.start_date);
@@ -1327,7 +1386,17 @@ export default function FacultySchedule() {
             <br/>
             <br/>
             <br/>
-            <p style="font-size: 12px; margin-bottom: auto; text-align: center; font-family: 'Times New Roman', Times, serif;"><b>Reviewed and approved by:</b></p>
+            <div style="margin-bottom: 20px; text-align: center; font-family: 'Times New Roman', Times, serif;">
+                <p style="font-size: 12px; margin-bottom: 10px;"><b>Reviewed and approved by:</b></p>
+                <div style="display: flex; justify-content: center; gap: 50px; margin-top: 20px;">
+                    ${reviewers.map((reviewer, index) => `
+                        <div style="text-align: center;">
+                            <div style="border-bottom: 1px solid #000; width: 200px; margin-bottom: 5px; height: 20px;"></div>
+                            <p style="font-size: 10px; margin: 0; font-weight: bold;">${reviewer}</p>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
 
         </div>
         <div class="footer">NCAT/${preparedBy}/Class Program / ${term.term.name}/ ${term.school_year}</div>
@@ -1346,7 +1415,7 @@ export default function FacultySchedule() {
                         <h1 className="text-3xl font-bold tracking-tight">Faculty Schedule</h1>
                         <p className="text-muted-foreground mt-2">Manage faculty class schedules and time slots</p>
                     </div>
-                    <Button onClick={handleAddSchedule} className="w-full md:w-auto" >
+                    <Button onClick={handleAddSchedule} className="w-full md:w-auto">
                         <Plus className="mr-2 h-4 w-4" />
                         Add Schedule
                     </Button>
@@ -1500,8 +1569,10 @@ export default function FacultySchedule() {
                                                         <div className="flex items-center gap-2">
                                                             <BookOpen className="text-muted-foreground h-4 w-4" />
                                                             <div>
-                                                                <div className="font-medium">{schedule.subject?.name}</div>
-                                                                <div className="text-muted-foreground text-sm">{schedule.subj_code}</div>
+                                                                <div className="font-medium">{schedule.program_subject.subject?.name}</div>
+                                                                <div className="text-muted-foreground text-sm">
+                                                                    {schedule.program_subject.prog_subj_code}
+                                                                </div>
                                                             </div>
                                                         </div>
                                                     </TableCell>

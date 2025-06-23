@@ -281,20 +281,48 @@ function ReportDialog({ isOpen, onClose, onGenerate, program_type }) {
     const [formData, setFormData] = useState({
         batchNumber: '',
         preparedBy: '',
+        reviewerCount: 1,
+        reviewers: [''],
     });
 
     React.useEffect(() => {
         if (isOpen) {
-            setFormData({ batchNumber: '', preparedBy: '' });
+            setFormData({ 
+                batchNumber: '', 
+                preparedBy: '',
+                reviewerCount: 1,
+                reviewers: [''],
+            });
         }
     }, [isOpen]);
+
+    const handleReviewerCountChange = (count) => {
+        const newCount = parseInt(count);
+        const newReviewers = Array(newCount).fill('').map((_, index) => 
+            formData.reviewers[index] || ''
+        );
+        setFormData({ 
+            ...formData, 
+            reviewerCount: newCount,
+            reviewers: newReviewers
+        });
+    };
+
+    const handleReviewerChange = (index, value) => {
+        const newReviewers = [...formData.reviewers];
+        newReviewers[index] = value;
+        setFormData({ ...formData, reviewers: newReviewers });
+    };
 
     const handleGenerate = () => {
         // For Vocational Foundation Program, both fields are required
         // For other programs, only preparedBy is required
-        const isValid = program_type === 'Vocational Foundation Program' ? formData.batchNumber && formData.preparedBy : formData.preparedBy;
-
-        if (isValid) {
+        const basicFieldsValid = program_type === 'Vocational Foundation Program' ? 
+            formData.batchNumber && formData.preparedBy : formData.preparedBy;
+        
+        const reviewersValid = formData.reviewers.every(reviewer => reviewer.trim() !== '');
+        
+        if (basicFieldsValid && reviewersValid) {
             onGenerate(formData);
             onClose();
         }
@@ -334,6 +362,37 @@ function ReportDialog({ isOpen, onClose, onGenerate, program_type }) {
                             placeholder="Enter prepared by"
                         />
                     </div>
+                    
+                    <div className="grid grid-cols-4 items-center gap-4">
+                        <label htmlFor="reviewerCount" className="text-right text-sm font-medium">
+                            Number of Reviewers
+                        </label>
+                        <Select value={formData.reviewerCount.toString()} onValueChange={handleReviewerCountChange}>
+                            <SelectTrigger className="col-span-3">
+                                <SelectValue placeholder="Select number of reviewers" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="1">1</SelectItem>
+                                <SelectItem value="2">2</SelectItem>
+                                <SelectItem value="3">3</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
+                    
+                    {formData.reviewers.map((reviewer, index) => (
+                        <div key={index} className="grid grid-cols-4 items-center gap-4">
+                            <label htmlFor={`reviewer${index}`} className="text-right text-sm font-medium">
+                                Reviewed and approved by {index + 1}:
+                            </label>
+                            <Input
+                                id={`reviewer${index}`}
+                                value={reviewer}
+                                onChange={(e) => handleReviewerChange(index, e.target.value)}
+                                className="col-span-3"
+                                placeholder={`Enter reviewer ${index + 1} name`}
+                            />
+                        </div>
+                    ))}
                 </div>
                 <DialogFooter>
                     <Button variant="outline" onClick={onClose}>
@@ -342,7 +401,9 @@ function ReportDialog({ isOpen, onClose, onGenerate, program_type }) {
                     <Button
                         onClick={handleGenerate}
                         disabled={
-                            program_type === 'Vocational Foundation Program' ? !formData.batchNumber || !formData.preparedBy : !formData.preparedBy
+                            program_type === 'Vocational Foundation Program' ? 
+                                !formData.batchNumber || !formData.preparedBy || formData.reviewers.some(reviewer => reviewer.trim() === '') : 
+                                !formData.preparedBy || formData.reviewers.some(reviewer => reviewer.trim() === '')
                         }
                     >
                         Generate Report
@@ -464,6 +525,7 @@ export default function ClassSchedule() {
                 schedules: schedules,
                 batchNumber: reportData.batchNumber,
                 preparedBy: reportData.preparedBy,
+                reviewers: reportData.reviewers,
             });
 
             // Create a hidden iframe and print
@@ -495,7 +557,7 @@ export default function ClassSchedule() {
         }
     };
 
-    const createPrintableReport = ({ group, term, subjects, lecturers, totalClasses, schedules, batchNumber, preparedBy }) => {
+    const createPrintableReport = ({ group, term, subjects, lecturers, totalClasses, schedules, batchNumber, preparedBy, reviewers }) => {
         const groupName = group?.name || '';
         const startDate = formatDate(term.start_date);
         const endDate = formatDate(term.end_date);
@@ -902,7 +964,17 @@ export default function ClassSchedule() {
                 <br/>
                 <br/>
                 <br/>
-                <p style="font-size: 12px; margin-bottom: auto; text-align: center; font-family: 'Times New Roman', Times, serif;"><b>Reviewed and approved by:</b></p>
+                <div style="margin-bottom: 20px; text-align: center; font-family: 'Times New Roman', Times, serif;">
+                    <p style="font-size: 12px; margin-bottom: 10px;"><b>Reviewed and approved by:</b></p>
+                    <div style="display: flex; justify-content: center; gap: 50px; margin-top: 20px;">
+                        ${reviewers.map((reviewer, index) => `
+                            <div style="text-align: center;">
+                                <div style="border-bottom: 1px solid #000; width: 200px; margin-bottom: 5px; height: 20px;"></div>
+                                <p style="font-size: 10px; margin: 0; font-weight: bold;">${reviewer}</p>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
 
             </div>
             <div class="footer">NCAT/${preparedBy}/Class Program / ${term.term.name}/ ${term.school_year}</div>
