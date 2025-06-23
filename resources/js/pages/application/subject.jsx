@@ -64,7 +64,10 @@ function SubjectDialog({ isOpen, onClose, subjectData = null, onSave, errors = n
     }, [subjectData, isOpen]);
 
     const handleSave = () => {
-        if (formData.name && formData.unit) {
+        if (formData.name) {
+            if(!formData.unit){
+                formData.unit = 1
+            }
             onSave({
                 ...formData,
                 unit: parseInt(formData.unit),
@@ -111,7 +114,7 @@ function SubjectDialog({ isOpen, onClose, subjectData = null, onSave, errors = n
                         </Label>
                         <Select value={formData.unit.toString()} onValueChange={(value) => setFormData({ ...formData, unit: value })}>
                             <SelectTrigger className="col-span-3">
-                                <SelectValue placeholder="Select units" />
+                                <SelectValue placeholder="Select units (Optional)" />
                             </SelectTrigger>
                             <SelectContent>
                                 <SelectItem value="1">1 Unit</SelectItem>
@@ -143,7 +146,7 @@ function SubjectDialog({ isOpen, onClose, subjectData = null, onSave, errors = n
                     <Button variant="outline" onClick={onClose}>
                         Cancel
                     </Button>
-                    <Button onClick={handleSave} disabled={!formData.name || !formData.unit}>
+                    <Button onClick={handleSave} disabled={!formData.name}>
                         {subjectData ? 'Update' : 'Create'} Subject
                     </Button>
                 </DialogFooter>
