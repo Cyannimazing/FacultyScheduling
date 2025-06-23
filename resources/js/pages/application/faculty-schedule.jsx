@@ -654,7 +654,7 @@ function ReportDialog({ isOpen, onClose, onGenerate }) {
 
     React.useEffect(() => {
         if (isOpen) {
-            setFormData({ 
+            setFormData({
                 preparedBy: '',
                 reviewerCount: 1,
                 reviewers: [''],
@@ -664,13 +664,13 @@ function ReportDialog({ isOpen, onClose, onGenerate }) {
 
     const handleReviewerCountChange = (count) => {
         const newCount = parseInt(count);
-        const newReviewers = Array(newCount).fill('').map((_, index) => 
-            formData.reviewers[index] || ''
-        );
-        setFormData({ 
-            ...formData, 
+        const newReviewers = Array(newCount)
+            .fill('')
+            .map((_, index) => formData.reviewers[index] || '');
+        setFormData({
+            ...formData,
             reviewerCount: newCount,
-            reviewers: newReviewers
+            reviewers: newReviewers,
         });
     };
 
@@ -681,9 +681,8 @@ function ReportDialog({ isOpen, onClose, onGenerate }) {
     };
 
     const handleGenerate = () => {
-        const hasRequiredFields = formData.preparedBy && 
-            formData.reviewers.every(reviewer => reviewer.trim() !== '');
-        
+        const hasRequiredFields = formData.preparedBy && formData.reviewers.every((reviewer) => reviewer.trim() !== '');
+
         if (hasRequiredFields) {
             onGenerate(formData);
             onClose();
@@ -710,7 +709,7 @@ function ReportDialog({ isOpen, onClose, onGenerate }) {
                             placeholder="Enter prepared by"
                         />
                     </div>
-                    
+
                     <div className="grid grid-cols-4 items-center gap-4">
                         <label htmlFor="reviewerCount" className="text-right text-sm font-medium">
                             Number of Reviewers
@@ -726,7 +725,7 @@ function ReportDialog({ isOpen, onClose, onGenerate }) {
                             </SelectContent>
                         </Select>
                     </div>
-                    
+
                     {formData.reviewers.map((reviewer, index) => (
                         <div key={index} className="grid grid-cols-4 items-center gap-4">
                             <label htmlFor={`reviewer${index}`} className="text-right text-sm font-medium">
@@ -746,7 +745,7 @@ function ReportDialog({ isOpen, onClose, onGenerate }) {
                     <Button variant="outline" onClick={onClose}>
                         Cancel
                     </Button>
-                    <Button onClick={handleGenerate} disabled={!formData.preparedBy || formData.reviewers.some(reviewer => reviewer.trim() === '')}>
+                    <Button onClick={handleGenerate} disabled={!formData.preparedBy || formData.reviewers.some((reviewer) => reviewer.trim() === '')}>
                         Generate Report
                     </Button>
                 </DialogFooter>
@@ -1389,12 +1388,16 @@ export default function FacultySchedule() {
             <div style="margin-bottom: 20px; text-align: center; font-family: 'Times New Roman', Times, serif;">
                 <p style="font-size: 12px; margin-bottom: 10px;"><b>Reviewed and approved by:</b></p>
                 <div style="display: flex; justify-content: center; gap: 50px; margin-top: 20px;">
-                    ${reviewers.map((reviewer, index) => `
+                    ${reviewers
+                        .map(
+                            (reviewer, index) => `
                         <div style="text-align: center;">
                             <div style="border-bottom: 1px solid #000; width: 200px; margin-bottom: 5px; height: 20px;"></div>
                             <p style="font-size: 10px; margin: 0; font-weight: bold;">${reviewer}</p>
                         </div>
-                    `).join('')}
+                    `,
+                        )
+                        .join('')}
                 </div>
             </div>
 
