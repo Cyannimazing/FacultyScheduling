@@ -1500,8 +1500,8 @@ export default function FacultySchedule() {
                                                         <div className="flex items-center gap-2">
                                                             <BookOpen className="text-muted-foreground h-4 w-4" />
                                                             <div>
-                                                                <div className="font-medium">{schedule.subject?.name}</div>
-                                                                <div className="text-muted-foreground text-sm">{schedule.subj_code}</div>
+                                                                <div className="font-medium">{schedule.program_subject.subject?.name}</div>
+                                                                <div className="text-muted-foreground text-sm">{schedule.program_subject.prog_subj_code}</div>
                                                             </div>
                                                         </div>
                                                     </TableCell>
