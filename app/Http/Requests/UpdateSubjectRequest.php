@@ -24,7 +24,7 @@ class UpdateSubjectRequest extends FormRequest
         $subjectId = $this->route('subject'); // Get the subject ID from route
 
         return [
-            'name' => 'required|string|max:255',
+            'name' => 'required|string|max:255|unique:subjects,name',
             'unit' => 'required|integer|min:1|max:10',
             'is_gen_ed' => 'nullable|boolean',
         ];
@@ -36,6 +36,7 @@ class UpdateSubjectRequest extends FormRequest
     public function messages(): array
     {
         return [
+            'name.unique' => 'Subject name already exists.',
             'name.required' => 'Subject name is required.',
             'unit.required' => 'Unit is required.',
             'unit.integer' => 'Unit must be an integer.',
