@@ -44,7 +44,8 @@ function ClassDialog({ isOpen, onClose, classData = null, onSave, errors = null 
         name: '',
         prog_code: '',
         description: '',
-        prog_type: ''
+        prog_type: '',
+        time_period: ''
     });
 
     const handleProgramChange = (progCode) => {
@@ -62,21 +63,33 @@ function ClassDialog({ isOpen, onClose, classData = null, onSave, errors = null 
     React.useEffect(() => {
         if (isOpen) {
             if (classData) {
+                // Extract time period from existing class name if it exists
+                const nameMatch = classData.name?.match(/^(.+)\s*-\s*(Morning|Evening)$/);
+                const baseName = nameMatch ? nameMatch[1].trim() : classData.name || '';
+                const timePeriod = nameMatch ? nameMatch[2] : '';
+                
                 setFormData({
-                    name: classData.name || '',
+                    name: baseName,
                     prog_code: classData.prog_code || '',
                     description: classData.program?.description || '',
-                    prog_type: classData.program?.name || ''
+                    prog_type: classData.program?.name || '',
+                    time_period: timePeriod || 'none'
                 });
             } else {
-                setFormData({ name: '', prog_code: '', description: '', prog_type: '' });
+                setFormData({ name: '', prog_code: '', description: '', prog_type: '', time_period: 'none' });
             }
         }
     }, [isOpen, classData]);
 
     const handleSave = () => {
         if (formData.name && formData.prog_code && formData.description) {
-            onSave(formData);
+            // Append time period to the class name with dash format only if time period is selected and not 'none'
+            const finalClassName = formData.time_period && formData.time_period !== 'none' ? `${formData.name} - ${formData.time_period}` : formData.name;
+            const dataToSave = {
+                ...formData,
+                name: finalClassName
+            };
+            onSave(dataToSave);
         }
     };
 
@@ -110,8 +123,23 @@ function ClassDialog({ isOpen, onClose, classData = null, onSave, errors = null 
                             value={formData.name}
                             onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                             className="col-span-3"
-                            placeholder="e.g., Computer Science - Year 1A"
+                            placeholder="e.g., A, B, 1A, 2B"
                         />
+                    </div>
+                    <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="time_period" className="text-right text-sm font-medium">
+                            Time Period (Optional)
+                        </Label>
+                        <Select value={formData.time_period} onValueChange={(value) => setFormData({ ...formData, time_period: value === 'none' ? '' : value })}>
+                            <SelectTrigger className="col-span-3">
+                                <SelectValue placeholder="Select time period (optional)" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="none">None</SelectItem>
+                                <SelectItem value="Morning">Morning</SelectItem>
+                                <SelectItem value="Evening">Evening</SelectItem>
+                            </SelectContent>
+                        </Select>
                     </div>
                     <div className="grid grid-cols-4 items-center gap-4">
                         <Label htmlFor="program" className="text-right text-sm font-medium">
