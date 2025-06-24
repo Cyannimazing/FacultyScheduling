@@ -8,8 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import AppLayout from '@/layouts/app-layout';
 import { Head, usePage, router } from '@inertiajs/react';
-import { BookOpen, ChevronLeft, ChevronRight, Code, GripVertical, Plus, Search, Trash2, Users, AlertCircle } from 'lucide-react';
-import { useState } from 'react';
+import { BookOpen, ChevronLeft, ChevronRight, Code, GripVertical, Plus, Search, Trash2, Users, AlertCircle, Edit } from 'lucide-react';
+import { useState, useEffect } from 'react';
 
 const breadcrumbs = [
     {
@@ -60,7 +60,7 @@ function SubjectItem({ subject, onDragStart }) {
 }
 
 // Program drop zone component
-function ProgramDropZone({ program, assignments, onDrop, onRemoveAssignment, terms }) {
+function ProgramDropZone({ program, assignments, onDrop, onRemoveAssignment, onEditAssignment, terms }) {
     const [dragOver, setDragOver] = useState(false);
     const [selectedYear, setSelectedYear] = useState('all');
     const [selectedTerm, setSelectedTerm] = useState('all');
@@ -180,14 +180,24 @@ function ProgramDropZone({ program, assignments, onDrop, onRemoveAssignment, ter
                                                         <span className="font-mono text-xs">{prog_subj.prog_subj_code}</span>
                                                         <span className="text-xs">{prog_subj.subject.name}</span>
                                                     </div>
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="sm"
-                                                        onClick={() => onRemoveAssignment(assignment)}
-                                                        className="h-6 w-6 p-0 text-red-500 hover:text-red-700"
-                                                    >
-                                                        <Trash2 className="h-3 w-3" />
-                                                    </Button>
+                                                    <div className="flex items-center gap-1">
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            onClick={() => onEditAssignment(assignment)}
+                                                            className="h-6 w-6 p-0 text-blue-500 hover:text-blue-700"
+                                                        >
+                                                            <Edit className="h-3 w-3" />
+                                                        </Button>
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            onClick={() => onRemoveAssignment(assignment)}
+                                                            className="h-6 w-6 p-0 text-red-500 hover:text-red-700"
+                                                        >
+                                                            <Trash2 className="h-3 w-3" />
+                                                        </Button>
+                                                    </div>
                                                 </div>
                                             ) : null;
                                         })}
@@ -305,6 +315,159 @@ function DropAssignmentDialog({ isOpen, onClose, onSave, subject, program, terms
                     </Button>
                     <Button onClick={handleSave} disabled={!formData.year_level || !formData.term_id}>
                         Assign Subject
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    );
+}
+
+// Edit Assignment Dialog
+function EditAssignmentDialog({ isOpen, onClose, onSave, assignment, programs, subjects, terms, errors = null }) {
+    const [formData, setFormData] = useState({
+        prog_subj_code: '',
+        program_id: '',
+        subject_id: '',
+        year_level: '',
+        term_id: '',
+    });
+
+    // Update form data when assignment changes
+    useEffect(() => {
+        if (assignment) {
+            setFormData({
+                prog_subj_code: assignment.prog_subj_code || '',
+                program_id: assignment.program?.id || '',
+                subject_id: assignment.subject?.id || '',
+                year_level: assignment.year_level?.toString() || '',
+                term_id: assignment.term_id?.toString() || '',
+            });
+        }
+    }, [assignment]);
+
+    // Get selected program to determine available year levels
+    const selectedProgram = programs.find((p) => p.id == formData.program_id);
+    const availableYearLevels = getAvailableYearLevels(selectedProgram?.number_of_year);
+
+    // Reset year level when program changes
+    const handleProgramChange = (value) => {
+        setFormData({ ...formData, program_id: value, year_level: '' });
+    };
+
+    const handleSave = () => {
+        if (formData.prog_subj_code && formData.program_id && formData.subject_id && formData.year_level && formData.term_id) {
+            onSave(formData);
+        }
+    };
+
+    return (
+        <Dialog open={isOpen} onOpenChange={onClose}>
+            <DialogContent className="sm:max-w-[500px]">
+                <DialogHeader>
+                    <DialogTitle>Edit Course Assignment</DialogTitle>
+                    <DialogDescription>Update the course assignment details.</DialogDescription>
+                </DialogHeader>
+                <div className="grid gap-4 py-4">
+                    {errors && (
+                        <div className="rounded-md border border-red-200 bg-red-50 p-3 text-red-600">
+                            <div className="mb-2 font-semibold">⚠️ Please fix the following errors:</div>
+                            <ul className="list-inside list-disc space-y-1">
+                                {Object.entries(errors).map(([field, messages]) => (
+                                    <li key={field}>
+                                        <span className="font-medium capitalize">{field.replace('_', ' ')}:</span>{' '}
+                                        {Array.isArray(messages) ? messages[0] : messages}
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
+                    )}
+                    <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="program" className="text-right text-sm font-medium">
+                            Program
+                        </Label>
+                        <Select value={formData.program_id} onValueChange={handleProgramChange}>
+                            <SelectTrigger className="col-span-3">
+                                <SelectValue placeholder="Select program" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {programs.map((program) => (
+                                    <SelectItem key={program.id} value={program.id}>
+                                        {program.code} - {program.description}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                    <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="subject" className="text-right text-sm font-medium">
+                            Subject
+                        </Label>
+                        <Select value={formData.subject_id} onValueChange={(value) => setFormData({ ...formData, subject_id: value })}>
+                            <SelectTrigger className="col-span-3">
+                                <SelectValue placeholder="Select subject" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {subjects.map((subject) => (
+                                    <SelectItem key={subject.id} value={subject.id}>
+                                        {subject.name}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                    <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="subject" className="text-right text-sm font-medium">
+                            Subject Code
+                        </Label>
+                        <Input
+                            id="prog_subj_code"
+                            value={formData.prog_subj_code}
+                            onChange={(e) => setFormData({ ...formData, prog_subj_code: e.target.value })}
+                            className="col-span-3"
+                            placeholder="Enter subject code"
+                        />
+                    </div>
+                    <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="year" className="text-right text-sm font-medium">
+                            Year Level
+                        </Label>
+                        <Select value={formData.year_level} onValueChange={(value) => setFormData({ ...formData, year_level: value })}>
+                            <SelectTrigger className="col-span-3">
+                                <SelectValue placeholder="Select year level" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {availableYearLevels.map((year) => (
+                                    <SelectItem key={year.id} value={year.id.toString()}>
+                                        {year.name}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                    <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="term" className="text-right text-sm font-medium">
+                            Term
+                        </Label>
+                        <Select value={formData.term_id} onValueChange={(value) => setFormData({ ...formData, term_id: value })}>
+                            <SelectTrigger className="col-span-3">
+                                <SelectValue placeholder="Select term" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {terms.map((term) => (
+                                    <SelectItem key={term.id} value={term.id.toString()}>
+                                        {term.name}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                </div>
+                <DialogFooter>
+                    <Button variant="outline" onClick={onClose}>
+                        Cancel
+                    </Button>
+                    <Button onClick={handleSave} disabled={!formData.program_id || !formData.subject_id || !formData.year_level || !formData.term_id}>
+                        Update Assignment
                     </Button>
                 </DialogFooter>
             </DialogContent>
@@ -473,9 +636,12 @@ export default function CourseAssignment() {
     const [dropTarget, setDropTarget] = useState(null);
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [assignmentToDelete, setAssignmentToDelete] = useState(null);
+    const [editDialogOpen, setEditDialogOpen] = useState(false);
+    const [assignmentToEdit, setAssignmentToEdit] = useState(null);
     const [currentPage, setCurrentPage] = useState(1);
     const [assignmentErrors, setAssignmentErrors] = useState(null);
     const [deleteErrors, setDeleteErrors] = useState(null);
+    const [editErrors, setEditErrors] = useState(null);
 
     // Pagination settings
     const itemsPerPage = 5;
@@ -584,6 +750,12 @@ export default function CourseAssignment() {
         setDeleteDialogOpen(true);
     };
 
+    const handleEditAssignment = (assignment) => {
+        setAssignmentToEdit(assignment);
+        setEditDialogOpen(true);
+        setEditErrors(null);
+    };
+
     const confirmDeleteAssignment = () => {
         if (assignmentToDelete) {
             // Clear any previous errors
@@ -630,6 +802,36 @@ export default function CourseAssignment() {
             onError: (errors) => {
                 console.error('Error creating manual assignment:', errors);
                 setAssignmentErrors(errors);
+            }
+        });
+    };
+
+    const handleUpdateAssignment = (formData) => {
+        if (!assignmentToEdit) return;
+        
+        setEditErrors(null);
+
+        // Get the selected program and subject to send codes instead of IDs
+        const selectedProgram = programs.find(p => p.id == formData.program_id);
+        const selectedSubject = subjects.find(s => s.id == formData.subject_id);
+
+        // Update assignment using Inertia router
+        router.put(`/course-assignment/${assignmentToEdit.id}`, {
+            prog_subj_code: formData.prog_subj_code,
+            prog_code: selectedProgram.code,
+            subj_id: selectedSubject.id,
+            year_level: parseInt(formData.year_level),
+            term_id: parseInt(formData.term_id)
+        }, {
+            preserveScroll: true,
+            onSuccess: () => {
+                setEditErrors(null);
+                setEditDialogOpen(false);
+                setAssignmentToEdit(null);
+            },
+            onError: (errors) => {
+                console.error('Error updating assignment:', errors);
+                setEditErrors(errors);
             }
         });
     };
@@ -756,6 +958,7 @@ export default function CourseAssignment() {
                                         assignments={assignments}
                                         onDrop={handleDrop}
                                         onRemoveAssignment={handleRemoveAssignment}
+                                        onEditAssignment={handleEditAssignment}
                                         terms={terms}
                                     />
                                 ))}
@@ -818,14 +1021,24 @@ export default function CourseAssignment() {
                                                         </div>
                                                     </TableCell>
                                                     <TableCell className="text-right">
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="sm"
-                                                            onClick={() => handleRemoveAssignment(assignment)}
-                                                            className="text-red-500 hover:text-red-700"
-                                                        >
-                                                            <Trash2 className="h-4 w-4" />
-                                                        </Button>
+                                                        <div className="flex items-center justify-end gap-1">
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="sm"
+                                                                onClick={() => handleEditAssignment(assignment)}
+                                                                className="text-blue-500 hover:text-blue-700"
+                                                            >
+                                                                <Edit className="h-4 w-4" />
+                                                            </Button>
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="sm"
+                                                                onClick={() => handleRemoveAssignment(assignment)}
+                                                                className="text-red-500 hover:text-red-700"
+                                                            >
+                                                                <Trash2 className="h-4 w-4" />
+                                                            </Button>
+                                                        </div>
                                                     </TableCell>
                                                 </TableRow>
                                             );
@@ -888,6 +1101,22 @@ export default function CourseAssignment() {
                     subjects={subjects}
                     terms={terms}
                     errors={assignmentErrors}
+                />
+
+                {/* Edit Assignment Dialog */}
+                <EditAssignmentDialog
+                    isOpen={editDialogOpen}
+                    onClose={() => {
+                        setEditDialogOpen(false);
+                        setAssignmentToEdit(null);
+                        setEditErrors(null);
+                    }}
+                    onSave={handleUpdateAssignment}
+                    assignment={assignmentToEdit}
+                    programs={programs}
+                    subjects={subjects}
+                    terms={terms}
+                    errors={editErrors}
                 />
 
                 {/* Drag and Drop Assignment Dialog */}

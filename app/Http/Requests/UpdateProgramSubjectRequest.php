@@ -21,22 +21,38 @@ class UpdateProgramSubjectRequest extends FormRequest
      */
     public function rules(): array
     {
-        $programSubjectId = $this->route('program_subject'); // Assuming the route parameter is 'program_subject'
+        $programSubjectId = $this->route('id'); // Route parameter is 'id' based on the route definition
         
         return [
-            'prog_code' => [
+            'prog_subj_code' => [
                 'required',
                 'string',
-                'exists:programs,code',
-                // Unique validation for prog_code + subj_id combination excluding current record
+                // Unique validation for prog_subj_code excluding current record
                 function ($attribute, $value, $fail) use ($programSubjectId) {
-                    $exists = \App\Models\ProgramSubject::where('prog_code', $value)
-                        ->where('subj_id', $this->input('subj_id'))
+                    $exists = \App\Models\ProgramSubject::where('prog_subj_code', $value)
                         ->where('id', '!=', $programSubjectId)
                         ->exists();
                     
                     if ($exists) {
-                        $fail('This subject is already assigned to this program.');
+                        $fail('This program subject code is already in use.');
+                    }
+                },
+            ],
+            'prog_code' => [
+                'required',
+                'string',
+                'exists:programs,code',
+                // Unique validation for the complete combination excluding current record
+                function ($attribute, $value, $fail) use ($programSubjectId) {
+                    $exists = \App\Models\ProgramSubject::where('prog_code', $value)
+                        ->where('subj_id', $this->input('subj_id'))
+                        ->where('year_level', $this->input('year_level'))
+                        ->where('term_id', $this->input('term_id'))
+                        ->where('id', '!=', $programSubjectId)
+                        ->exists();
+                    
+                    if ($exists) {
+                        $fail('This subject is already assigned to this program for the same year level and term.');
                     }
                 },
             ],
@@ -64,6 +80,7 @@ class UpdateProgramSubjectRequest extends FormRequest
     public function messages(): array
     {
         return [
+            'prog_subj_code.required' => 'Program subject code is required.',
             'prog_code.required' => 'Program code is required.',
             'prog_code.exists' => 'Selected program does not exist.',
             'subj_id.required' => 'Subject ID is required.',

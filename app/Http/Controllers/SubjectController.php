@@ -64,11 +64,8 @@ class SubjectController extends Controller
     {
         $subject = Subject::find($id);
         if($subject){
-            $subject->update([
-                'name' => $request->name,
-                'unit' => $request->unit,
-                'is_gen_ed' => $request->is_gen_ed
-            ]);
+            $validated = $request->validated();
+            $subject->update($validated);
         }
         return redirect()->route('subject')->with('success', 'Subject updated successfully.');
     }

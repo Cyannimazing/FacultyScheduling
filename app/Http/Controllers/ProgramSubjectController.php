@@ -85,10 +85,8 @@ class ProgramSubjectController extends Controller
     {
         $programSubject = ProgramSubject::find($id);
         if($programSubject){
-            $programSubject->update([
-                'program_id' => $request->program_id,
-                'subject_id' => $request->subject_id
-            ]);
+            $validated = $request->validated();
+            $programSubject->update($validated);
         }
         return redirect()->route('course-assignment')->with('success', 'Program Subject updated successfully.');
     }
