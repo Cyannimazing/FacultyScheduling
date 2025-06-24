@@ -87,7 +87,7 @@ function ScheduleGrid({ schedules }) {
     const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday'];
     const colors = generateColors();
     // Create color mapping for each unique class-subject combination
-    const getClassSubjectKey = (schedule) => `${schedule.class_id}-${schedule.subj_code}`;
+    const getClassSubjectKey = (schedule) => `${schedule.class_id}-${schedule.prog_subj_id}`;
     const uniqueClassSubjects = [...new Set(schedules.map(getClassSubjectKey))];
     const colorMap = {};
     uniqueClassSubjects.forEach((key, index) => {
@@ -126,7 +126,6 @@ function ScheduleGrid({ schedules }) {
             };
         });
     });
-    console.log(schedules);
     // Place schedules in the grid
     schedules.forEach((schedule) => {
         const day = schedule.day;
@@ -1075,7 +1074,7 @@ export default function FacultySchedule() {
             const GAP_HEIGHT = 5; // Gap between rows
 
             // Create color mapping for each unique class-subject combination
-            const getClassSubjectKey = (schedule) => `${schedule.class_id}-${schedule.subj_code}`;
+            const getClassSubjectKey = (schedule) => `${schedule.class_id}-${schedule.prog_subj_id}`;
             const uniqueClassSubjects = [...new Set(schedules.map(getClassSubjectKey))];
             const colorMap = {};
             uniqueClassSubjects.forEach((key, index) => {

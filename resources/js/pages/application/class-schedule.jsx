@@ -118,7 +118,7 @@ function ClassScheduleGrid({ schedules }) {
     const colors = generateColors();
 
     // Create color mapping for each unique subject-lecturer combination
-    const getSubjectLecturerKey = (schedule) => `${schedule.subj_code}-${schedule.lecturer_id}`;
+    const getSubjectLecturerKey = (schedule) => `${schedule.prog_subj_id}-${schedule.lecturer_id}`;
     const uniqueSubjectLecturers = [...new Set(schedules.map(getSubjectLecturerKey))];
     const colorMap = {};
     uniqueSubjectLecturers.forEach((key, index) => {
@@ -642,7 +642,7 @@ export default function ClassSchedule() {
             const days = DAYS_OF_WEEK;
             const colors = ['blue-card', 'green-card', 'purple-card', 'orange-card', 'pink-card'];
 
-            const getSubjectLecturerKey = (schedule) => `${schedule.subj_code}-${schedule.lecturer_id}`;
+            const getSubjectLecturerKey = (schedule) => `${schedule.prog_subj_id}-${schedule.lecturer_id}`;
             const uniqueSubjectLecturers = [...new Set(schedules.map(getSubjectLecturerKey))];
             const colorMap = {};
             uniqueSubjectLecturers.forEach((key, index) => {

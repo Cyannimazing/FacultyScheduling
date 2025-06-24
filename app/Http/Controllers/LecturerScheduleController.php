@@ -160,7 +160,7 @@ class LecturerScheduleController extends Controller
         if($lecturerSchedule){
             $lecturerSchedule->update([
                 'lecturer_id' => $request->lecturer_id,
-                'subj_id' => $request->subj_id,
+                'prog_subj_id' => $request->prog_subj_id,
                 'room_code' => $request->room_code,
                 'start_time' => $request->start_time,
                 'end_time' => $request->end_time,
