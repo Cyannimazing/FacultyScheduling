@@ -5,12 +5,15 @@ namespace App\Http\Controllers;
 use App\Models\AcademicCalendar;
 use App\Models\Lecturer;
 use App\Models\LecturerSubject;
+use App\Models\LecturerSchedule;
 use App\Http\Requests\StoreLecturerSubjectRequest;
 use App\Http\Requests\UpdateLecturerSubjectRequest;
 use App\Models\Program;
 use App\Models\ProgramSubject;
 use App\Models\Term;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 
 class LecturerSubjectController extends Controller
@@ -158,13 +161,42 @@ class LecturerSubjectController extends Controller
      */
     public function update(UpdateLecturerSubjectRequest $request, int $id)
     {
-        $lecturerSubject = LecturerSubject::find($id);
-        if($lecturerSubject){
-            $lecturerSubject->update([
-                'lecturer_id' => $request->lecturer_id,
-                'prog_subj_id' => $request->prog_subj_id,
-                'sy_term_id' => $request->sy_term_id
-            ]);
+        DB::beginTransaction();
+        try {
+            $lecturerSubject = LecturerSubject::find($id);
+            if ($lecturerSubject) {
+                // Store old values before update
+                $oldProgSubjId = $lecturerSubject->prog_subj_id;
+                $oldLecturerId = $lecturerSubject->lecturer_id;
+                $oldSyTermId = $lecturerSubject->sy_term_id;
+                
+                // Update the lecturer subject
+                $lecturerSubject->update([
+                    'lecturer_id' => $request->lecturer_id,
+                    'prog_subj_id' => $request->prog_subj_id,
+                    'sy_term_id' => $request->sy_term_id
+                ]);
+                
+                // Update related LecturerSchedule records if any of the key fields changed
+                if ($oldProgSubjId !== $request->prog_subj_id || 
+                    $oldLecturerId !== $request->lecturer_id || 
+                    $oldSyTermId !== $request->sy_term_id) {
+                    
+                    LecturerSchedule::where('lecturer_id', $oldLecturerId)
+                        ->where('prog_subj_id', $oldProgSubjId)
+                        ->where('sy_term_id', $oldSyTermId)
+                        ->update([
+                            'lecturer_id' => $request->lecturer_id,
+                            'prog_subj_id' => $request->prog_subj_id,
+                            'sy_term_id' => $request->sy_term_id
+                        ]);
+                }
+            }
+            DB::commit();
+        } catch (\Exception $e) {
+            DB::rollback();
+            Log::error('Failed to update Lecturer Subject and related schedules: ' . $e->getMessage());
+            return redirect()->route('subject-allocation')->withErrors(['error' => 'Failed to update Lecturer Subject.']);
         }
         return redirect()->route('subject-allocation')->with('success', 'Lecturer Subject updated successfully.');
     }

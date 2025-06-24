@@ -69,7 +69,9 @@ function SubjectAllocationSheet({ isOpen, onClose, allocation = null, onSave, ex
 
     React.useEffect(() => {
         if (allocation) {
-            const programCode = allocation.program_subject?.program?.code || '';
+            console.log( "Test")
+            console.log( allocation.program_subject.prog_code)
+            const programCode = allocation.program_subject?.prog_code || '';
             setFormData({
                 lecturer_id: allocation.lecturer_id?.toString() || '',
                 prog_subj_id: allocation.prog_subj_id?.toString() || '',
@@ -86,6 +88,15 @@ function SubjectAllocationSheet({ isOpen, onClose, allocation = null, onSave, ex
                     .then(response => response.json())
                     .then(programSubjects => {
                         setAvailableSubjects(programSubjects);
+
+                        // Get unique terms from the program subjects and set available terms
+                        const uniqueTerms = programSubjects.reduce((acc, ps) => {
+                            if (ps.term && !acc.find(t => t.id === ps.term.id)) {
+                                acc.push(ps.term);
+                            }
+                            return acc;
+                        }, []);
+                        setAvailableTerms(uniqueTerms);
 
                         // Load academic calendars if we have a selected subject
                         const currentProgSubjId = allocation.prog_subj_id?.toString();
@@ -109,6 +120,7 @@ function SubjectAllocationSheet({ isOpen, onClose, allocation = null, onSave, ex
                     .catch(error => {
                         console.error('Error fetching subjects:', error);
                         setAvailableSubjects([]);
+                        setAvailableTerms([]);
                     })
                     .finally(() => setIsLoadingSubjects(false));
             }
