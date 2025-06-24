@@ -287,8 +287,8 @@ function ReportDialog({ isOpen, onClose, onGenerate, program_type }) {
 
     React.useEffect(() => {
         if (isOpen) {
-            setFormData({ 
-                batchNumber: '', 
+            setFormData({
+                batchNumber: '',
                 preparedBy: '',
                 reviewerCount: 1,
                 reviewers: [''],
@@ -298,13 +298,13 @@ function ReportDialog({ isOpen, onClose, onGenerate, program_type }) {
 
     const handleReviewerCountChange = (count) => {
         const newCount = parseInt(count);
-        const newReviewers = Array(newCount).fill('').map((_, index) => 
-            formData.reviewers[index] || ''
-        );
-        setFormData({ 
-            ...formData, 
+        const newReviewers = Array(newCount)
+            .fill('')
+            .map((_, index) => formData.reviewers[index] || '');
+        setFormData({
+            ...formData,
             reviewerCount: newCount,
-            reviewers: newReviewers
+            reviewers: newReviewers,
         });
     };
 
@@ -317,11 +317,10 @@ function ReportDialog({ isOpen, onClose, onGenerate, program_type }) {
     const handleGenerate = () => {
         // For Vocational Foundation Program, both fields are required
         // For other programs, only preparedBy is required
-        const basicFieldsValid = program_type === 'Vocational Foundation Program' ? 
-            formData.batchNumber && formData.preparedBy : formData.preparedBy;
-        
-        const reviewersValid = formData.reviewers.every(reviewer => reviewer.trim() !== '');
-        
+        const basicFieldsValid = program_type === 'Vocational Foundation Program' ? formData.batchNumber && formData.preparedBy : formData.preparedBy;
+
+        const reviewersValid = formData.reviewers.every((reviewer) => reviewer.trim() !== '');
+
         if (basicFieldsValid && reviewersValid) {
             onGenerate(formData);
             onClose();
@@ -362,7 +361,7 @@ function ReportDialog({ isOpen, onClose, onGenerate, program_type }) {
                             placeholder="Enter prepared by"
                         />
                     </div>
-                    
+
                     <div className="grid grid-cols-4 items-center gap-4">
                         <label htmlFor="reviewerCount" className="text-right text-sm font-medium">
                             Number of Reviewers
@@ -378,7 +377,7 @@ function ReportDialog({ isOpen, onClose, onGenerate, program_type }) {
                             </SelectContent>
                         </Select>
                     </div>
-                    
+
                     {formData.reviewers.map((reviewer, index) => (
                         <div key={index} className="grid grid-cols-4 items-center gap-4">
                             <label htmlFor={`reviewer${index}`} className="text-right text-sm font-medium">
@@ -401,9 +400,9 @@ function ReportDialog({ isOpen, onClose, onGenerate, program_type }) {
                     <Button
                         onClick={handleGenerate}
                         disabled={
-                            program_type === 'Vocational Foundation Program' ? 
-                                !formData.batchNumber || !formData.preparedBy || formData.reviewers.some(reviewer => reviewer.trim() === '') : 
-                                !formData.preparedBy || formData.reviewers.some(reviewer => reviewer.trim() === '')
+                            program_type === 'Vocational Foundation Program'
+                                ? !formData.batchNumber || !formData.preparedBy || formData.reviewers.some((reviewer) => reviewer.trim() === '')
+                                : !formData.preparedBy || formData.reviewers.some((reviewer) => reviewer.trim() === '')
                         }
                     >
                         Generate Report
@@ -858,6 +857,7 @@ export default function ClassSchedule() {
                     left: -1px;
                     right: -1px;
                     top: 0px;
+                    margin: 0px 2px;
                     padding: 2px;
                     border-left: 3px solid;
                     border-top: 1px solid #d1d5db;
@@ -967,12 +967,16 @@ export default function ClassSchedule() {
                 <div style="margin-bottom: 20px; text-align: center; font-family: 'Times New Roman', Times, serif;">
                     <p style="font-size: 12px; margin-bottom: 10px;"><b>Reviewed and approved by:</b></p>
                     <div style="display: flex; justify-content: center; gap: 50px; margin-top: 20px;">
-                        ${reviewers.map((reviewer, index) => `
+                        ${reviewers
+                            .map(
+                                (reviewer, index) => `
                             <div style="text-align: center;">
                                 <div style="border-bottom: 1px solid #000; width: 200px; margin-bottom: 5px; height: 20px;"></div>
                                 <p style="font-size: 10px; margin: 0; font-weight: bold;">${reviewer}</p>
                             </div>
-                        `).join('')}
+                        `,
+                            )
+                            .join('')}
                     </div>
                 </div>
 

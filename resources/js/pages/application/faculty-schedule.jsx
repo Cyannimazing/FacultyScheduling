@@ -647,21 +647,21 @@ function ScheduleDialog({ isOpen, onClose, schedule = null, onSave, lecturers, a
 
 function ReportDialog({ isOpen, onClose, onGenerate }) {
     const [formData, setFormData] = useState({
+        programTitle: 'FOUNDATION PROGRAM',
         preparedBy: '',
         reviewerCount: 1,
         reviewers: [''],
     });
-
     React.useEffect(() => {
         if (isOpen) {
             setFormData({
+                programTitle: 'FOUNDATION PROGRAM',
                 preparedBy: '',
                 reviewerCount: 1,
                 reviewers: [''],
             });
         }
     }, [isOpen]);
-
     const handleReviewerCountChange = (count) => {
         const newCount = parseInt(count);
         const newReviewers = Array(newCount)
@@ -681,7 +681,7 @@ function ReportDialog({ isOpen, onClose, onGenerate }) {
     };
 
     const handleGenerate = () => {
-        const hasRequiredFields = formData.preparedBy && formData.reviewers.every((reviewer) => reviewer.trim() !== '');
+        const hasRequiredFields = formData.programTitle && formData.preparedBy && formData.reviewers.every((reviewer) => reviewer.trim() !== '');
 
         if (hasRequiredFields) {
             onGenerate(formData);
@@ -694,9 +694,21 @@ function ReportDialog({ isOpen, onClose, onGenerate }) {
             <DialogContent className="sm:max-w-[500px]">
                 <DialogHeader>
                     <DialogTitle>Generate Report</DialogTitle>
-                    <DialogDescription>Please enter the batch number and prepared by information for the report.</DialogDescription>
+                    <DialogDescription>Please enter the program title and prepared by information for the report.</DialogDescription>
                 </DialogHeader>
                 <div className="grid gap-4 py-4">
+                    <div className="grid grid-cols-4 items-center gap-4">
+                        <label htmlFor="programTitle" className="text-right text-sm font-medium">
+                            Program Title
+                        </label>
+                        <Input
+                            id="programTitle"
+                            value={formData.programTitle}
+                            onChange={(e) => setFormData({ ...formData, programTitle: e.target.value })}
+                            className="col-span-3"
+                            placeholder="Enter program title (e.g., FOUNDATION PROGRAM)"
+                        />
+                    </div>
                     <div className="grid grid-cols-4 items-center gap-4">
                         <label htmlFor="preparedBy" className="text-right text-sm font-medium">
                             Prepared By
@@ -745,7 +757,10 @@ function ReportDialog({ isOpen, onClose, onGenerate }) {
                     <Button variant="outline" onClick={onClose}>
                         Cancel
                     </Button>
-                    <Button onClick={handleGenerate} disabled={!formData.preparedBy || formData.reviewers.some((reviewer) => reviewer.trim() === '')}>
+                    <Button
+                        onClick={handleGenerate}
+                        disabled={!formData.programTitle || !formData.preparedBy || formData.reviewers.some((reviewer) => reviewer.trim() === '')}
+                    >
                         Generate Report
                     </Button>
                 </DialogFooter>
@@ -967,6 +982,7 @@ export default function FacultySchedule() {
                 subjects: uniqueSubjects,
                 teachingLoad: teachingLoad,
                 schedules: schedules,
+                programTitle: reportData.programTitle,
                 preparedBy: reportData.preparedBy,
                 reviewers: reportData.reviewers,
             });
@@ -1000,7 +1016,7 @@ export default function FacultySchedule() {
         }
     };
 
-    const createPrintableReport = ({ lecturer, term, subjects, teachingLoad, schedules, preparedBy, reviewers }) => {
+    const createPrintableReport = ({ lecturer, term, subjects, teachingLoad, schedules, programTitle, preparedBy, reviewers }) => {
         const lecturerName = `${lecturer?.title || ''} ${lecturer?.fname || ''} ${lecturer?.lname || ''}`.trim();
         const termInfo = `${term?.term?.name || ''} - ${term?.school_year || ''}`;
         const startDate = formatDate(term.start_date);
@@ -1284,6 +1300,7 @@ export default function FacultySchedule() {
                 left: -1px;
                 right: -1px;
                 top: 0px;
+                margin: 0px 2px;
                 padding: 2px;
                 border-left: 3px solid;
                 border-top: 1px solid #d1d5db;
@@ -1291,7 +1308,7 @@ export default function FacultySchedule() {
                 border-right: 1px solid #d1d5db;
                 border-top-right-radius: 6px;
                 border-bottom-right-radius: 6px;
-                font-size: 7px;
+                font-size: 5px;
                 line-height: 1.1;
                 text-align: center;
                 display: flex;
@@ -1363,7 +1380,7 @@ export default function FacultySchedule() {
         <div class="header">
             <img class="logo" src="${logo}" alt="logo"/>
         </div>
-        <div class="program-title">FOUNDATION PROGRAM <br/> LECTURER'S LOAD</div>
+        <div class="program-title">${programTitle} <br/> LECTURER'S LOAD</div>
         <div class="info-section">
             <div class="info-left">
                 <strong>Lecturer Name:</strong> <u>${lecturerName}</u><br>
