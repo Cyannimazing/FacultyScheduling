@@ -1282,7 +1282,7 @@ export default function FacultySchedule() {
                 text-align: center;
                 font-weight: bold;
                 border: 1px solid #d1d5db;
-                font-size: 8px;
+                font-size: 6px;
                 display: flex;
                 align-items: center;
                 justify-content: center;

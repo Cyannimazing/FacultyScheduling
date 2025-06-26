@@ -78,39 +78,32 @@ function generateColors() {
     return colors;
 }
 
-// Create dynamic time slot grid based on class schedule times
+// Create dynamic time slot grid with accurate time blocks (no extra end slots)
 function ClassScheduleGrid({ schedules }) {
-    // Get unique time slots from schedules to create dynamic grid
+    // Get all time slots that are needed based on schedules
     const getTimeSlotsFromSchedules = (schedules) => {
         if (!schedules || schedules.length === 0) {
             return Object.keys(TIME_SLOTS); // Default time slots
         }
 
-        const allTimes = [];
+        const allTimes = new Set();
         schedules.forEach((schedule) => {
-            allTimes.push(schedule.start_time, schedule.end_time);
+            // Add all time slots between start and end time
+            const allSlots = Object.keys(TIME_SLOTS);
+            const startIndex = allSlots.indexOf(schedule.start_time);
+            const endIndex = allSlots.indexOf(schedule.end_time);
+
+            if (startIndex !== -1 && endIndex !== -1) {
+                // Add all slots from start to end (excluding end)
+                for (let i = startIndex; i < endIndex; i++) {
+                    allTimes.add(allSlots[i]);
+                }
+            }
         });
 
-        // Get unique times and sort them
-        const uniqueTimes = [...new Set(allTimes)].sort();
-
-        // Find earliest and latest times
-        const earliestTime = uniqueTimes[0];
-        const latestTime = uniqueTimes[uniqueTimes.length - 1];
-
-        // Generate 30-minute slots from earliest to latest
-        const timeSlots = [];
-        const allAvailableSlots = Object.keys(TIME_SLOTS);
-
-        const startIndex = allAvailableSlots.findIndex((slot) => slot >= earliestTime);
-        const endIndex = allAvailableSlots.findIndex((slot) => slot >= latestTime);
-
-        if (startIndex !== -1) {
-            const finalEndIndex = endIndex === -1 ? allAvailableSlots.length : endIndex + 1;
-            return allAvailableSlots.slice(startIndex, finalEndIndex);
-        }
-
-        return Object.keys(TIME_SLOTS); // Fallback to all slots
+        // Convert to array and sort
+        const timeSlots = Array.from(allTimes).sort();
+        return timeSlots.length > 0 ? timeSlots : Object.keys(TIME_SLOTS);
     };
 
     const timeSlots = getTimeSlotsFromSchedules(schedules);
@@ -125,21 +118,19 @@ function ClassScheduleGrid({ schedules }) {
         colorMap[key] = colors[index % colors.length];
     });
 
-    // Calculate time slot spans for each schedule (same as faculty-schedule)
+    // Calculate time slot spans for each schedule
     const getTimeSlotSpan = (startTime, endTime) => {
-        const startIndex = timeSlots.indexOf(startTime);
-        const endIndex = timeSlots.findIndex((slot) => slot >= endTime);
+        const allSlots = Object.keys(TIME_SLOTS);
+        const startIndex = allSlots.indexOf(startTime);
+        const endIndex = allSlots.indexOf(endTime);
 
-        if (startIndex === -1) return { startIndex: 0, span: 1 };
+        if (startIndex === -1 || endIndex === -1) return { startIndex: 0, span: 1 };
 
-        let span;
-        if (endIndex === -1) {
-            span = timeSlots.length - startIndex;
-        } else {
-            span = Math.max(1, endIndex - startIndex);
-        }
+        const span = Math.max(1, endIndex - startIndex);
 
-        return { startIndex, span };
+        // Map to our filtered timeSlots array
+        const filteredStartIndex = timeSlots.indexOf(startTime);
+        return { startIndex: filteredStartIndex, span };
     };
 
     // Create a grid structure to track occupied cells and schedule placements
@@ -172,10 +163,13 @@ function ClassScheduleGrid({ schedules }) {
             // Mark all spanned cells as occupied
             for (let i = startIndex; i < Math.min(startIndex + span, timeSlots.length); i++) {
                 const slot = timeSlots[i];
-                gridData[day][slot].isOccupied = true;
-                if (i > startIndex) {
-                    gridData[day][slot].isSpanned = true;
-                    gridData[day][slot].spanningSchedule = schedule;
+                if (gridData[day][slot]) {
+                    // Safety check
+                    gridData[day][slot].isOccupied = true;
+                    if (i > startIndex) {
+                        gridData[day][slot].isSpanned = true;
+                        gridData[day][slot].spanningSchedule = schedule;
+                    }
                 }
             }
         }
@@ -183,6 +177,18 @@ function ClassScheduleGrid({ schedules }) {
 
     const formatTime = (time) => {
         return TIME_SLOTS[time] || time;
+    };
+
+    // Get time range for display (show start and next time for each slot)
+    const getTimeRangeDisplay = (currentSlot) => {
+        const allSlots = Object.keys(TIME_SLOTS);
+        const currentIndex = allSlots.indexOf(currentSlot);
+        const nextSlot = allSlots[currentIndex + 1];
+
+        const startTime = formatTime(currentSlot);
+        const endTime = nextSlot ? formatTime(nextSlot) : '';
+
+        return endTime ? `${startTime} - ${endTime}` : startTime;
     };
 
     return (
@@ -200,19 +206,19 @@ function ClassScheduleGrid({ schedules }) {
 
                 {/* Generate time slots dynamically */}
                 {timeSlots.map((timeSlot, timeIndex) => {
+                    const timeRangeDisplay = getTimeRangeDisplay(timeSlot);
+
                     return (
                         <div key={timeSlot} className="relative mb-1 grid grid-cols-6 gap-1">
-                            {/* Time column */}
-                            <div className="rounded border bg-gray-50 p-3 text-center text-sm font-medium">
-                                <div>{formatTime(timeSlot)}</div>
-                            </div>
+                            {/* Time column - show time range with consistent styling */}
+                            <div className="rounded bg-gray-100 p-3 text-center text-sm font-semibold">{timeRangeDisplay}</div>
 
                             {/* Day columns */}
                             {days.map((day, colIndex) => {
                                 const cellData = gridData[day][timeSlot];
 
                                 // If this cell is spanned by a schedule from a previous time slot, render completely empty
-                                if (cellData.isSpanned && cellData.schedules.length === 0) {
+                                if (cellData && cellData.isSpanned && cellData.schedules.length === 0) {
                                     return (
                                         <div key={`${day}-${timeSlot}`} style={{ minHeight: '60px', background: 'transparent' }}>
                                             {/* Completely empty - no border, no background */}
@@ -220,8 +226,8 @@ function ClassScheduleGrid({ schedules }) {
                                     );
                                 }
 
-                                // If this cell has schedules, render completely without any background
-                                if (cellData.schedules.length > 0) {
+                                // If this cell has schedules, render them with proper spanning
+                                if (cellData && cellData.schedules.length > 0) {
                                     return (
                                         <div key={`${day}-${timeSlot}`} className="relative" style={{ minHeight: '60px', background: 'transparent' }}>
                                             {cellData.schedules.map((schedule, index) => {
@@ -252,8 +258,7 @@ function ClassScheduleGrid({ schedules }) {
                                                         </div>
                                                         <div className="mb-1 text-xs opacity-75">Room: {schedule.room_code}</div>
                                                         <div className="text-xs opacity-75">
-                                                            <div>{formatTime(schedule.start_time)}</div>
-                                                            <div>{formatTime(schedule.end_time)}</div>
+                                                            {formatTime(schedule.start_time)} - {formatTime(schedule.end_time)}
                                                         </div>
                                                     </div>
                                                 );
@@ -606,36 +611,30 @@ export default function ClassSchedule() {
         }
 
         const generateScheduleGrid = (schedules) => {
-            // Use the same dynamic time slot logic as the main grid
+            // Fixed time slot generation - only include actual time slots that classes occupy
             const getTimeSlotsFromSchedules = (schedules) => {
                 if (!schedules || schedules.length === 0) {
                     return [];
                 }
 
-                const allTimes = [];
+                const allTimes = new Set();
                 schedules.forEach((schedule) => {
-                    allTimes.push(schedule.start_time, schedule.end_time);
+                    // Add all time slots between start and end time
+                    const allSlots = Object.keys(TIME_SLOTS);
+                    const startIndex = allSlots.indexOf(schedule.start_time);
+                    const endIndex = allSlots.indexOf(schedule.end_time);
+
+                    if (startIndex !== -1 && endIndex !== -1) {
+                        // Add all slots from start to end (excluding end)
+                        for (let i = startIndex; i < endIndex; i++) {
+                            allTimes.add(allSlots[i]);
+                        }
+                    }
                 });
 
-                // Get unique times and sort them
-                const uniqueTimes = [...new Set(allTimes)].sort();
-
-                // Find earliest and latest times
-                const earliestTime = uniqueTimes[0];
-                const latestTime = uniqueTimes[uniqueTimes.length - 1];
-
-                // Generate 30-minute slots from earliest to latest
-                const allAvailableSlots = Object.keys(TIME_SLOTS);
-
-                const startIndex = allAvailableSlots.findIndex((slot) => slot >= earliestTime);
-                const endIndex = allAvailableSlots.findIndex((slot) => slot >= latestTime);
-
-                if (startIndex !== -1) {
-                    const finalEndIndex = endIndex === -1 ? allAvailableSlots.length : endIndex + 1;
-                    return allAvailableSlots.slice(startIndex, finalEndIndex);
-                }
-
-                return [];
+                // Convert to array and sort
+                const timeSlots = Array.from(allTimes).sort();
+                return timeSlots.length > 0 ? timeSlots : [];
             };
 
             const timeSlots = getTimeSlotsFromSchedules(schedules);
@@ -648,24 +647,23 @@ export default function ClassSchedule() {
             uniqueSubjectLecturers.forEach((key, index) => {
                 colorMap[key] = colors[index % colors.length];
             });
-            // Calculate time slot spans for each schedule (exact same logic as main grid)
+
+            // Calculate time slot spans for each schedule using the same logic as main grid
             const getTimeSlotSpan = (startTime, endTime) => {
-                const startIndex = timeSlots.indexOf(startTime);
-                const endIndex = timeSlots.findIndex((slot) => slot >= endTime);
+                const allSlots = Object.keys(TIME_SLOTS);
+                const startIndex = allSlots.indexOf(startTime);
+                const endIndex = allSlots.indexOf(endTime);
 
-                if (startIndex === -1) return { startIndex: 0, span: 1 };
+                if (startIndex === -1 || endIndex === -1) return { startIndex: 0, span: 1 };
 
-                let span;
-                if (endIndex === -1) {
-                    span = timeSlots.length - startIndex;
-                } else {
-                    span = Math.max(1, endIndex - startIndex);
-                }
+                const span = Math.max(1, endIndex - startIndex);
 
-                return { startIndex, span };
+                // Map to our filtered timeSlots array
+                const filteredStartIndex = timeSlots.indexOf(startTime);
+                return { startIndex: filteredStartIndex, span };
             };
 
-            // Create a grid structure to track occupied cells (same as main grid)
+            // Create a grid structure to track occupied cells
             const gridData = {};
             days.forEach((day) => {
                 gridData[day] = {};
@@ -679,7 +677,7 @@ export default function ClassSchedule() {
                 });
             });
 
-            // Place schedules in the grid (same logic as main grid)
+            // Place schedules in the grid
             schedules.forEach((schedule) => {
                 const day = schedule.day;
                 const { startIndex, span } = getTimeSlotSpan(schedule.start_time, schedule.end_time);
@@ -695,65 +693,81 @@ export default function ClassSchedule() {
                     // Mark all spanned cells as occupied
                     for (let i = startIndex; i < Math.min(startIndex + span, timeSlots.length); i++) {
                         const slot = timeSlots[i];
-                        gridData[day][slot].isOccupied = true;
-                        if (i > startIndex) {
-                            gridData[day][slot].isSpanned = true;
-                            gridData[day][slot].spanningSchedule = schedule;
+                        if (gridData[day][slot]) {
+                            // Safety check
+                            gridData[day][slot].isOccupied = true;
+                            if (i > startIndex) {
+                                gridData[day][slot].isSpanned = true;
+                                gridData[day][slot].spanningSchedule = schedule;
+                            }
                         }
                     }
                 }
             });
 
+            // Helper function to get time range display like "8:00 AM - 8:30 AM"
+            const getTimeRangeDisplay = (currentSlot) => {
+                const allSlots = Object.keys(TIME_SLOTS);
+                const currentIndex = allSlots.indexOf(currentSlot);
+                const nextSlot = allSlots[currentIndex + 1];
+
+                const startTime = TIME_SLOTS[currentSlot] || currentSlot;
+                const endTime = nextSlot ? TIME_SLOTS[nextSlot] || nextSlot : '';
+
+                return endTime ? `${startTime} - ${endTime}` : startTime;
+            };
+
             // Build grid HTML for printing with exact same structure as display grid
             let gridHTML = `
-            <div class="schedule-container">
-                <div class="grid-header">
-                    <div class="header-cell">Time</div>
-                    ${days.map((day) => `<div class="header-cell">${day}</div>`).join('')}
-                </div>
-            `;
+                <div class="schedule-container">
+                    <div class="grid-header">
+                        <div class="header-cell">Time</div>
+                        ${days.map((day) => `<div class="header-cell">${day}</div>`).join('')}
+                    </div>
+                `;
 
             // Add only the time slots that are actually used
             timeSlots.forEach((timeSlot, timeIndex) => {
+                const timeRangeDisplay = getTimeRangeDisplay(timeSlot);
+
                 gridHTML += `<div class="grid-row">`;
-                gridHTML += `<div class="time-cell">${TIME_SLOTS[timeSlot]}</div>`;
+                gridHTML += `<div class="time-cell">${timeRangeDisplay}</div>`;
 
                 days.forEach((day) => {
                     const cellData = gridData[day][timeSlot];
 
                     // If this cell is spanned by a schedule from a previous time slot, render empty space
-                    if (cellData.isSpanned && cellData.schedules.length === 0) {
-                        gridHTML += `<div class="day-cell" style="height: 30px; border: none;"></div>`;
+                    if (cellData && cellData.isSpanned && cellData.schedules.length === 0) {
+                        gridHTML += `<div class="day-cell" style="height: 30px; border: none; background: transparent;"></div>`;
                         return;
                     }
 
-                    if (cellData.schedules.length > 0) {
+                    if (cellData && cellData.schedules.length > 0) {
                         const schedule = cellData.schedules[0];
                         const colorClass = colorMap[getSubjectLecturerKey(schedule)];
                         const span = schedule.span;
                         const spanHeight = span * 32 + (span - 1) * 2;
 
                         gridHTML += `
-                        <div class="day-cell occupied" style="height: 30px; position: relative;">
-                            <div class="schedule-card ${colorClass}" style="
-                                height: ${spanHeight}px;
-                                position: absolute;
-                                top: 0;
-                                left: 0;
-                                right: 0;
-                                z-index: 10;
-                            ">
-                                <div class="subject-name" style="font-size:6px; font-weight: normal;">(${schedule.program_subject?.prog_subj_code})</div>
-                                <div class="subject-name">${schedule.program_subject.subject?.name}</div>
-                                <div class="lecturer-name">${schedule.lecturer?.title || ''} ${schedule.lecturer?.fname || ''} ${schedule.lecturer?.lname || ''}</div>
-                                <div class="room-info">Room: ${schedule.room_code}</div>
-                                <div class="time-info">
-                                    <div>${TIME_SLOTS[schedule.start_time]}</div>
-                                    <div>${TIME_SLOTS[schedule.end_time]}</div>
-                                </div>
-                            </div>
+                <div class="day-cell occupied" style="height: 30px; position: relative; background: transparent;">
+                    <div class="schedule-card ${colorClass}" style="
+                        height: ${spanHeight}px;
+                        position: absolute;
+                        top: 0;
+                        left: 0;
+                        right: 0;
+                        z-index: 10;
+                    ">
+                        <div class="subject-name" style="font-size:6px; font-weight: normal;">(${schedule.program_subject?.prog_subj_code})</div>
+                        <div class="subject-name">${schedule.program_subject.subject?.name}</div>
+                        <div class="lecturer-name">${schedule.lecturer?.title || ''} ${schedule.lecturer?.fname || ''} ${schedule.lecturer?.lname || ''}</div>
+                        <div class="room-info">Room: ${schedule.room_code}</div>
+                        <div class="time-info">
+                            <div>${TIME_SLOTS[schedule.start_time]} - ${TIME_SLOTS[schedule.end_time]}</div>
                         </div>
-                    `;
+                    </div>
+                </div>
+            `;
                     } else {
                         gridHTML += `<div class="day-cell" style="height: 30px;"></div>`;
                     }
@@ -837,7 +851,7 @@ export default function ClassSchedule() {
                     text-align: center;
                     font-weight: bold;
                     border: 1px solid #d1d5db;
-                    font-size: 8px;
+                    font-size: 6px;
                     display: flex;
                     align-items: center;
                     justify-content: center;
