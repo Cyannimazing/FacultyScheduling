@@ -316,7 +316,7 @@ function ScheduleDialog({ isOpen, onClose, schedule = null, onSave, lecturers, a
     };
 
     const loadAvailableTimeSlots = async () => {
-        const { day, sy_term_id, lecturer_id, room_code, class_id } = formData;
+        const { day, sy_term_id, lecturer_id, room_code, class_id, start_time } = formData;
         
         // Only load if we have the required data
         if (!day || !sy_term_id) {
@@ -343,7 +343,8 @@ function ScheduleDialog({ isOpen, onClose, schedule = null, onSave, lecturers, a
             setAvailableTimeSlots(data.available_time_slots || []);
             
             // Set available end times based on current start time
-            updateAvailableEndTimes(formData.start_time, data.available_time_slots || []);
+            // In edit mode, preserve the existing start_time value from formData
+            updateAvailableEndTimes(start_time, data.available_time_slots || []);
         } catch (error) {
             console.error('Error fetching available time slots:', error);
             setAvailableTimeSlots([]);
@@ -361,9 +362,25 @@ function ScheduleDialog({ isOpen, onClose, schedule = null, onSave, lecturers, a
 
         const matchingSlot = timeSlots.find(slot => slot.start_time === startTime);
         if (matchingSlot) {
-            setAvailableEndTimes(matchingSlot.possible_end_times || []);
+            const newEndTimes = matchingSlot.possible_end_times || [];
+            
+            // In edit mode, always include the current end_time if it exists and is valid
+            if (schedule && formData.end_time && formData.end_time > startTime) {
+                // Create a merged list that includes both available times and the current end_time
+                const mergedEndTimes = [...new Set([...newEndTimes, formData.end_time])].sort();
+                setAvailableEndTimes(mergedEndTimes);
+                console.log('Edit mode: Preserved end_time', formData.end_time, 'in available options');
+            } else {
+                setAvailableEndTimes(newEndTimes);
+            }
         } else {
-            setAvailableEndTimes([]);
+            // If start time is not in available slots but we're in edit mode, preserve the end_time
+            if (schedule && formData.end_time && formData.end_time > startTime) {
+                setAvailableEndTimes([formData.end_time]);
+                console.log('Edit mode: Start time not in available slots, preserving end_time only');
+            } else {
+                setAvailableEndTimes([]);
+            }
         }
     };
 
@@ -433,8 +450,80 @@ function ScheduleDialog({ isOpen, onClose, schedule = null, onSave, lecturers, a
 
     // Load available time slots when relevant form data changes
     React.useEffect(() => {
-        loadAvailableTimeSlots();
+        // Only load time slots if we're not in edit mode or if we are in edit mode but times aren't populated yet
+        if (!schedule || !formData.start_time || !formData.end_time) {
+            loadAvailableTimeSlots();
+        }
     }, [formData.day, formData.sy_term_id, formData.lecturer_id, formData.room_code, formData.class_id]);
+
+    // Separate useEffect specifically for edit mode - load time slots after form data is populated
+    React.useEffect(() => {
+        if (schedule && formData.start_time && formData.end_time && formData.day && formData.sy_term_id) {
+            // In edit mode, we need to reload time slots to ensure proper availability validation
+            // but we must preserve the existing start and end times
+            console.log('Edit mode: Loading time slots while preserving existing times');
+            
+            const loadTimeSlotsForEditMode = async () => {
+                const preservedStartTime = formData.start_time;
+                const preservedEndTime = formData.end_time;
+                
+                setIsLoadingTimeSlots(true);
+                try {
+                    const params = new URLSearchParams({
+                        day: formData.day,
+                        sy_term_id: formData.sy_term_id,
+                        ...(formData.lecturer_id && { lecturer_id: formData.lecturer_id }),
+                        ...(formData.room_code && { room_code: formData.room_code }),
+                        ...(formData.class_id && { class_id: formData.class_id }),
+                        exclude_schedule_id: schedule.id
+                    });
+
+                    const response = await fetch(`/api/available-time-slots?${params}`);
+                    const data = await response.json();
+                    
+                    console.log('Edit mode: Available time slots loaded:', data.available_time_slots?.length);
+                    setAvailableTimeSlots(data.available_time_slots || []);
+                    
+                    // For edit mode, we need to ensure the current start time is in the available options
+                    const availableSlots = data.available_time_slots || [];
+                    const startTimeExists = availableSlots.some(slot => slot.start_time === preservedStartTime);
+                    
+                    if (!startTimeExists) {
+                        // Add the preserved start time to available slots for edit mode
+                        console.log('Edit mode: Adding preserved start time to available options');
+                        setAvailableTimeSlots(prev => [...prev, { start_time: preservedStartTime, possible_end_times: [preservedEndTime] }]);
+                    }
+                    
+                    // Handle end times with preservation
+                    const matchingSlot = availableSlots.find(slot => slot.start_time === preservedStartTime);
+                    if (matchingSlot) {
+                        const newEndTimes = matchingSlot.possible_end_times || [];
+                        const endTimesWithPreserved = newEndTimes.includes(preservedEndTime) 
+                            ? newEndTimes 
+                            : [...newEndTimes, preservedEndTime].sort();
+                        setAvailableEndTimes(endTimesWithPreserved);
+                        console.log('Edit mode: End times set with preservation:', endTimesWithPreserved);
+                    } else {
+                        // If start time doesn't exist in available slots, just use the preserved end time
+                        setAvailableEndTimes([preservedEndTime]);
+                        console.log('Edit mode: Using only preserved end time');
+                    }
+                    
+                } catch (error) {
+                    console.error('Error loading time slots in edit mode:', error);
+                    // On error, at least preserve the existing times
+                    setAvailableTimeSlots([{ start_time: preservedStartTime, possible_end_times: [preservedEndTime] }]);
+                    setAvailableEndTimes([preservedEndTime]);
+                } finally {
+                    setIsLoadingTimeSlots(false);
+                }
+            };
+            
+            // Small delay to ensure form data is fully set
+            const timeoutId = setTimeout(loadTimeSlotsForEditMode, 100);
+            return () => clearTimeout(timeoutId);
+        }
+    }, [schedule?.id, formData.day, formData.sy_term_id, formData.lecturer_id, formData.room_code, formData.class_id, formData.start_time, formData.end_time]);
 
     const handleSave = () => {
         console.log('Saving schedule with data:', formData);
