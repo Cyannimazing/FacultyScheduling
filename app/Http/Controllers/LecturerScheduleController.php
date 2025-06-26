@@ -115,6 +115,128 @@ class LecturerScheduleController extends Controller
         return response()->json($classes);
     }
 
+    /**
+     * Get available time slots for a specific day, room, lecturer, and class
+     * excluding conflicts with existing schedules
+     */
+    public function getAvailableTimeSlots(Request $request)
+    {
+        $request->validate([
+            'day' => 'required|string|in:Monday,Tuesday,Wednesday,Thursday,Friday,Saturday,Sunday',
+            'sy_term_id' => 'required|integer|exists:academic_calendars,id',
+            'lecturer_id' => 'nullable|integer|exists:lecturers,id',
+            'room_code' => 'nullable|string|exists:rooms,name',
+            'class_id' => 'nullable|integer|exists:groups,id',
+            'exclude_schedule_id' => 'nullable|integer|exists:lecturer_schedules,id', // For editing existing schedule
+        ]);
+
+        // Define all possible time slots (30-minute intervals)
+        $allTimeSlots = [
+            '08:00', '08:30', '09:00', '09:30', '10:00', '10:30',
+            '11:00', '11:30', '12:00', '12:30', '13:00', '13:30',
+            '14:00', '14:30', '15:00', '15:30', '16:00', '16:30',
+            '17:00', '17:30', '18:00'
+        ];
+
+        $day = $request->input('day');
+        $syTermId = $request->input('sy_term_id');
+        $lecturerId = $request->input('lecturer_id');
+        $roomCode = $request->input('room_code');
+        $classId = $request->input('class_id');
+        $excludeScheduleId = $request->input('exclude_schedule_id');
+
+        // Get existing schedules for the same day and term
+        $conflictingSchedules = LecturerSchedule::where('day', $day)
+            ->where('sy_term_id', $syTermId)
+            ->when($excludeScheduleId, function ($query) use ($excludeScheduleId) {
+                return $query->where('id', '!=', $excludeScheduleId);
+            })
+            ->get();
+
+        // Check conflicts for each resource type
+        $blockedTimeSlots = [];
+
+        foreach ($conflictingSchedules as $schedule) {
+            $hasConflict = false;
+
+            // Check lecturer conflict
+            if ($lecturerId && $schedule->lecturer_id == $lecturerId) {
+                $hasConflict = true;
+            }
+
+            // Check room conflict
+            if ($roomCode && $schedule->room_code == $roomCode) {
+                $hasConflict = true;
+            }
+
+            // Check class conflict
+            if ($classId && $schedule->class_id == $classId) {
+                $hasConflict = true;
+            }
+
+            if ($hasConflict) {
+                // Block all time slots that overlap with this schedule
+                $startTime = $schedule->start_time;
+                $endTime = $schedule->end_time;
+                
+                $startIndex = array_search($startTime, $allTimeSlots);
+                $endIndex = array_search($endTime, $allTimeSlots);
+                
+                if ($startIndex !== false && $endIndex !== false) {
+                    // Block all slots from start to end (exclusive of end)
+                    for ($i = $startIndex; $i < $endIndex; $i++) {
+                        $blockedTimeSlots[] = $allTimeSlots[$i];
+                    }
+                }
+            }
+        }
+
+        // Remove duplicates and get available slots
+        $blockedTimeSlots = array_unique($blockedTimeSlots);
+        $availableStartTimes = array_diff($allTimeSlots, $blockedTimeSlots);
+        
+        // For end times, we need to ensure there's a valid end time after each start time
+        $availableTimeSlots = [];
+        
+        foreach ($availableStartTimes as $startTime) {
+            $startIndex = array_search($startTime, $allTimeSlots);
+            $possibleEndTimes = [];
+            
+            // Check for consecutive available slots after this start time
+            for ($i = $startIndex + 1; $i < count($allTimeSlots); $i++) {
+                $potentialEndTime = $allTimeSlots[$i];
+                
+                // Check if this end time would create a conflict
+                $wouldConflict = false;
+                for ($j = $startIndex; $j < $i; $j++) {
+                    if (in_array($allTimeSlots[$j], $blockedTimeSlots)) {
+                        $wouldConflict = true;
+                        break;
+                    }
+                }
+                
+                if (!$wouldConflict) {
+                    $possibleEndTimes[] = $potentialEndTime;
+                } else {
+                    break; // Stop at first conflict
+                }
+            }
+            
+            if (!empty($possibleEndTimes)) {
+                $availableTimeSlots[] = [
+                    'start_time' => $startTime,
+                    'possible_end_times' => $possibleEndTimes
+                ];
+            }
+        }
+
+        return response()->json([
+            'available_time_slots' => $availableTimeSlots,
+            'blocked_time_slots' => array_values($blockedTimeSlots),
+            'all_time_slots' => $allTimeSlots
+        ]);
+    }
+
 
     /**
      * Store a newly created resource in storage.

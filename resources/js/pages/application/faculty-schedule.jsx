@@ -223,8 +223,11 @@ function ScheduleDialog({ isOpen, onClose, schedule = null, onSave, lecturers, a
     const [validationError, setValidationError] = useState('');
     const [availableSubjects, setAvailableSubjects] = useState([]);
     const [availableClasses, setAvailableClasses] = useState([]);
+    const [availableTimeSlots, setAvailableTimeSlots] = useState([]);
+    const [availableEndTimes, setAvailableEndTimes] = useState([]);
     const [isLoadingSubjects, setIsLoadingSubjects] = useState(false);
     const [isLoadingClasses, setIsLoadingClasses] = useState(false);
+    const [isLoadingTimeSlots, setIsLoadingTimeSlots] = useState(false);
 
     React.useEffect(() => {
         if (isOpen) {
@@ -312,6 +315,63 @@ function ScheduleDialog({ isOpen, onClose, schedule = null, onSave, lecturers, a
         }
     };
 
+    const loadAvailableTimeSlots = async () => {
+        const { day, sy_term_id, lecturer_id, room_code, class_id } = formData;
+        
+        // Only load if we have the required data
+        if (!day || !sy_term_id) {
+            setAvailableTimeSlots([]);
+            setAvailableEndTimes([]);
+            return;
+        }
+
+        setIsLoadingTimeSlots(true);
+        try {
+            const params = new URLSearchParams({
+                day,
+                sy_term_id,
+                ...(lecturer_id && { lecturer_id }),
+                ...(room_code && { room_code }),
+                ...(class_id && { class_id }),
+                ...(schedule && { exclude_schedule_id: schedule.id }), // Exclude current schedule when editing
+            });
+
+            const response = await fetch(`/api/available-time-slots?${params}`);
+            const data = await response.json();
+            
+            console.log('Available time slots:', data);
+            setAvailableTimeSlots(data.available_time_slots || []);
+            
+            // Set available end times based on current start time
+            updateAvailableEndTimes(formData.start_time, data.available_time_slots || []);
+        } catch (error) {
+            console.error('Error fetching available time slots:', error);
+            setAvailableTimeSlots([]);
+            setAvailableEndTimes([]);
+        } finally {
+            setIsLoadingTimeSlots(false);
+        }
+    };
+
+    const updateAvailableEndTimes = (startTime, timeSlots) => {
+        if (!startTime) {
+            setAvailableEndTimes([]);
+            return;
+        }
+
+        const matchingSlot = timeSlots.find(slot => slot.start_time === startTime);
+        if (matchingSlot) {
+            setAvailableEndTimes(matchingSlot.possible_end_times || []);
+        } else {
+            setAvailableEndTimes([]);
+        }
+    };
+
+    const handleStartTimeChange = (startTime) => {
+        setFormData({ ...formData, start_time: startTime, end_time: '' });
+        updateAvailableEndTimes(startTime, availableTimeSlots);
+    };
+
     const handleLecturerTermChange = async () => {
         const { lecturer_id, sy_term_id } = formData;
         if (lecturer_id && sy_term_id) {
@@ -370,6 +430,11 @@ function ScheduleDialog({ isOpen, onClose, schedule = null, onSave, lecturers, a
             }
         }
     }, [availableSubjects, formData.prog_subj_id, schedule]);
+
+    // Load available time slots when relevant form data changes
+    React.useEffect(() => {
+        loadAvailableTimeSlots();
+    }, [formData.day, formData.sy_term_id, formData.lecturer_id, formData.room_code, formData.class_id]);
 
     const handleSave = () => {
         console.log('Saving schedule with data:', formData);
@@ -576,14 +641,31 @@ function ScheduleDialog({ isOpen, onClose, schedule = null, onSave, lecturers, a
 
                         <div className="space-y-2">
                             <Label htmlFor="start_time">Start Time *</Label>
-                            <Select value={formData.start_time} onValueChange={(value) => setFormData({ ...formData, start_time: value })}>
+                            <Select 
+                                value={formData.start_time} 
+                                onValueChange={handleStartTimeChange}
+                                disabled={!formData.day || !formData.sy_term_id || isLoadingTimeSlots}
+                            >
                                 <SelectTrigger className="w-full">
-                                    <SelectValue placeholder="Start time" />
+                                    <SelectValue 
+                                        placeholder={
+                                            !formData.day || !formData.sy_term_id
+                                                ? 'Select day and term first'
+                                                : isLoadingTimeSlots
+                                                  ? 'Loading available times...'
+                                                  : availableTimeSlots.length === 0
+                                                    ? 'No available times'
+                                                    : 'Select start time'
+                                        }
+                                    />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    {Object.entries(TIME_SLOTS).map(([value24h, display12h]) => (
-                                        <SelectItem key={value24h} value={value24h}>
-                                            {display12h}
+                                    {availableTimeSlots.map((slot) => (
+                                        <SelectItem key={slot.start_time} value={slot.start_time}>
+                                            <div className="flex items-center gap-2">
+                                                <Clock className="h-4 w-4" />
+                                                <span>{TIME_SLOTS[slot.start_time]}</span>
+                                            </div>
                                         </SelectItem>
                                     ))}
                                 </SelectContent>
@@ -592,14 +674,29 @@ function ScheduleDialog({ isOpen, onClose, schedule = null, onSave, lecturers, a
 
                         <div className="space-y-2">
                             <Label htmlFor="end_time">End Time *</Label>
-                            <Select value={formData.end_time} onValueChange={(value) => setFormData({ ...formData, end_time: value })}>
+                            <Select 
+                                value={formData.end_time} 
+                                onValueChange={(value) => setFormData({ ...formData, end_time: value })}
+                                disabled={!formData.start_time || availableEndTimes.length === 0}
+                            >
                                 <SelectTrigger className="w-full">
-                                    <SelectValue placeholder="End time" />
+                                    <SelectValue 
+                                        placeholder={
+                                            !formData.start_time 
+                                                ? 'Select start time first'
+                                                : availableEndTimes.length === 0
+                                                  ? 'No available end times'
+                                                  : 'Select end time'
+                                        }
+                                    />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    {Object.entries(TIME_SLOTS).map(([value24h, display12h]) => (
-                                        <SelectItem key={value24h} value={value24h}>
-                                            {display12h}
+                                    {availableEndTimes.map((endTime) => (
+                                        <SelectItem key={endTime} value={endTime}>
+                                            <div className="flex items-center gap-2">
+                                                <Clock className="h-4 w-4" />
+                                                <span>{TIME_SLOTS[endTime]}</span>
+                                            </div>
                                         </SelectItem>
                                     ))}
                                 </SelectContent>
