@@ -11,6 +11,7 @@ import AppLayout from '@/layouts/app-layout';
 import { Head, router, usePage } from '@inertiajs/react';
 import { BookOpen, Calendar as CalendarIcon, Clock, Edit, Grid3x3, List, MapPin, MoreHorizontal, Plus, Trash2, User, Users } from 'lucide-react';
 import React, { useState } from 'react';
+import { getTimeRangeDisplay, TIME_SLOTS , formatTime} from '../../lib/timeFormatter';
 
 const breadcrumbs = [
     {
@@ -20,31 +21,6 @@ const breadcrumbs = [
 ];
 
 const DAYS_OF_WEEK = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday'];
-
-// Time slots as key-value pairs: key = 24h format (for backend), value = 12h format (for display)
-const TIME_SLOTS = {
-    '08:00': '8:00 AM',
-    '08:30': '8:30 AM',
-    '09:00': '9:00 AM',
-    '09:30': '9:30 AM',
-    '10:00': '10:00 AM',
-    '10:30': '10:30 AM',
-    '11:00': '11:00 AM',
-    '11:30': '11:30 AM',
-    '12:00': '12:00 PM',
-    '12:30': '12:30 PM',
-    '13:00': '1:00 PM',
-    '13:30': '1:30 PM',
-    '14:00': '2:00 PM',
-    '14:30': '2:30 PM',
-    '15:00': '3:00 PM',
-    '15:30': '3:30 PM',
-    '16:00': '4:00 PM',
-    '16:30': '4:30 PM',
-    '17:00': '5:00 PM',
-    '17:30': '5:30 PM',
-    '18:00': '6:00 PM',
-};
 
 function LoadingSkeleton() {
     return (
@@ -152,10 +128,6 @@ function ScheduleGrid({ schedules }) {
         }
     });
 
-    const formatTime = (time) => {
-        return TIME_SLOTS[time] || time;
-    };
-
     return (
         <div className="overflow-x-auto">
             <div className="relative min-w-[800px]">
@@ -171,63 +143,65 @@ function ScheduleGrid({ schedules }) {
 
                 {/* Generate all time slots from TIME_SLOTS */}
                 {timeSlots.map((timeSlot, timeIndex) => {
-                    return (
-                        <div key={timeSlot} className="relative mb-1 grid grid-cols-6 gap-1">
-                            {/* Time column */}
-                            <div className="rounded border bg-gray-50 p-3 text-center text-sm font-medium">
-                                <div>{formatTime(timeSlot)}</div>
-                            </div>
+                    const timeRangeDisplay = getTimeRangeDisplay(timeSlot);
+                    if(timeRangeDisplay){
+                        return (
+                            <div key={timeSlot} className="relative mb-1 grid grid-cols-6 gap-1">
+                                {/* Time column */}
+                                <div className="rounded border bg-gray-50 p-3 text-center text-sm font-medium">
+                                    <div>{timeRangeDisplay}</div>
+                                </div>
 
-                            {/* Day columns */}
-                            {days.map((day, colIndex) => {
-                                const cellData = gridData[day][timeSlot];
+                                {/* Day columns */}
+                                {days.map((day, colIndex) => {
+                                    const cellData = gridData[day][timeSlot];
 
-                                // If this cell is spanned by a schedule from a previous time slot, render empty space
-                                if (cellData.isSpanned && cellData.schedules.length === 0) {
+                                    // If this cell is spanned by a schedule from a previous time slot, render empty space
+                                    if (cellData.isSpanned && cellData.schedules.length === 0) {
+                                        return (
+                                            <div key={`${day}-${timeSlot}`} className="rounded border" style={{ minHeight: '60px' }}>
+                                                {/* Empty space - consumed by spanning schedule above */}
+                                            </div>
+                                        );
+                                    }
+
                                     return (
-                                        <div key={`${day}-${timeSlot}`} className="rounded border" style={{ minHeight: '60px' }}>
-                                            {/* Empty space - consumed by spanning schedule above */}
+                                        <div key={`${day}-${timeSlot}`} className="relative rounded border" style={{ minHeight: '60px' }}>
+                                            {cellData.schedules.map((schedule, index) => {
+                                                const classSubjectKey = getClassSubjectKey(schedule);
+                                                const colorClass = colorMap[classSubjectKey];
+                                                const span = schedule.span;
+
+                                                // Calculate the height to span across multiple time slots
+                                                const spanHeight = span * 60 + (span - 1) * 4; // 80px per slot + 4px gap between slots
+
+                                                return (
+                                                    <div
+                                                        key={`${schedule.id}-${index}`}
+                                                        className={`absolute inset-0 rounded border-l-4 p-2 text-xs ${colorClass} z-10 flex flex-col items-center justify-center text-center`}
+                                                        style={{
+                                                            height: `${spanHeight}px`,
+                                                            top: '0px',
+                                                        }}
+                                                    >
+                                                        <div className="text-xs font-semibold">({schedule.program_subject.prog_subj_code})</div>
+                                                        <div className="mb-1 text-sm font-semibold">{schedule.program_subject.subject?.name}</div>
+                                                        <div className="mb-1 text-xs opacity-75">
+                                                            Class: {schedule.group.prog_code}({schedule.group?.name})
+                                                        </div>
+                                                        <div className="mb-1 text-xs opacity-75">Room: {schedule.room_code}</div>
+                                                        <div className="text-xs opacity-75">
+                                                            <div>{formatTime(schedule.start_time)} - {formatTime(schedule.end_time)}</div>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
                                         </div>
                                     );
-                                }
-
-                                return (
-                                    <div key={`${day}-${timeSlot}`} className="relative rounded border" style={{ minHeight: '60px' }}>
-                                        {cellData.schedules.map((schedule, index) => {
-                                            const classSubjectKey = getClassSubjectKey(schedule);
-                                            const colorClass = colorMap[classSubjectKey];
-                                            const span = schedule.span;
-
-                                            // Calculate the height to span across multiple time slots
-                                            const spanHeight = span * 60 + (span - 1) * 4; // 80px per slot + 4px gap between slots
-
-                                            return (
-                                                <div
-                                                    key={`${schedule.id}-${index}`}
-                                                    className={`absolute inset-0 rounded border-l-4 p-2 text-xs ${colorClass} z-10 flex flex-col items-center justify-center text-center`}
-                                                    style={{
-                                                        height: `${spanHeight}px`,
-                                                        top: '0px',
-                                                    }}
-                                                >
-                                                    <div className="text-xs font-semibold">({schedule.program_subject.prog_subj_code})</div>
-                                                    <div className="mb-1 text-sm font-semibold">{schedule.program_subject.subject?.name}</div>
-                                                    <div className="mb-1 text-xs opacity-75">
-                                                        Class: {schedule.group.prog_code}({schedule.group?.name})
-                                                    </div>
-                                                    <div className="mb-1 text-xs opacity-75">Room: {schedule.room_code}</div>
-                                                    <div className="text-xs opacity-75">
-                                                        <div>{formatTime(schedule.start_time)}</div>
-                                                        <div>{formatTime(schedule.end_time)}</div>
-                                                    </div>
-                                                </div>
-                                            );
-                                        })}
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    );
+                                })}
+                            </div>
+                        );
+                    }
                 })}
             </div>
         </div>
@@ -1153,51 +1127,54 @@ export default function FacultySchedule() {
         `;
 
             timeSlots.forEach((timeSlot, timeIndex) => {
-                gridHTML += `<div class="grid-row">`;
-                gridHTML += `<div class="time-cell">${TIME_SLOTS[timeSlot]}</div>`;
+                const timeRangeDisplay = getTimeRangeDisplay(timeSlot);
 
-                days.forEach((day) => {
-                    const cellData = gridData[day][timeSlot];
+                if(timeRangeDisplay){
+                    gridHTML += `<div class="grid-row">`;
+                    gridHTML += `<div class="time-cell">${timeRangeDisplay}</div>`;
 
-                    // If this cell is spanned by a schedule from a previous time slot, don't render anything
-                    if (cellData.isSpanned && cellData.schedules.length === 0) {
-                        gridHTML += `<div class="day-cell" style="height: ${BASE_SLOT_HEIGHT}px; border: none;"></div>`;
-                        return;
-                    }
+                    days.forEach((day) => {
+                        const cellData = gridData[day][timeSlot];
 
-                    // Empty cell - show grid lines
-                    if (cellData.schedules.length === 0) {
-                        gridHTML += `<div class="day-cell" style="height: ${BASE_SLOT_HEIGHT}px;"></div>`;
-                        return;
-                    }
+                        // If this cell is spanned by a schedule from a previous time slot, don't render anything
+                        if (cellData.isSpanned && cellData.schedules.length === 0) {
+                            gridHTML += `<div class="day-cell" style="height: ${BASE_SLOT_HEIGHT}px; border: none;"></div>`;
+                            return;
+                        }
 
-                    // Cell with schedule
-                    gridHTML += `<div class="day-cell" style="height: ${BASE_SLOT_HEIGHT}px; border: none;">`;
+                        // Empty cell - show grid lines
+                        if (cellData.schedules.length === 0) {
+                            gridHTML += `<div class="day-cell" style="height: ${BASE_SLOT_HEIGHT}px;"></div>`;
+                            return;
+                        }
 
-                    cellData.schedules.forEach((schedule, index) => {
-                        const classSubjectKey = getClassSubjectKey(schedule);
-                        const colorClass = colorMap[classSubjectKey];
-                        const span = schedule.span;
-                        const spanHeight = span * BASE_SLOT_HEIGHT + (span - 1) * GAP_HEIGHT;
+                        // Cell with schedule
+                        gridHTML += `<div class="day-cell" style="height: ${BASE_SLOT_HEIGHT}px; border: none;">`;
 
-                        gridHTML += `
-                    <div class="schedule-card ${colorClass}" style="height: ${spanHeight}px;">
-                    <div class="subject-name" style="font-size:6px; font-weight: normal;">(${schedule.program_subject?.prog_subj_code})</div>
-                        <div class="subject-name">${schedule.program_subject.subject?.name}</div>
-                        <div class="class-name">Class: ${schedule.group.prog_code + '(' + schedule.group?.name + ')'}</div>
-                        <div class="room-info">Room: ${schedule.room_code}</div>
-                        <div class="time-info">
-                            <div>${TIME_SLOTS[schedule.start_time]}</div>
-                            <div>${TIME_SLOTS[schedule.end_time]}</div>
-                        </div>
-                    </div>
-                `;
+                        cellData.schedules.forEach((schedule, index) => {
+                            const classSubjectKey = getClassSubjectKey(schedule);
+                            const colorClass = colorMap[classSubjectKey];
+                            const span = schedule.span;
+                            const spanHeight = span * BASE_SLOT_HEIGHT + (span - 1) * GAP_HEIGHT;
+
+                            gridHTML += `
+                            <div class="schedule-card ${colorClass}" style="height: ${spanHeight}px;">
+                            <div class="subject-name" style="font-size:6px; font-weight: normal;">(${schedule.program_subject?.prog_subj_code})</div>
+                            <div class="subject-name">${schedule.program_subject.subject?.name}</div>
+                            <div class="class-name">Class: ${schedule.group.prog_code + '(' + schedule.group?.name + ')'}</div>
+                            <div class="room-info">Room: ${schedule.room_code}</div>
+                            <div class="time-info">
+                            <div>${TIME_SLOTS[schedule.start_time]} - ${TIME_SLOTS[schedule.end_time]}</div>
+                            </div>
+                            </div>
+                            `;
+                        });
+
+                        gridHTML += `</div>`;
                     });
 
                     gridHTML += `</div>`;
-                });
-
-                gridHTML += `</div>`;
+                }
             });
 
             gridHTML += `</div>`;

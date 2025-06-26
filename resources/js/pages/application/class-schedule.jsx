@@ -8,6 +8,7 @@ import AppLayout from '@/layouts/app-layout';
 import { Head, router, usePage } from '@inertiajs/react';
 import { Calendar as CalendarIcon, FileText, Users } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
+import { formatTime, getTimeRangeDisplay, TIME_SLOTS } from '../../lib/timeFormatter';
 
 const breadcrumbs = [
     {
@@ -18,30 +19,6 @@ const breadcrumbs = [
 
 const DAYS_OF_WEEK = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday'];
 
-// Time slots as key-value pairs: key = 24h format (for backend), value = 12h format (for display)
-const TIME_SLOTS = {
-    '08:00': '8:00 AM',
-    '08:30': '8:30 AM',
-    '09:00': '9:00 AM',
-    '09:30': '9:30 AM',
-    '10:00': '10:00 AM',
-    '10:30': '10:30 AM',
-    '11:00': '11:00 AM',
-    '11:30': '11:30 AM',
-    '12:00': '12:00 PM',
-    '12:30': '12:30 PM',
-    '13:00': '1:00 PM',
-    '13:30': '1:30 PM',
-    '14:00': '2:00 PM',
-    '14:30': '2:30 PM',
-    '15:00': '3:00 PM',
-    '15:30': '3:30 PM',
-    '16:00': '4:00 PM',
-    '16:30': '4:30 PM',
-    '17:00': '5:00 PM',
-    '17:30': '5:30 PM',
-    '18:00': '6:00 PM',
-};
 
 function LoadingSkeleton() {
     return (
@@ -175,21 +152,7 @@ function ClassScheduleGrid({ schedules }) {
         }
     });
 
-    const formatTime = (time) => {
-        return TIME_SLOTS[time] || time;
-    };
 
-    // Get time range for display (show start and next time for each slot)
-    const getTimeRangeDisplay = (currentSlot) => {
-        const allSlots = Object.keys(TIME_SLOTS);
-        const currentIndex = allSlots.indexOf(currentSlot);
-        const nextSlot = allSlots[currentIndex + 1];
-
-        const startTime = formatTime(currentSlot);
-        const endTime = nextSlot ? formatTime(nextSlot) : '';
-
-        return endTime ? `${startTime} - ${endTime}` : startTime;
-    };
 
     return (
         <div className="overflow-x-auto">
@@ -207,9 +170,10 @@ function ClassScheduleGrid({ schedules }) {
                 {/* Generate time slots dynamically */}
                 {timeSlots.map((timeSlot, timeIndex) => {
                     const timeRangeDisplay = getTimeRangeDisplay(timeSlot);
+                    if(timeRangeDisplay){
 
-                    return (
-                        <div key={timeSlot} className="relative mb-1 grid grid-cols-6 gap-1">
+                        return (
+                            <div key={timeSlot} className="relative mb-1 grid grid-cols-6 gap-1">
                             {/* Time column - show time range with consistent styling */}
                             <div className="rounded bg-gray-100 p-3 text-center text-sm font-semibold">{timeRangeDisplay}</div>
 
@@ -240,16 +204,16 @@ function ClassScheduleGrid({ schedules }) {
 
                                                 return (
                                                     <div
-                                                        key={`${schedule.id}-${index}`}
-                                                        className={`absolute rounded border-l-4 p-2 text-xs ${colorClass} z-20 flex flex-col items-center justify-center text-center`}
-                                                        style={{
-                                                            height: `${spanHeight}px`,
-                                                            top: '0px',
-                                                            left: '-2px',
-                                                            right: '-2px',
-                                                            border: 'none',
-                                                            borderLeft: '4px solid',
-                                                        }}
+                                                    key={`${schedule.id}-${index}`}
+                                                    className={`absolute rounded border-l-4 p-2 text-xs ${colorClass} z-20 flex flex-col items-center justify-center text-center`}
+                                                    style={{
+                                                        height: `${spanHeight}px`,
+                                                        top: '0px',
+                                                        left: '-2px',
+                                                        right: '-2px',
+                                                        border: 'none',
+                                                        borderLeft: '4px solid',
+                                                    }}
                                                     >
                                                         <div className="text-xs font-semibold">({schedule.program_subject.prog_subj_code})</div>
                                                         <div className="mb-1 text-sm font-semibold">{schedule.program_subject.subject?.name}</div>
@@ -275,7 +239,8 @@ function ClassScheduleGrid({ schedules }) {
                                 );
                             })}
                         </div>
-                    );
+                        );
+                    }
                 })}
             </div>
         </div>
@@ -705,18 +670,6 @@ export default function ClassSchedule() {
                 }
             });
 
-            // Helper function to get time range display like "8:00 AM - 8:30 AM"
-            const getTimeRangeDisplay = (currentSlot) => {
-                const allSlots = Object.keys(TIME_SLOTS);
-                const currentIndex = allSlots.indexOf(currentSlot);
-                const nextSlot = allSlots[currentIndex + 1];
-
-                const startTime = TIME_SLOTS[currentSlot] || currentSlot;
-                const endTime = nextSlot ? TIME_SLOTS[nextSlot] || nextSlot : '';
-
-                return endTime ? `${startTime} - ${endTime}` : startTime;
-            };
-
             // Build grid HTML for printing with exact same structure as display grid
             let gridHTML = `
                 <div class="schedule-container">
@@ -730,10 +683,12 @@ export default function ClassSchedule() {
             timeSlots.forEach((timeSlot, timeIndex) => {
                 const timeRangeDisplay = getTimeRangeDisplay(timeSlot);
 
-                gridHTML += `<div class="grid-row">`;
-                gridHTML += `<div class="time-cell">${timeRangeDisplay}</div>`;
+                if(timeRangeDisplay){
 
-                days.forEach((day) => {
+                    gridHTML += `<div class="grid-row">`;
+                    gridHTML += `<div class="time-cell">${timeRangeDisplay}</div>`;
+
+                    days.forEach((day) => {
                     const cellData = gridData[day][timeSlot];
 
                     // If this cell is spanned by a schedule from a previous time slot, render empty space
@@ -749,31 +704,32 @@ export default function ClassSchedule() {
                         const spanHeight = span * 32 + (span - 1) * 2;
 
                         gridHTML += `
-                <div class="day-cell occupied" style="height: 30px; position: relative; background: transparent;">
-                    <div class="schedule-card ${colorClass}" style="
-                        height: ${spanHeight}px;
-                        position: absolute;
-                        top: 0;
-                        left: 0;
-                        right: 0;
-                        z-index: 10;
-                    ">
-                        <div class="subject-name" style="font-size:6px; font-weight: normal;">(${schedule.program_subject?.prog_subj_code})</div>
-                        <div class="subject-name">${schedule.program_subject.subject?.name}</div>
-                        <div class="lecturer-name">${schedule.lecturer?.title || ''} ${schedule.lecturer?.fname || ''} ${schedule.lecturer?.lname || ''}</div>
-                        <div class="room-info">Room: ${schedule.room_code}</div>
-                        <div class="time-info">
+                            <div class="day-cell occupied" style="height: 30px; position: relative; background: transparent;">
+                            <div class="schedule-card ${colorClass}" style="
+                            height: ${spanHeight}px;
+                            position: absolute;
+                            top: 0;
+                            left: 0;
+                            right: 0;
+                            z-index: 10;
+                            ">
+                            <div class="subject-name" style="font-size:6px; font-weight: normal;">(${schedule.program_subject?.prog_subj_code})</div>
+                            <div class="subject-name">${schedule.program_subject.subject?.name}</div>
+                            <div class="lecturer-name">${schedule.lecturer?.title || ''} ${schedule.lecturer?.fname || ''} ${schedule.lecturer?.lname || ''}</div>
+                            <div class="room-info">Room: ${schedule.room_code}</div>
+                            <div class="time-info">
                             <div>${TIME_SLOTS[schedule.start_time]} - ${TIME_SLOTS[schedule.end_time]}</div>
-                        </div>
-                    </div>
-                </div>
-            `;
+                            </div>
+                            </div>
+                            </div>
+                            `;
                     } else {
                         gridHTML += `<div class="day-cell" style="height: 30px;"></div>`;
                     }
-                });
+                    });
 
-                gridHTML += `</div>`;
+                    gridHTML += `</div>`;
+                }
             });
 
             gridHTML += `</div>`;
