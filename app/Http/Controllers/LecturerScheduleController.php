@@ -378,4 +378,54 @@ class LecturerScheduleController extends Controller
             ]
         ]);
     }
+    public function getRoomSchedule(Request $request){
+        $termFilter = $request->input('sy_term_id');
+        $roomFilter = $request->input('room_code');
+
+        $schedules = collect();
+
+        if ($roomFilter && $termFilter) {
+            $schedulesQuery = LecturerSchedule::with([
+                'lecturer',
+                'programSubject.subject',
+                'room',
+                'group',
+                'academicCalendar.term'
+            ]);
+
+            $schedulesQuery->where('sy_term_id', $termFilter)
+                          ->where('room_code', $roomFilter);
+
+            $schedules = $schedulesQuery->orderBy('day')
+                                       ->orderBy('start_time')
+                                       ->get();
+        }
+
+        // Get academic calendars for the filter dropdown
+        $academicCalendars = AcademicCalendar::with('term')
+                            ->orderBy('school_year', 'desc')
+                            ->orderBy('id')
+                            ->get();
+
+        // Get all programs for the program filter dropdown
+        $rooms = Room::orderBy('name')->get();
+
+
+        //UNCOMMENT TO TEST THE RETURN DATA
+        // return response()->json([
+        //     'data' => [
+        //         'schedules' => $schedules,
+        //         'academicCalendars' => $academicCalendars,
+        //         'rooms' => $rooms,
+        //     ]
+        // ]);
+
+        return Inertia::render('application/room-schedule', [
+            'data' => [
+                'schedules' => $schedules,
+                'academicCalendars' => $academicCalendars,
+                'rooms' => $rooms,
+            ]
+        ]);
+    }
 }

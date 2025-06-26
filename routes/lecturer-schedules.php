@@ -15,6 +15,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('api/available-time-slots', 'getAvailableTimeSlots');
 
         Route::get('class-schedule', 'getGroupSchedule');
+        Route::get('room-schedule', 'getRoomSchedule');
     });
 });
 
