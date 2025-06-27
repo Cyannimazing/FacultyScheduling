@@ -101,17 +101,38 @@ function SubjectAllocationSheet({ isOpen, onClose, allocation = null, onSave, ex
                         if (currentProgSubjId) {
                             const selectedSubject = programSubjects.find(ps => ps.id.toString() === currentProgSubjId);
                             if (selectedSubject && selectedSubject.term_id) {
-                                setIsLoadingCalendars(true);
-                                fetch(`/api/academic-calendars-by-term/${selectedSubject.term_id}`)
-                                    .then(response => response.json())
-                                    .then(filteredCalendars => {
-                                        setFilteredAcademicCalendars(filteredCalendars);
-                                    })
-                                    .catch(error => {
-                                        console.error('Error fetching academic calendars:', error);
-                                        setFilteredAcademicCalendars([]);
-                                    })
-                                    .finally(() => setIsLoadingCalendars(false));
+                                // Get the program information for the API call
+                                const selectedProgram = programs.find(p => p.code === programCode);
+                                if (selectedProgram) {
+                                    setIsLoadingCalendars(true);
+                                    fetch(`/api/academic-calendars-by-term/${selectedSubject.term_id}/${selectedProgram.id}`)
+                                        .then(response => response.json())
+                                        .then(filteredCalendars => {
+                                            setFilteredAcademicCalendars(filteredCalendars);
+                                        })
+                                        .catch(error => {
+                                            console.error('Error fetching academic calendars:', error);
+                                            setFilteredAcademicCalendars([]);
+                                        })
+                                        .finally(() => setIsLoadingCalendars(false));
+                                } else {
+                                    // Fallback: if program not found, try without program filter
+                                    setIsLoadingCalendars(true);
+                                    fetch(`/api/academic-calendars-by-term/${selectedSubject.term_id}`)
+                                        .then(response => response.json())
+                                        .then(filteredCalendars => {
+                                            // Filter by program code on the frontend if needed
+                                            const filteredByProgram = filteredCalendars.filter(cal => 
+                                                cal.program?.code === programCode
+                                            );
+                                            setFilteredAcademicCalendars(filteredByProgram.length > 0 ? filteredByProgram : filteredCalendars);
+                                        })
+                                        .catch(error => {
+                                            console.error('Error fetching academic calendars:', error);
+                                            setFilteredAcademicCalendars([]);
+                                        })
+                                        .finally(() => setIsLoadingCalendars(false));
+                                }
                             }
                         }
                     })

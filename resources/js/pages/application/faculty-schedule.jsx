@@ -232,21 +232,23 @@ function ScheduleDialog({ isOpen, onClose, schedule = null, onSave, lecturers, a
     React.useEffect(() => {
         if (isOpen) {
             if (schedule) {
+                console.log(schedule)
                 // Edit mode - populate form with existing schedule data
                 setFormData({
                     lecturer_id: schedule.lecturer_id?.toString() || '',
                     sy_term_id: schedule.sy_term_id?.toString() || '',
-                    prog_subj_id: schedule.prog_subj_id || '',
+                    prog_subj_id: schedule.prog_subj_id?.toString() || '',
                     room_code: schedule.room_code || '',
                     class_id: schedule.class_id?.toString() || '',
                     day: schedule.day || '',
                     start_time: schedule.start_time || '',
                     end_time: schedule.end_time || '',
-                    selectedSubjectValue: '', // Will be set when subjects are loaded
+                    selectedSubjectValue: schedule.prog_subj_id?.toString() || '',
                 });
 
-                // Load subjects and classes if we have the required data
+                // Load subjects first, then classes
                 if (schedule.lecturer_id && schedule.sy_term_id) {
+                    console.log('Edit mode: Loading subjects for lecturer', schedule.lecturer_id, 'and term', schedule.sy_term_id);
                     loadSubjects(schedule.sy_term_id, schedule.lecturer_id);
                 }
             } else {
@@ -264,23 +266,35 @@ function ScheduleDialog({ isOpen, onClose, schedule = null, onSave, lecturers, a
                 });
                 setAvailableSubjects([]);
                 setAvailableClasses([]);
+                setAvailableTimeSlots([]);
+                setAvailableEndTimes([]);
             }
         }
         setValidationError('');
     }, [schedule, isOpen]);
 
     const loadSubjects = async (syTermId, lecturerId) => {
-        if (!syTermId || !lecturerId) return;
+        if (!syTermId || !lecturerId) return Promise.resolve();
 
+        console.log('loadSubjects called with:', { syTermId, lecturerId });
         setIsLoadingSubjects(true);
         try {
-            const response = await fetch(`/api/subject-by-lecturer-schoolyear/${syTermId}/${lecturerId}`);
+            const url = `/api/subject-by-lecturer-schoolyear/${syTermId}/${lecturerId}`;
+            console.log('Fetching subjects from URL:', url);
+            const response = await fetch(url);
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
             const subjects = await response.json();
-            console.log(subjects);
+            console.log('Loaded subjects:', subjects);
             setAvailableSubjects(subjects);
+            return subjects; // Return the subjects for chaining
         } catch (error) {
             console.error('Error fetching subjects:', error);
             setAvailableSubjects([]);
+            return [];
         } finally {
             setIsLoadingSubjects(false);
         }
@@ -302,21 +316,10 @@ function ScheduleDialog({ isOpen, onClose, schedule = null, onSave, lecturers, a
         }
     };
 
-    const loadClassesForExistingSubject = async (progSubjId) => {
-        console.log(progSubjId);
-        // Find the program subject in the current availableSubjects to get its program code
-        const selectedProgramSubject = availableSubjects.find((programSubject) => programSubject.id === parseInt(progSubjId));
-
-        if (selectedProgramSubject && selectedProgramSubject.prog_code) {
-            console.log('Loading classes for existing program subject:', selectedProgramSubject);
-            await loadClasses(selectedProgramSubject.prog_code);
-        } else {
-            console.warn('Could not find program code for existing program subject:', progSubjId);
-        }
-    };
+    // This function is no longer needed - we'll handle this directly in the useEffect
 
     const loadAvailableTimeSlots = async () => {
-        const { day, sy_term_id, lecturer_id, room_code, class_id, start_time } = formData;
+        const { day, sy_term_id, lecturer_id, room_code, class_id, start_time, end_time } = formData;
 
         // Only load if we have the required data
         if (!day || !sy_term_id) {
@@ -340,15 +343,43 @@ function ScheduleDialog({ isOpen, onClose, schedule = null, onSave, lecturers, a
             const data = await response.json();
 
             console.log('Available time slots:', data);
-            setAvailableTimeSlots(data.available_time_slots || []);
+            const availableSlots = data.available_time_slots || [];
+
+            // In edit mode, ensure the existing start_time is available
+            if (schedule && start_time) {
+                const startTimeExists = availableSlots.some(slot => slot.start_time === start_time);
+
+                if (!startTimeExists) {
+                    console.log('Edit mode: Adding preserved start time to available options');
+                    // Create a slot for the existing start time with the existing end time as an option
+                    const preservedSlot = {
+                        start_time: start_time,
+                        possible_end_times: end_time ? [end_time] : []
+                    };
+                    availableSlots.push(preservedSlot);
+                }
+            }
+
+            setAvailableTimeSlots(availableSlots);
 
             // Set available end times based on current start time
             // In edit mode, preserve the existing start_time value from formData
-            updateAvailableEndTimes(start_time, data.available_time_slots || []);
+            updateAvailableEndTimes(start_time, availableSlots);
         } catch (error) {
             console.error('Error fetching available time slots:', error);
-            setAvailableTimeSlots([]);
-            setAvailableEndTimes([]);
+
+            // In edit mode, provide fallback with existing times
+            if (schedule && formData.start_time) {
+                const fallbackSlots = [{
+                    start_time: formData.start_time,
+                    possible_end_times: formData.end_time ? [formData.end_time] : []
+                }];
+                setAvailableTimeSlots(fallbackSlots);
+                setAvailableEndTimes(formData.end_time ? [formData.end_time] : []);
+            } else {
+                setAvailableTimeSlots([]);
+                setAvailableEndTimes([]);
+            }
         } finally {
             setIsLoadingTimeSlots(false);
         }
@@ -392,7 +423,15 @@ function ScheduleDialog({ isOpen, onClose, schedule = null, onSave, lecturers, a
     const handleLecturerTermChange = async () => {
         const { lecturer_id, sy_term_id } = formData;
         if (lecturer_id && sy_term_id) {
+            // Clear selected subject when term changes since subjects will be different
+            setFormData(prev => ({ ...prev, prog_subj_id: '', selectedSubjectValue: '', class_id: '' }));
+            setAvailableSubjects([]);
+            setAvailableClasses([]);
             await loadSubjects(sy_term_id, lecturer_id);
+        } else {
+            // Clear subjects if either lecturer or term is not selected
+            setAvailableSubjects([]);
+            setAvailableClasses([]);
         }
     };
 
@@ -429,101 +468,64 @@ function ScheduleDialog({ isOpen, onClose, schedule = null, onSave, lecturers, a
         handleLecturerTermChange();
     }, [formData.lecturer_id, formData.sy_term_id]);
 
-    // Watch for availableSubjects changes in edit mode to load classes and set selectedSubjectValue
+    // Watch for availableSubjects changes in edit mode to set up existing subject and load classes
     React.useEffect(() => {
         if (schedule && availableSubjects.length > 0 && formData.prog_subj_id) {
             // This is edit mode and subjects have been loaded
-            console.log('Edit mode: Loading classes for existing program subject', formData.prog_subj_id);
+            console.log('Edit mode: Setting up existing program subject', formData.prog_subj_id);
+            console.log('Available subjects count:', availableSubjects.length);
 
-            // Set the selectedSubjectValue for the current program subject
-            const matchingProgramSubject = availableSubjects.find((ps) => ps.id === parseInt(formData.prog_subj_id));
+            // Find the matching program subject
+            const progSubjIdInt = parseInt(formData.prog_subj_id);
+            const matchingProgramSubject = availableSubjects.find((ps) => ps.id === progSubjIdInt);
+
             if (matchingProgramSubject) {
-                setFormData((prev) => ({ ...prev, selectedSubjectValue: formData.prog_subj_id }));
-            }
+                console.log('Found matching program subject:', matchingProgramSubject);
 
-            // Load classes if not already loaded
-            if (availableClasses.length === 0) {
-                loadClassesForExistingSubject(formData.prog_subj_id);
+                // Update selectedSubjectValue to match the prog_subj_id (only if it's different)
+                if (formData.selectedSubjectValue !== formData.prog_subj_id) {
+                    console.log('Setting selectedSubjectValue to:', formData.prog_subj_id);
+                    setFormData((prev) => ({
+                        ...prev,
+                        selectedSubjectValue: formData.prog_subj_id
+                    }));
+                }
+
+                // Load classes for this program subject if we have the program code
+                if (matchingProgramSubject.prog_code) {
+                    console.log('Loading classes for program code:', matchingProgramSubject.prog_code);
+                    loadClasses(matchingProgramSubject.prog_code);
+                } else {
+                    console.warn('No program code found for subject:', matchingProgramSubject);
+                }
+            } else {
+                console.warn('No matching program subject found for ID:', formData.prog_subj_id);
+                console.warn('Available subjects:', availableSubjects.map(s => ({ id: s.id, code: s.prog_subj_code || 'No code' })));
             }
         }
-    }, [availableSubjects, formData.prog_subj_id, schedule]);
+    }, [availableSubjects.length, schedule?.id, formData.prog_subj_id]);
 
     // Load available time slots when relevant form data changes
     React.useEffect(() => {
-        // Only load time slots if we're not in edit mode or if we are in edit mode but times aren't populated yet
-        if (!schedule || !formData.start_time || !formData.end_time) {
+        // Always load time slots when the required dependencies change
+        if (formData.day && formData.sy_term_id) {
             loadAvailableTimeSlots();
         }
     }, [formData.day, formData.sy_term_id, formData.lecturer_id, formData.room_code, formData.class_id]);
 
-    // Separate useEffect specifically for edit mode - load time slots after form data is populated
+    // In edit mode, reset start and end times when room or day changes
     React.useEffect(() => {
-        if (schedule && formData.start_time && formData.end_time && formData.day && formData.sy_term_id) {
-            // In edit mode, we need to reload time slots to ensure proper availability validation
-            // but we must preserve the existing start and end times
-            console.log('Edit mode: Loading time slots while preserving existing times');
-
-            const loadTimeSlotsForEditMode = async () => {
-                const preservedStartTime = formData.start_time;
-                const preservedEndTime = formData.end_time;
-
-                setIsLoadingTimeSlots(true);
-                try {
-                    const params = new URLSearchParams({
-                        day: formData.day,
-                        sy_term_id: formData.sy_term_id,
-                        ...(formData.lecturer_id && { lecturer_id: formData.lecturer_id }),
-                        ...(formData.room_code && { room_code: formData.room_code }),
-                        ...(formData.class_id && { class_id: formData.class_id }),
-                        exclude_schedule_id: schedule.id
-                    });
-
-                    const response = await fetch(`/api/available-time-slots?${params}`);
-                    const data = await response.json();
-
-                    console.log('Edit mode: Available time slots loaded:', data.available_time_slots?.length);
-                    setAvailableTimeSlots(data.available_time_slots || []);
-
-                    // For edit mode, we need to ensure the current start time is in the available options
-                    const availableSlots = data.available_time_slots || [];
-                    const startTimeExists = availableSlots.some(slot => slot.start_time === preservedStartTime);
-
-                    if (!startTimeExists) {
-                        // Add the preserved start time to available slots for edit mode
-                        console.log('Edit mode: Adding preserved start time to available options');
-                        setAvailableTimeSlots(prev => [...prev, { start_time: preservedStartTime, possible_end_times: [preservedEndTime] }]);
-                    }
-
-                    // Handle end times with preservation
-                    const matchingSlot = availableSlots.find(slot => slot.start_time === preservedStartTime);
-                    if (matchingSlot) {
-                        const newEndTimes = matchingSlot.possible_end_times || [];
-                        const endTimesWithPreserved = newEndTimes.includes(preservedEndTime)
-                            ? newEndTimes
-                            : [...newEndTimes, preservedEndTime].sort();
-                        setAvailableEndTimes(endTimesWithPreserved);
-                        console.log('Edit mode: End times set with preservation:', endTimesWithPreserved);
-                    } else {
-                        // If start time doesn't exist in available slots, just use the preserved end time
-                        setAvailableEndTimes([preservedEndTime]);
-                        console.log('Edit mode: Using only preserved end time');
-                    }
-
-                } catch (error) {
-                    console.error('Error loading time slots in edit mode:', error);
-                    // On error, at least preserve the existing times
-                    setAvailableTimeSlots([{ start_time: preservedStartTime, possible_end_times: [preservedEndTime] }]);
-                    setAvailableEndTimes([preservedEndTime]);
-                } finally {
-                    setIsLoadingTimeSlots(false);
-                }
-            };
-
-            // Small delay to ensure form data is fully set
-            const timeoutId = setTimeout(loadTimeSlotsForEditMode, 100);
-            return () => clearTimeout(timeoutId);
+        if (schedule && isOpen) {
+            // Only reset times if we're in edit mode and the dialog is open
+            setFormData(prev => ({
+                ...prev,
+                start_time: '',
+                end_time: ''
+            }));
+            setAvailableEndTimes([]);
         }
-    }, [schedule?.id, formData.day, formData.sy_term_id, formData.lecturer_id, formData.room_code, formData.class_id, formData.start_time, formData.end_time]);
+    }, [formData.day, formData.room_code, schedule?.id, isOpen]);
+
 
     const handleSave = () => {
         console.log('Saving schedule with data:', formData);
@@ -744,7 +746,9 @@ function ScheduleDialog({ isOpen, onClose, schedule = null, onSave, lecturers, a
                                                   ? 'Loading available times...'
                                                   : availableTimeSlots.length === 0
                                                     ? 'No available times'
-                                                    : 'Select start time'
+                                                    : schedule && schedule.start_time
+                                                      ? `Current: ${TIME_SLOTS[schedule.start_time] || schedule.start_time}`
+                                                      : 'Select start time'
                                         }
                                     />
                                 </SelectTrigger>
@@ -775,7 +779,9 @@ function ScheduleDialog({ isOpen, onClose, schedule = null, onSave, lecturers, a
                                                 ? 'Select start time first'
                                                 : availableEndTimes.length === 0
                                                   ? 'No available end times'
-                                                  : 'Select end time'
+                                                  : schedule && schedule.end_time
+                                                    ? `Current: ${TIME_SLOTS[schedule.end_time] || schedule.end_time}`
+                                                    : 'Select end time'
                                         }
                                     />
                                 </SelectTrigger>
@@ -1019,9 +1025,21 @@ export default function FacultySchedule() {
     const handleSaveSchedule = (formData) => {
         setScheduleErrors(null); // Clear previous errors
 
-        // Add current filter parameters to preserve them after redirect
+        // Map the term_filter to sy_term_id and add current filter parameters to preserve them after redirect
+        // For storage, we need to find a matching academic calendar ID from the term_filter (format: "termId_schoolYear")
+        if (!selectedCalendar || !selectedCalendar.includes('_')) {
+            setScheduleErrors({ term_filter: ['Please select a valid term'] });
+            return;
+        }
+
+        const [termId, schoolYear] = selectedCalendar.split('_');
+        const matchingCalendar = academicCalendars.find(cal =>
+            cal.term?.id.toString() === termId && cal.school_year === schoolYear
+        );
+
         const dataWithFilters = {
             ...formData,
+            sy_term_id: matchingCalendar ? matchingCalendar.id : formData.sy_term_id, // Use the actual calendar ID for storage
             term_filter: selectedCalendar,
             lecturer_filter: selectedLecturer,
             class_filter: selectedClass || null,
@@ -1097,8 +1115,8 @@ export default function FacultySchedule() {
     }, [selectedCalendar, selectedLecturer, selectedClass]);
 
     const applyFilters = React.useCallback(() => {
-        // Don't make API call if required filters are missing
-        if (!selectedLecturer || !selectedCalendar) {
+        // Don't make API call if required filters are missing or invalid
+        if (!selectedLecturer || !selectedCalendar || !selectedCalendar.includes('_')) {
             return;
         }
 
@@ -1697,11 +1715,28 @@ export default function FacultySchedule() {
                                         <SelectValue placeholder="Select Term *" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        {academicCalendars.map((calendar) => (
-                                            <SelectItem key={calendar.id} value={calendar.id.toString()}>
-                                                {calendar.term?.name} - {calendar.school_year}
-                                            </SelectItem>
-                                        ))}
+                                        {/* Group calendars by term and school year combination */}
+                                        {(() => {
+                                            const groupedCalendars = academicCalendars.reduce((acc, calendar) => {
+                                                const key = `${calendar.term?.id}_${calendar.school_year}`;
+                                                if (!acc[key]) {
+                                                    acc[key] = {
+                                                        term_id: calendar.term?.id,
+                                                        term_name: calendar.term?.name,
+                                                        school_year: calendar.school_year,
+                                                        programs: []
+                                                    };
+                                                }
+                                                acc[key].programs.push(calendar.program.code);
+                                                return acc;
+                                            }, {});
+
+                                            return Object.entries(groupedCalendars).map(([key, group]) => (
+                                                <SelectItem key={key} value={key}>
+                                                    {group.term_name} {group.school_year}
+                                                </SelectItem>
+                                            ));
+                                        })()}
                                     </SelectContent>
                                 </Select>
 

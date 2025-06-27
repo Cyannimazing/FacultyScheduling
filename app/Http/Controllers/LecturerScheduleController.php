@@ -32,18 +32,38 @@ class LecturerScheduleController extends Controller
 
         // Only fetch schedules if both lecturer and term are selected
         if ($lecturerFilter && $termFilter) {
-            // Get schedules with relationships
-            $schedulesQuery = LecturerSchedule::with([
-                'lecturer',
-                'programSubject.subject',
-                'room',
-                'group',
-                'academicCalendar.term'
-            ]);
+            // Parse term filter to extract term_id and school_year
+            if (strpos($termFilter, '_') !== false) {
+                list($termId, $schoolYear) = explode('_', $termFilter);
+                
+                // Get schedules with relationships
+                $schedulesQuery = LecturerSchedule::with([
+                    'lecturer',
+                    'programSubject.subject',
+                    'room',
+                    'group',
+                    'academicCalendar.term'
+                ]);
 
-            // Apply required filters
-            $schedulesQuery->where('sy_term_id', $termFilter)
-                        ->where('lecturer_id', $lecturerFilter);
+                // Apply required filters using term_id and school_year to get all subjects across programs
+                $schedulesQuery->whereHas('academicCalendar', function ($query) use ($termId, $schoolYear) {
+                        $query->where('term_id', $termId)
+                              ->where('school_year', $schoolYear);
+                    })
+                    ->where('lecturer_id', $lecturerFilter);
+            } else {
+                // Fallback to original logic if term_filter format is unexpected
+                $schedulesQuery = LecturerSchedule::with([
+                    'lecturer',
+                    'programSubject.subject',
+                    'room',
+                    'group',
+                    'academicCalendar.term'
+                ]);
+
+                $schedulesQuery->where('sy_term_id', $termFilter)
+                ->where('lecturer_id', $lecturerFilter);
+            }
 
             if ($programTypeFilter){
                 $schedulesQuery->whereHas('group.program', function($query) use($programTypeFilter) {
@@ -101,6 +121,12 @@ class LecturerScheduleController extends Controller
 
     //kani na query mo return rani ug mga subject base sa kinsa na lecturer ug unsa na schoolyear
     public function getSubjectsByLecturerAndSchoolYear($sy_term_id, $lecturer_id){
+        // Get the term_id and school_year from the selected academic calendar
+        $selectedAcademicCalendar = AcademicCalendar::findOrFail($sy_term_id);
+        $termId = $selectedAcademicCalendar->term_id;
+        $schoolYear = $selectedAcademicCalendar->school_year;
+
+        // Get subjects for the lecturer across all programs for the same term and school year
         $subjects = LecturerSubject::with(['programSubject.subject', 'programSubject.program'])
                         ->where('lecturer_id', $lecturer_id)
                         ->where('sy_term_id', $sy_term_id)
@@ -117,7 +143,7 @@ class LecturerScheduleController extends Controller
 
     /**
      * Get available time slots for a specific day, room, lecturer, and class
-     * excluding conflicts with existing schedules
+     * excluding conflicts with existing schedules across all programs
      */
     public function getAvailableTimeSlots(Request $request)
     {
@@ -145,9 +171,18 @@ class LecturerScheduleController extends Controller
         $classId = $request->input('class_id');
         $excludeScheduleId = $request->input('exclude_schedule_id');
 
-        // Get existing schedules for the same day and term
+        // Get the term_id and school_year from the selected academic calendar
+        $selectedAcademicCalendar = AcademicCalendar::findOrFail($syTermId);
+        $termId = $selectedAcademicCalendar->term_id;
+        $schoolYear = $selectedAcademicCalendar->school_year;
+
+        // Get existing schedules for the same day, term, and school year across ALL programs
+        // This ensures we consider occupied timeslots from all programs with the same term and school year
         $conflictingSchedules = LecturerSchedule::where('day', $day)
-            ->where('sy_term_id', $syTermId)
+            ->whereHas('academicCalendar', function ($query) use ($termId, $schoolYear) {
+                $query->where('term_id', $termId)
+                      ->where('school_year', $schoolYear);
+            })
             ->when($excludeScheduleId, function ($query) use ($excludeScheduleId) {
                 return $query->where('id', '!=', $excludeScheduleId);
             })
@@ -206,7 +241,7 @@ class LecturerScheduleController extends Controller
             for ($i = $startIndex + 1; $i < count($allTimeSlots); $i++) {
                 $potentialEndTime = $allTimeSlots[$i];
 
-                // Check if this end time would create a conflict
+                // Check if any slot between start and this potential end time is blocked
                 $wouldConflict = false;
                 for ($j = $startIndex; $j < $i; $j++) {
                     if (in_array($allTimeSlots[$j], $blockedTimeSlots)) {
@@ -218,7 +253,8 @@ class LecturerScheduleController extends Controller
                 if (!$wouldConflict) {
                     $possibleEndTimes[] = $potentialEndTime;
                 } else {
-                    break; // Stop at first conflict
+                    // If we hit a conflict, we can't use any later end times either
+                    break;
                 }
             }
 
