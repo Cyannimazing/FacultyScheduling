@@ -35,7 +35,7 @@ class LecturerSubjectController extends Controller
         $lecturers = Lecturer::all(); //Add Alocation dropdown
         $programs = Program::with(['subjects']) //Add allocation dropdown
                         ->get();
-        $academicCalendar = AcademicCalendar::with('term')//Add allocation dropdown
+        $academicCalendar = AcademicCalendar::with('term', 'program')//Add allocation dropdown
                     ->get();
 
         //MAIN Table data
@@ -169,19 +169,19 @@ class LecturerSubjectController extends Controller
                 $oldProgSubjId = $lecturerSubject->prog_subj_id;
                 $oldLecturerId = $lecturerSubject->lecturer_id;
                 $oldSyTermId = $lecturerSubject->sy_term_id;
-                
+
                 // Update the lecturer subject
                 $lecturerSubject->update([
                     'lecturer_id' => $request->lecturer_id,
                     'prog_subj_id' => $request->prog_subj_id,
                     'sy_term_id' => $request->sy_term_id
                 ]);
-                
+
                 // Update related LecturerSchedule records if any of the key fields changed
-                if ($oldProgSubjId !== $request->prog_subj_id || 
-                    $oldLecturerId !== $request->lecturer_id || 
+                if ($oldProgSubjId !== $request->prog_subj_id ||
+                    $oldLecturerId !== $request->lecturer_id ||
                     $oldSyTermId !== $request->sy_term_id) {
-                    
+
                     LecturerSchedule::where('lecturer_id', $oldLecturerId)
                         ->where('prog_subj_id', $oldProgSubjId)
                         ->where('sy_term_id', $oldSyTermId)
@@ -213,10 +213,10 @@ class LecturerSubjectController extends Controller
                 ->where('prog_subj_id', $lecturerSubject->prog_subj_id)
                 ->where('sy_term_id', $lecturerSubject->sy_term_id)
                 ->delete();
-            
+
             // Then delete the LecturerSubject record
             $lecturerSubject->delete();
-            
+
             DB::commit();
         } catch (\Exception $e) {
             DB::rollback();
@@ -256,10 +256,11 @@ class LecturerSubjectController extends Controller
     /**
      * Get academic calendars filtered by term_id from selected subject
      */
-    public function getAcademicCalendarsByTermId(Request $request, $termId)
+    public function getAcademicCalendarsByTermId(Request $request, $termId, $progId)
     {
-        $academicCalendars = AcademicCalendar::with('term')
+        $academicCalendars = AcademicCalendar::with('term', 'program')
             ->where('term_id', $termId)
+            ->where('prog_id', $progId)
             ->get();
 
         return response()->json($academicCalendars);

@@ -26,41 +26,12 @@ class StoreAcademicCalendarRequest extends FormRequest
                 'required',
                 'integer',
                 'exists:terms,id',
-                // Unique validation for term_id + school_year combination
-                function ($attribute, $value, $fail) {
-                    $exists = \App\Models\AcademicCalendar::where('term_id', $value)
-                        ->where('school_year', $this->input('school_year'))
-                        ->exists();
-                    
-                    if ($exists) {
-                        $fail('This term already exists for the selected school year.');
-                    }
-                },
             ],
             'school_year' => 'required|regex:/^\d{4}-\d{4}$/|string',
             'start_date' => [
                 'required',
                 'date',
                 'before:end_date',
-                // Check for date overlaps with existing academic calendars
-                function ($attribute, $value, $fail) {
-                    $startDate = $value;
-                    $endDate = $this->input('end_date');
-                    
-                    if (!$endDate) {
-                        return; // Let end_date validation handle missing end_date
-                    }
-                    
-                    // Check for any overlapping academic calendars
-                    $overlapping = \App\Models\AcademicCalendar::where(function ($query) use ($startDate, $endDate) {
-                        $query->where('start_date', '<', $endDate)
-                              ->where('end_date', '>', $startDate);
-                    })->exists();
-                    
-                    if ($overlapping) {
-                        $fail('The selected dates overlap with an existing academic calendar.');
-                    }
-                },
             ],
             'end_date' => 'required|date|after:start_date',
             'prog_id' => [
@@ -87,6 +58,9 @@ class StoreAcademicCalendarRequest extends FormRequest
             'end_date.required' => 'End date is required.',
             'end_date.date' => 'End date must be a valid date.',
             'end_date.after' => 'End date must be after start date.',
+            'prog_id.required' => 'Program is required.',
+            'prog_id.integer' => 'Program must be a valid selection.',
+            'prog_id.exists' => 'Selected program does not exist.',
         ];
     }
 
@@ -100,6 +74,7 @@ class StoreAcademicCalendarRequest extends FormRequest
             'school_year' => 'school year',
             'start_date' => 'start date',
             'end_date' => 'end date',
+            'prog_id' => 'program',
         ];
     }
 }

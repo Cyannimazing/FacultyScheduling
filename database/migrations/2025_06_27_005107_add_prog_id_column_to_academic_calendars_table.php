@@ -15,13 +15,13 @@ return new class extends Migration
         // Drop triggers first
         DB::unprepared('DROP TRIGGER IF EXISTS check_calendar_availability_before_insert');
         DB::unprepared('DROP TRIGGER IF EXISTS check_calendar_availability_before_update');
-        
+
         // Drop unique constraints
         Schema::table('academic_calendars', function (Blueprint $table) {
             $table->dropUnique('academic_calendar_start_end_date');
             $table->dropUnique('academic_calendar_school_term');
         });
-        
+
         // Add the prog_id column
         Schema::table('academic_calendars', function (Blueprint $table) {
             $table->unsignedBigInteger('prog_id')->nullable()->after('end_date');
@@ -38,13 +38,13 @@ return new class extends Migration
             $table->dropForeign(['prog_id']);
             $table->dropColumn('prog_id');
         });
-        
+
         // Recreate unique constraints
         Schema::table('academic_calendars', function (Blueprint $table) {
             $table->unique(['start_date', 'end_date'], 'academic_calendar_start_end_date');
             $table->unique(['term_id', 'school_year'], 'academic_calendar_school_term');
         });
-        
+
         // Recreate triggers if needed (optional)
         DB::unprepared("
         CREATE TRIGGER check_calendar_availability_before_insert

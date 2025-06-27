@@ -18,19 +18,32 @@ class AcademicCalendarController extends Controller
     public function index(Request $request)
     {
         $search = $request->input('search');
+        $programFilter = $request->input('program', "");
         $page = $request->input('page', 1);
         $perPage = 5;
 
-        $academicCalendars = AcademicCalendar::with(['term', 'program'])
-            ->where('school_year', 'LIKE', "%$search%")
-            ->orWhereHas('term', function ($query) use ($search) {
-                $query->where('name', 'LIKE', "%$search%");
-            })
-            ->orWhereHas('program', function ($query) use ($search) {
-                $query->where('code', 'LIKE', "%$search%")
-                      ->orWhere('description', 'LIKE', "%$search%");
-            })
-            ->orderBy('school_year')
+        $query = AcademicCalendar::with(['term', 'program']);
+
+        // Apply program filter if provided
+        if ($programFilter) {
+            $query->where('prog_id', $programFilter);
+        }
+
+        // Apply search filter if provided
+        if ($search) {
+            $query->where(function($q) use ($search) {
+                $q->where('school_year', 'LIKE', "%$search%")
+                  ->orWhereHas('term', function ($query) use ($search) {
+                      $query->where('name', 'LIKE', "%$search%");
+                  })
+                  ->orWhereHas('program', function ($query) use ($search) {
+                      $query->where('code', 'LIKE', "%$search%")
+                            ->orWhere('description', 'LIKE', "%$search%");
+                  });
+            });
+        }
+
+        $academicCalendars = $query->orderBy('school_year')
             ->paginate($perPage, ['*'], 'page', $page);
 
         $terms = Term::select(['id', 'name'])->orderBy('name')->get();
@@ -75,9 +88,9 @@ class AcademicCalendarController extends Controller
     {
         $academicCalendar = AcademicCalendar::findOrFail($id);
         $validated = $request->validated();
-        
+
         $academicCalendar->update($validated);
-        
+
         return redirect()->route('calendar')->with('success', 'Academic Calendar updated successfully.');
     }
 

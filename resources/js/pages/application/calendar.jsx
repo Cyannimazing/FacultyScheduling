@@ -36,6 +36,7 @@ const breadcrumbs = [
 
 
 var termOptions = [];
+var programOptions = [];
 
 function LoadingSkeleton() {
     return (
@@ -62,6 +63,7 @@ function CalendarDialog({ isOpen, onClose, calendar = null, onSave, errors = nul
         school_year: '',
         start_date: '',
         end_date: '',
+        prog_id: '',
     });
 
     React.useEffect(() => {
@@ -74,16 +76,17 @@ function CalendarDialog({ isOpen, onClose, calendar = null, onSave, errors = nul
                     school_year: calendar.school_year || '',
                     start_date: calendar.start_date ? calendar.start_date.split('T')[0] : '',
                     end_date: calendar.end_date ? calendar.end_date.split('T')[0] : '',
+                    prog_id: calendar.prog_id ? calendar.prog_id.toString() : '',
                 });
             } else {
                 // Clear form data when adding new calendar
-                setFormData({ term_id:'', term_name: '', school_year: '', start_date: '', end_date: '' });
+                setFormData({ term_id:'', term_name: '', school_year: '', start_date: '', end_date: '', prog_id: '' });
             }
         }
     }, [calendar, isOpen]);
 
     const handleSave = () => {
-        if (formData.term_id && formData.school_year && formData.start_date && formData.end_date) {
+        if (formData.term_id && formData.school_year && formData.start_date && formData.end_date && formData.prog_id) {
             onSave(formData);
         }
     };
@@ -153,6 +156,23 @@ function CalendarDialog({ isOpen, onClose, calendar = null, onSave, errors = nul
                         </Select>
                     </div>
                     <div className="grid grid-cols-4 items-center gap-4">
+                        <label htmlFor="program" className="text-right text-sm font-medium">
+                            Program
+                        </label>
+                        <Select value={formData.prog_id} onValueChange={(value) => setFormData({ ...formData, prog_id: value })}>
+                            <SelectTrigger className="col-span-3">
+                                <SelectValue placeholder="Select a program" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {programOptions.map((program) => (
+                                    <SelectItem key={program.id} value={program.id.toString()}>
+                                        {program.code} - {program.description}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                    <div className="grid grid-cols-4 items-center gap-4">
                         <label htmlFor="start_date" className="text-right text-sm font-medium">
                             Start Date
                         </label>
@@ -189,7 +209,7 @@ function CalendarDialog({ isOpen, onClose, calendar = null, onSave, errors = nul
                     <Button variant="outline" onClick={onClose}>
                         Cancel
                     </Button>
-                    <Button onClick={handleSave} disabled={!formData.term_id || !formData.school_year || !formData.start_date || !formData.end_date}>
+                    <Button onClick={handleSave} disabled={!formData.term_id || !formData.school_year || !formData.start_date || !formData.end_date || !formData.prog_id}>
                         {calendar ? 'Update' : 'Create'} Calendar
                     </Button>
                 </DialogFooter>
@@ -202,6 +222,7 @@ export default function Calendar() {
     const { data } = usePage().props
     const [isLoading, setIsLoading] = useState(false);
     const [seachCalendar, setSearchCalendar] = useState('');
+    const [selectedProgram, setSelectedProgram] = useState('all');
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [editingCalendar, setEditingCalendar] = useState(null);
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -209,7 +230,10 @@ export default function Calendar() {
     const [isDeleting, setIsDeleting] = useState(false);
     const [calendarErrors, setCalendarErrors] = useState(null);
     termOptions = data.terms
+    programOptions = data.programs
     const itemsPerPage = data.academicCalendars.per_page;
+
+    console.log(data.academicCalendars.data[0])
 
     const getDateRangeStatus = (startDate, endDate) => {
         const today = new Date();
@@ -245,7 +269,20 @@ export default function Calendar() {
         setIsLoading(true);
         router.get(
             '/calendar',
-            { search: e.target.value, page: 1 },
+            { search: e.target.value, program: selectedProgram === 'all' ? '' : selectedProgram, page: 1 },
+            {
+                preserveState: true,
+                onFinish: () => setIsLoading(false),
+            },
+        );
+    };
+
+    const handleProgramFilter = (programId) => {
+        setSelectedProgram(programId);
+        setIsLoading(true);
+        router.get(
+            '/calendar',
+            { search: seachCalendar, program: programId === 'all' ? '' : programId, page: 1 },
             {
                 preserveState: true,
                 onFinish: () => setIsLoading(false),
@@ -349,14 +386,31 @@ export default function Calendar() {
                 <Card>
                     <CardHeader>
                         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-                            <div className="relative flex-1 md:max-w-sm">
-                                <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
-                                <Input
-                                    placeholder="Search calendars..."
-                                    value={seachCalendar}
-                                    onChange={handleSearch}
-                                    className="pl-9"
-                                />
+                            <div className="flex flex-col gap-4 md:flex-row md:items-center flex-1">
+                                <div className="relative flex-1 md:max-w-sm">
+                                    <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
+                                    <Input
+                                        placeholder="Search calendars..."
+                                        value={seachCalendar}
+                                        onChange={handleSearch}
+                                        className="pl-9"
+                                    />
+                                </div>
+                                <div className="md:max-w-xs">
+                                    <Select value={selectedProgram} onValueChange={handleProgramFilter}>
+                                        <SelectTrigger className="w-full">
+                                            <SelectValue placeholder="Filter by Program" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="all">All Programs</SelectItem>
+                                            {programOptions.map((program) => (
+                                                <SelectItem key={program.id} value={program.id.toString()}>
+                                                    {program.code} - {program.description}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
                             </div>
                             <div className="text-muted-foreground text-sm">
                                 Showing {paginatedData.length} of {data.academicCalendars.total} calendars
@@ -373,6 +427,7 @@ export default function Calendar() {
                                         <TableRow>
                                             <TableHead className="w-[80px]">ID</TableHead>
                                             <TableHead>Term & Year</TableHead>
+                                            <TableHead>Program</TableHead>
                                             <TableHead className="text-center">Date Range</TableHead>
                                             <TableHead className="text-center">Status</TableHead>
                                             <TableHead className="text-center">Last Updated</TableHead>
@@ -381,6 +436,7 @@ export default function Calendar() {
                                     </TableHeader>
                                     <TableBody>
                                         {paginatedData.map((calendar) => {
+                                            console.log(calendar)
                                             const dateStatus = getDateRangeStatus(calendar.start_date, calendar.end_date);
                                             return (
                                                 <TableRow key={calendar.id} className="hover:bg-muted/50">
@@ -394,6 +450,12 @@ export default function Calendar() {
                                                                 <span className="font-medium">{calendar.term.name}</span>
                                                             </div>
                                                             <div className="text-muted-foreground text-sm">{calendar.school_year}</div>
+                                                        </div>
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        <div className="space-y-1">
+                                                            <div className="font-medium">{calendar.program?.code || 'N/A'}</div>
+                                                            <div className="text-muted-foreground text-sm">{calendar.program?.description || 'No description'}</div>
                                                         </div>
                                                     </TableCell>
                                                     <TableCell className="text-center">

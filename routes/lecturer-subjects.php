@@ -12,7 +12,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
         // API endpoints for cascading dropdowns
         Route::get('api/subjects-by-program/{programCode}', 'getSubjectsByProgram');
-        Route::get('api/academic-calendars-by-term/{termId}', 'getAcademicCalendarsByTermId');
+        Route::get('api/academic-calendars-by-term/{termId}/{progId}', 'getAcademicCalendarsByTermId');
     });
 });
 

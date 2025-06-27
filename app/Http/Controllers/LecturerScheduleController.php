@@ -64,7 +64,7 @@ class LecturerScheduleController extends Controller
         }
 
 
-        $academicCalendars = AcademicCalendar::with('term')
+        $academicCalendars = AcademicCalendar::with('term', 'program')
                                 ->orderBy('school_year', 'desc')
                                 ->orderBy('id')
                                 ->get();
@@ -178,10 +178,10 @@ class LecturerScheduleController extends Controller
                 // Block all time slots that overlap with this schedule
                 $startTime = $schedule->start_time;
                 $endTime = $schedule->end_time;
-                
+
                 $startIndex = array_search($startTime, $allTimeSlots);
                 $endIndex = array_search($endTime, $allTimeSlots);
-                
+
                 if ($startIndex !== false && $endIndex !== false) {
                     // Block all slots from start to end (exclusive of end)
                     for ($i = $startIndex; $i < $endIndex; $i++) {
@@ -194,18 +194,18 @@ class LecturerScheduleController extends Controller
         // Remove duplicates and get available slots
         $blockedTimeSlots = array_unique($blockedTimeSlots);
         $availableStartTimes = array_diff($allTimeSlots, $blockedTimeSlots);
-        
+
         // For end times, we need to ensure there's a valid end time after each start time
         $availableTimeSlots = [];
-        
+
         foreach ($availableStartTimes as $startTime) {
             $startIndex = array_search($startTime, $allTimeSlots);
             $possibleEndTimes = [];
-            
+
             // Check for consecutive available slots after this start time
             for ($i = $startIndex + 1; $i < count($allTimeSlots); $i++) {
                 $potentialEndTime = $allTimeSlots[$i];
-                
+
                 // Check if this end time would create a conflict
                 $wouldConflict = false;
                 for ($j = $startIndex; $j < $i; $j++) {
@@ -214,14 +214,14 @@ class LecturerScheduleController extends Controller
                         break;
                     }
                 }
-                
+
                 if (!$wouldConflict) {
                     $possibleEndTimes[] = $potentialEndTime;
                 } else {
                     break; // Stop at first conflict
                 }
             }
-            
+
             if (!empty($possibleEndTimes)) {
                 $availableTimeSlots[] = [
                     'start_time' => $startTime,
@@ -243,23 +243,23 @@ class LecturerScheduleController extends Controller
      */
     public function store(StoreLecturerScheduleRequest $request)
     {
-        $validated = $request->validated();
+            $validated = $request->validated();
 
-        LecturerSchedule::create($validated);
+            LecturerSchedule::create($validated);
 
-        // Preserve the current filters in the redirect
-        $queryParams = [];
-        if ($request->input('term_filter')) {
-            $queryParams['term_filter'] = $request->input('term_filter');
-        }
-        if ($request->input('lecturer_filter')) {
-            $queryParams['lecturer_filter'] = $request->input('lecturer_filter');
-        }
-        if ($request->input('class_filter')) {
-            $queryParams['class_filter'] = $request->input('class_filter');
-        }
+            // Preserve the current filters in the redirect
+            $queryParams = [];
+            if ($request->input('term_filter')) {
+                $queryParams['term_filter'] = $request->input('term_filter');
+            }
+            if ($request->input('lecturer_filter')) {
+                $queryParams['lecturer_filter'] = $request->input('lecturer_filter');
+            }
+            if ($request->input('class_filter')) {
+                $queryParams['class_filter'] = $request->input('class_filter');
+            }
 
-        return redirect()->route('faculty-schedule', $queryParams)->with('success', 'Lecturer Schedule created successfully.');
+            return redirect()->route('faculty-schedule', $queryParams)->with('success', 'Lecturer Schedule created successfully.');
     }
 
     /**
@@ -278,33 +278,33 @@ class LecturerScheduleController extends Controller
      */
     public function update(UpdateLecturerScheduleRequest $request, int $id)
     {
-        $lecturerSchedule = LecturerSchedule::find($id);
-        if($lecturerSchedule){
-            $lecturerSchedule->update([
-                'lecturer_id' => $request->lecturer_id,
-                'prog_subj_id' => $request->prog_subj_id,
-                'room_code' => $request->room_code,
-                'start_time' => $request->start_time,
-                'end_time' => $request->end_time,
-                'day' => $request->day,
-                'class_id' => $request->class_id,
-                'sy_term_id' => $request->sy_term_id
-            ]);
-        }
+            $lecturerSchedule = LecturerSchedule::find($id);
+            if($lecturerSchedule){
+                $lecturerSchedule->update([
+                    'lecturer_id' => $request->lecturer_id,
+                    'prog_subj_id' => $request->prog_subj_id,
+                    'room_code' => $request->room_code,
+                    'start_time' => $request->start_time,
+                    'end_time' => $request->end_time,
+                    'day' => $request->day,
+                    'class_id' => $request->class_id,
+                    'sy_term_id' => $request->sy_term_id
+                ]);
+            }
 
-        // Preserve the current filters in the redirect
-        $queryParams = [];
-        if ($request->input('term_filter')) {
-            $queryParams['term_filter'] = $request->input('term_filter');
-        }
-        if ($request->input('lecturer_filter')) {
-            $queryParams['lecturer_filter'] = $request->input('lecturer_filter');
-        }
-        if ($request->input('class_filter')) {
-            $queryParams['class_filter'] = $request->input('class_filter');
-        }
+            // Preserve the current filters in the redirect
+            $queryParams = [];
+            if ($request->input('term_filter')) {
+                $queryParams['term_filter'] = $request->input('term_filter');
+            }
+            if ($request->input('lecturer_filter')) {
+                $queryParams['lecturer_filter'] = $request->input('lecturer_filter');
+            }
+            if ($request->input('class_filter')) {
+                $queryParams['class_filter'] = $request->input('class_filter');
+            }
 
-        return redirect()->route('faculty-schedule', $queryParams)->with('success', 'Lecturer Schedule updated successfully.');
+            return redirect()->route('faculty-schedule', $queryParams)->with('success', 'Lecturer Schedule updated successfully.');
     }
 
     /**

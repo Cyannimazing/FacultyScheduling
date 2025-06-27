@@ -3,6 +3,8 @@
 namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Validator;
+use Illuminate\Support\Facades\DB;
 
 class UpdateLecturerScheduleRequest extends FormRequest
 {
@@ -28,48 +30,16 @@ class UpdateLecturerScheduleRequest extends FormRequest
                 'required',
                 'integer',
                 'exists:lecturers,id',
-                // Check if lecturer is already scheduled during this time and term (excluding current record)
-                function ($attribute, $value, $fail) use ($lecturerScheduleId) {
-                    $query = \App\Models\LecturerSchedule::where('lecturer_id', $value)
-                        ->where('day', $this->input('day'))
-                        ->where('sy_term_id', $this->input('sy_term_id'))
-                        ->where(function ($query) {
-                            $query->where('start_time', '<', $this->input('end_time'))
-                                  ->where('end_time', '>', $this->input('start_time'));
-                        });
-                    
-                    if ($lecturerScheduleId) {
-                        $query->where('id', '!=', $lecturerScheduleId);
-                    }
-                    
-                    if ($query->exists()) {
-                        $fail('This lecturer is already scheduled during this time.');
-                    }
-                },
+                // Note: Conflict checking is now handled by database triggers
+                // which check for overlapping academic calendar periods
             ],
             'prog_subj_id' => 'required|integer|exists:program_subjects,id',
             'room_code' => [
                 'required',
                 'string',
                 'exists:rooms,name',
-                // Check if room is already booked during this time and term (excluding current record)
-                function ($attribute, $value, $fail) use ($lecturerScheduleId) {
-                    $query = \App\Models\LecturerSchedule::where('room_code', $value)
-                        ->where('day', $this->input('day'))
-                        ->where('sy_term_id', $this->input('sy_term_id'))
-                        ->where(function ($query) {
-                            $query->where('start_time', '<', $this->input('end_time'))
-                                  ->where('end_time', '>', $this->input('start_time'));
-                        });
-                    
-                    if ($lecturerScheduleId) {
-                        $query->where('id', '!=', $lecturerScheduleId);
-                    }
-                    
-                    if ($query->exists()) {
-                        $fail('This room is already booked during this time.');
-                    }
-                },
+                // Note: Conflict checking is now handled by database triggers
+                // which check for overlapping academic calendar periods
             ],
             'day' => 'required|string|in:Monday,Tuesday,Wednesday,Thursday,Friday,Saturday,Sunday',
             'start_time' => 'required|date_format:H:i',
@@ -82,24 +52,8 @@ class UpdateLecturerScheduleRequest extends FormRequest
                 'required',
                 'integer',
                 'exists:groups,id',
-                // Check if class is already scheduled during this time and term (excluding current record)
-                function ($attribute, $value, $fail) use ($lecturerScheduleId) {
-                    $query = \App\Models\LecturerSchedule::where('class_id', $value)
-                        ->where('day', $this->input('day'))
-                        ->where('sy_term_id', $this->input('sy_term_id'))
-                        ->where(function ($query) {
-                            $query->where('start_time', '<', $this->input('end_time'))
-                                  ->where('end_time', '>', $this->input('start_time'));
-                        });
-                    
-                    if ($lecturerScheduleId) {
-                        $query->where('id', '!=', $lecturerScheduleId);
-                    }
-                    
-                    if ($query->exists()) {
-                        $fail('This class is already scheduled during this time.');
-                    }
-                },
+                // Note: Conflict checking is now handled by database triggers
+                // which check for overlapping academic calendar periods
             ],
             'sy_term_id' => 'required|integer|exists:academic_calendars,id',
         ];
@@ -146,5 +100,108 @@ class UpdateLecturerScheduleRequest extends FormRequest
             'class_id' => 'class',
             'sy_term_id' => 'academic term',
         ];
+    }
+
+    /**
+     * Configure the validator instance.
+     */
+    public function withValidator(Validator $validator): void
+    {
+        $validator->after(function (Validator $validator) {
+            // Apply the same logic as database triggers
+            $this->checkRoomAvailability($validator);
+            $this->checkLecturerAvailability($validator);
+            $this->checkClassAvailability($validator);
+        });
+    }
+
+    /**
+     * Check room availability - mirrors the room availability trigger logic
+     */
+    protected function checkRoomAvailability(Validator $validator): void
+    {
+        $scheduleId = $this->route('lecturerSchedule') ?? $this->route('facultySchedule');
+        
+        $conflicts = DB::table('lecturer_schedules as ls')
+            ->join('academic_calendars as ac_existing', 'ac_existing.id', '=', 'ls.sy_term_id')
+            ->join('academic_calendars as ac_new', 'ac_new.id', '=', $this->input('sy_term_id'))
+            ->where('ls.room_code', $this->input('room_code'))
+            ->where('ls.day', $this->input('day'))
+            ->where(function ($query) {
+                // Check if academic calendar periods overlap
+                $query->whereRaw('ac_existing.start_date < ac_new.end_date')
+                      ->whereRaw('ac_existing.end_date > ac_new.start_date');
+            })
+            ->where(function ($query) {
+                // Check if time slots overlap
+                $query->whereRaw('ls.start_time < ?', [$this->input('end_time')])
+                      ->whereRaw('ls.end_time > ?', [$this->input('start_time')]);
+            })
+            ->where('ls.id', '!=', $scheduleId) // Exclude the current record being updated
+            ->exists();
+
+        if ($conflicts) {
+            $validator->errors()->add('room_code', 'Room is not available for this time slot - conflicts with existing schedule during overlapping academic periods');
+        }
+    }
+
+    /**
+     * Check lecturer availability - mirrors the lecturer availability trigger logic
+     */
+    protected function checkLecturerAvailability(Validator $validator): void
+    {
+        $scheduleId = $this->route('lecturerSchedule') ?? $this->route('facultySchedule');
+        
+        $conflicts = DB::table('lecturer_schedules as ls')
+            ->join('academic_calendars as ac_existing', 'ac_existing.id', '=', 'ls.sy_term_id')
+            ->join('academic_calendars as ac_new', 'ac_new.id', '=', $this->input('sy_term_id'))
+            ->where('ls.lecturer_id', $this->input('lecturer_id'))
+            ->where('ls.day', $this->input('day'))
+            ->where(function ($query) {
+                // Check if academic calendar periods overlap
+                $query->whereRaw('ac_existing.start_date < ac_new.end_date')
+                      ->whereRaw('ac_existing.end_date > ac_new.start_date');
+            })
+            ->where(function ($query) {
+                // Check if time slots overlap
+                $query->whereRaw('ls.start_time < ?', [$this->input('end_time')])
+                      ->whereRaw('ls.end_time > ?', [$this->input('start_time')]);
+            })
+            ->where('ls.id', '!=', $scheduleId) // Exclude the current record being updated
+            ->exists();
+
+        if ($conflicts) {
+            $validator->errors()->add('lecturer_id', 'Lecturer is not available for this time slot - conflicts with existing schedule during overlapping academic periods');
+        }
+    }
+
+    /**
+     * Check class availability - mirrors the class availability trigger logic
+     */
+    protected function checkClassAvailability(Validator $validator): void
+    {
+        $scheduleId = $this->route('lecturerSchedule') ?? $this->route('facultySchedule');
+        
+        $conflicts = DB::table('lecturer_schedules as ls')
+            ->join('academic_calendars as ac_existing', 'ac_existing.id', '=', 'ls.sy_term_id')
+            ->join('academic_calendars as ac_new', 'ac_new.id', '=', $this->input('sy_term_id'))
+            ->where('ls.class_id', $this->input('class_id'))
+            ->where('ls.day', $this->input('day'))
+            ->where(function ($query) {
+                // Check if academic calendar periods overlap
+                $query->whereRaw('ac_existing.start_date < ac_new.end_date')
+                      ->whereRaw('ac_existing.end_date > ac_new.start_date');
+            })
+            ->where(function ($query) {
+                // Check if time slots overlap
+                $query->whereRaw('ls.start_time < ?', [$this->input('end_time')])
+                      ->whereRaw('ls.end_time > ?', [$this->input('start_time')]);
+            })
+            ->where('ls.id', '!=', $scheduleId) // Exclude the current record being updated
+            ->exists();
+
+        if ($conflicts) {
+            $validator->errors()->add('class_id', 'This group/class is not available for this time slot - conflicts with existing schedule during overlapping academic periods');
+        }
     }
 }

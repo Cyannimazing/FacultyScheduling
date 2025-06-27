@@ -40,11 +40,14 @@ return new class extends Migration
                     CASE
                         WHEN (
                             SELECT COUNT(*)
-                            FROM lecturer_schedules
-                            WHERE room_code = NEW.room_code
-                            AND day = NEW.day
-                            AND sy_term_id = NEW.sy_term_id
-                            AND (start_time < NEW.end_time AND end_time > NEW.start_time)
+                            FROM lecturer_schedules ls
+                            INNER JOIN academic_calendars ac_new ON ls.sy_term_id = ac_new.id
+                            INNER JOIN academic_calendars ac_current ON NEW.sy_term_id = ac_current.id
+                            WHERE ls.room_code = NEW.room_code
+                            AND ls.day = NEW.day
+                            AND ac_new.term_id = ac_current.term_id
+                            AND ac_new.school_year = ac_current.school_year
+                            AND (ls.start_time < NEW.end_time AND ls.end_time > NEW.start_time)
                         ) > 0
                         THEN RAISE(ABORT, 'Room is not available for this time slot')
                     END;
@@ -59,11 +62,14 @@ return new class extends Migration
                     CASE
                         WHEN (
                             SELECT COUNT(*)
-                            FROM lecturer_schedules
-                            WHERE lecturer_id = NEW.lecturer_id
-                            AND day = NEW.day
-                            AND sy_term_id = NEW.sy_term_id
-                            AND (start_time < NEW.end_time AND end_time > NEW.start_time)
+                            FROM lecturer_schedules ls
+                            INNER JOIN academic_calendars ac_new ON ls.sy_term_id = ac_new.id
+                            INNER JOIN academic_calendars ac_current ON NEW.sy_term_id = ac_current.id
+                            WHERE ls.lecturer_id = NEW.lecturer_id
+                            AND ls.day = NEW.day
+                            AND ac_new.term_id = ac_current.term_id
+                            AND ac_new.school_year = ac_current.school_year
+                            AND (ls.start_time < NEW.end_time AND ls.end_time > NEW.start_time)
                         ) > 0
                         THEN RAISE(ABORT, 'Lecturer is not available for this time slot')
                     END;
@@ -78,11 +84,14 @@ return new class extends Migration
                     CASE
                         WHEN (
                             SELECT COUNT(*)
-                            FROM lecturer_schedules
-                            WHERE class_id = NEW.class_id
-                            AND day = NEW.day
-                            AND sy_term_id = NEW.sy_term_id
-                            AND (start_time < NEW.end_time AND end_time > NEW.start_time)
+                            FROM lecturer_schedules ls
+                            INNER JOIN academic_calendars ac_new ON ls.sy_term_id = ac_new.id
+                            INNER JOIN academic_calendars ac_current ON NEW.sy_term_id = ac_current.id
+                            WHERE ls.class_id = NEW.class_id
+                            AND ls.day = NEW.day
+                            AND ac_new.term_id = ac_current.term_id
+                            AND ac_new.school_year = ac_current.school_year
+                            AND (ls.start_time < NEW.end_time AND ls.end_time > NEW.start_time)
                         ) > 0
                         THEN RAISE(ABORT, 'This group is not available for this time slot')
                     END;
@@ -99,12 +108,15 @@ return new class extends Migration
                     CASE
                         WHEN (
                             SELECT COUNT(*)
-                            FROM lecturer_schedules
-                            WHERE room_code = NEW.room_code
-                            AND day = NEW.day
-                            AND sy_term_id = NEW.sy_term_id
-                            AND (start_time < NEW.end_time AND end_time > NEW.start_time)
-                            AND id != OLD.id
+                            FROM lecturer_schedules ls
+                            INNER JOIN academic_calendars ac_new ON ls.sy_term_id = ac_new.id
+                            INNER JOIN academic_calendars ac_current ON NEW.sy_term_id = ac_current.id
+                            WHERE ls.room_code = NEW.room_code
+                            AND ls.day = NEW.day
+                            AND ac_new.term_id = ac_current.term_id
+                            AND ac_new.school_year = ac_current.school_year
+                            AND (ls.start_time < NEW.end_time AND ls.end_time > NEW.start_time)
+                            AND ls.id != OLD.id
                         ) > 0
                         THEN RAISE(ABORT, 'Room is not available for this time slot')
                     END;
@@ -119,12 +131,15 @@ return new class extends Migration
                     CASE
                         WHEN (
                             SELECT COUNT(*)
-                            FROM lecturer_schedules
-                            WHERE lecturer_id = NEW.lecturer_id
-                            AND day = NEW.day
-                            AND sy_term_id = NEW.sy_term_id
-                            AND (start_time < NEW.end_time AND end_time > NEW.start_time)
-                            AND id != OLD.id
+                            FROM lecturer_schedules ls
+                            INNER JOIN academic_calendars ac_new ON ls.sy_term_id = ac_new.id
+                            INNER JOIN academic_calendars ac_current ON NEW.sy_term_id = ac_current.id
+                            WHERE ls.lecturer_id = NEW.lecturer_id
+                            AND ls.day = NEW.day
+                            AND ac_new.term_id = ac_current.term_id
+                            AND ac_new.school_year = ac_current.school_year
+                            AND (ls.start_time < NEW.end_time AND ls.end_time > NEW.start_time)
+                            AND ls.id != OLD.id
                         ) > 0
                         THEN RAISE(ABORT, 'Lecturer is not available for this time slot')
                     END;
@@ -139,12 +154,15 @@ return new class extends Migration
                     CASE
                         WHEN (
                             SELECT COUNT(*)
-                            FROM lecturer_schedules
-                            WHERE class_id = NEW.class_id
-                            AND day = NEW.day
-                            AND sy_term_id = NEW.sy_term_id
-                            AND (start_time < NEW.end_time AND end_time > NEW.start_time)
-                            AND id != OLD.id
+                            FROM lecturer_schedules ls
+                            INNER JOIN academic_calendars ac_new ON ls.sy_term_id = ac_new.id
+                            INNER JOIN academic_calendars ac_current ON NEW.sy_term_id = ac_current.id
+                            WHERE ls.class_id = NEW.class_id
+                            AND ls.day = NEW.day
+                            AND ac_new.term_id = ac_current.term_id
+                            AND ac_new.school_year = ac_current.school_year
+                            AND (ls.start_time < NEW.end_time AND ls.end_time > NEW.start_time)
+                            AND ls.id != OLD.id
                         ) > 0
                         THEN RAISE(ABORT, 'This group is not available for this time slot')
                     END;

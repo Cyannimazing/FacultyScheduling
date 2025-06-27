@@ -69,8 +69,6 @@ function SubjectAllocationSheet({ isOpen, onClose, allocation = null, onSave, ex
 
     React.useEffect(() => {
         if (allocation) {
-            console.log( "Test")
-            console.log( allocation.program_subject.prog_code)
             const programCode = allocation.program_subject?.prog_code || '';
             setFormData({
                 lecturer_id: allocation.lecturer_id?.toString() || '',
@@ -226,10 +224,12 @@ function SubjectAllocationSheet({ isOpen, onClose, allocation = null, onSave, ex
 
         // Find the selected program subject to get its term_id
         const selectedSubject = availableSubjects.find(ps => ps.id === parseInt(value));
+        const selectedProgram = programs.find(p => p.code === formData.program_code);
+        console.log(selectedProgram)
         if (selectedSubject && selectedSubject.term_id) {
             setIsLoadingCalendars(true);
             try {
-                const response = await fetch(`/api/academic-calendars-by-term/${selectedSubject.term_id}`);
+                const response = await fetch(`/api/academic-calendars-by-term/${selectedSubject.term_id}/${selectedProgram.id}`);
                 const filteredCalendars = await response.json();
                 setFilteredAcademicCalendars(filteredCalendars);
             } catch (error) {
@@ -422,7 +422,6 @@ function SubjectAllocationSheet({ isOpen, onClose, allocation = null, onSave, ex
                                                 ps.term_id.toString() === formData.term_id
                                             )
                                             .map((programSubject) => {
-                                                console.log(programSubject)
                                             if (!programSubject || !programSubject.subject) return null;
                                             const subject = programSubject;
                                             return (
@@ -481,13 +480,14 @@ function SubjectAllocationSheet({ isOpen, onClose, allocation = null, onSave, ex
                                         </div>
                                     ) : filteredAcademicCalendars.length > 0 ? (
                                         filteredAcademicCalendars.map((calendar) => {
+                                            console.log(calendar)
                                             const term = calendar.term;
                                             return (
                                                 <SelectItem key={calendar.id} value={calendar.id.toString()}>
                                                     <div className="flex items-center gap-2">
                                                         <GraduationCap className="h-4 w-4" />
                                                         <span>
-                                                            {term?.name || 'Unknown Term'} - {calendar.school_year}
+                                                            {term?.name || 'Unknown Term'} {calendar.school_year} ({calendar.program.code})
                                                         </span>
                                                     </div>
                                                 </SelectItem>
@@ -992,7 +992,6 @@ export default function SubjectAllocation() {
                                             const calendar = allocation.calendar;
                                             const program = allocation.program;
                                             const term = allocation.term;
-                                            console.log(subject)
                                             return (
                                                 <TableRow key={allocation.lecturer_id + '' + allocation.prog_subj_id + '' + allocation.sy_term_id} className="hover:bg-muted/50">
                                                     <TableCell>
