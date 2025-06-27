@@ -15,6 +15,9 @@ const mainNavItems = [
         url: '/class-schedule',
         icon: Calendar,
     },
+];
+
+const allocationNavItems = [
     {
         title: 'Subject Allocation',
         url: '/subject-allocation',
@@ -79,7 +82,8 @@ export function AppSidebar() {
             </SidebarHeader>
 
             <SidebarContent>
-                <NavMain items={mainNavItems} title={'Main Menu'} />
+                <NavMain items={mainNavItems} title={'Schedule Menu'} />
+                <NavMain items={allocationNavItems} title={'Allocation Menu'} />
                 <NavMain items={InputNavItems} title={'Entry Control'} />
             </SidebarContent>
 
