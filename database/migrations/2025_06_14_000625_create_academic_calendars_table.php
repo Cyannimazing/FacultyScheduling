@@ -18,7 +18,6 @@ return new class extends Migration
             $table->string('school_year');
             $table->date('start_date');
             $table->date('end_date');
-            $table->unsignedBigInteger('prog_id');
             $table->timestamps();
 
             // Unique constraint
@@ -27,7 +26,6 @@ return new class extends Migration
 
             // Foreign keys
             $table->foreign('term_id')->references('id')->on('terms')->onDelete('cascade');
-            $table->foreign('prog_id')->references('id')->on('programs')->onDelete('cascade');
 
         });
     }

@@ -389,7 +389,6 @@ export default function ClassSchedule() {
     const [isLoading, setIsLoading] = useState(false);
     const [selectedTerm, setSelectedTerm] = useState('');
     const [selectedGroup, setSelectedGroup] = useState('');
-    const [selectedProgram, setSelectedProgram] = useState('');
     const [isReportDialogOpen, setIsReportDialogOpen] = useState(false);
     const [logo, setLogo] = useState('');
 
@@ -420,41 +419,36 @@ export default function ClassSchedule() {
             class_id: selectedGroup,
         };
 
-        // Only add prog_code if a program is selected
-        if (selectedProgram) {
-            params.prog_code = selectedProgram;
-        }
-
         setIsLoading(true);
         router.get('/class-schedule', params, {
             preserveState: true,
             preserveScroll: true,
             onFinish: () => setIsLoading(false),
         });
-    }, [selectedTerm, selectedGroup, selectedProgram]);
+    }, [selectedTerm, selectedGroup]);
 
-    // Fetch groups when program changes
-    const fetchGroupsByProgram = React.useCallback(() => {
-        if (!selectedProgram) {
+    // Fetch groups when term changes (since academic calendar now contains program)
+    const fetchGroupsByTerm = React.useCallback(() => {
+        if (!selectedTerm) {
             return;
         }
 
-        const params = { prog_code: selectedProgram };
+        const params = { sy_term_id: selectedTerm };
 
         router.get('/class-schedule', params, {
             preserveState: true,
             preserveScroll: true,
             only: ['data'],
         });
-    }, [selectedProgram]);
+    }, [selectedTerm]);
 
-    // Reset group selection when program changes
+    // Reset group selection when term changes
     useEffect(() => {
-        if (selectedProgram) {
+        if (selectedTerm) {
             setSelectedGroup(''); // Reset group selection
-            fetchGroupsByProgram();
+            fetchGroupsByTerm();
         }
-    }, [selectedProgram, fetchGroupsByProgram]);
+    }, [selectedTerm, fetchGroupsByTerm]);
 
     // Apply filters when term or group changes
     useEffect(() => {
@@ -985,7 +979,7 @@ export default function ClassSchedule() {
                                                 <div className="flex items-center gap-2">
                                                     <CalendarIcon className="h-4 w-4" />
                                                     <span>
-                                                        {calendar.term?.name} - {calendar.school_year}
+                                                        {calendar.term?.name} - {calendar.school_year} ({calendar.program?.code || 'N/A'})
                                                     </span>
                                                 </div>
                                             </SelectItem>
@@ -993,27 +987,9 @@ export default function ClassSchedule() {
                                     </SelectContent>
                                 </Select>
 
-                                <Select value={selectedProgram} onValueChange={setSelectedProgram}>
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="Select Program *" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {programs.map((program) => (
-                                            <SelectItem key={program.code} value={program.code}>
-                                                <div className="flex items-center gap-2">
-                                                    <FileText className="h-4 w-4" />
-                                                    <span>
-                                                        {program.code} - {program.description}
-                                                    </span>
-                                                </div>
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-
-                                <Select value={selectedGroup} onValueChange={setSelectedGroup} disabled={!selectedProgram}>
+                                <Select value={selectedGroup} onValueChange={setSelectedGroup} disabled={!selectedTerm}>
                                     <SelectTrigger className="w-full md:w-[200px]">
-                                        <SelectValue placeholder={selectedProgram ? 'Select Group/Class *' : 'Select Program First'} />
+                                        <SelectValue placeholder={selectedTerm ? 'Select Group/Class *' : 'Select Academic Term First'} />
                                     </SelectTrigger>
                                     <SelectContent>
                                         {groups.map((group) => (
@@ -1066,7 +1042,10 @@ export default function ClassSchedule() {
                 isOpen={isReportDialogOpen}
                 onClose={() => setIsReportDialogOpen(false)}
                 onGenerate={handleGenerateReportWithParams}
-                program_type={programs.find((p) => p.code === selectedProgram)?.type || ''}
+                program_type={(() => {
+                    const selectedCalendar = academicCalendars.find(cal => cal.id.toString() === selectedTerm);
+                    return selectedCalendar?.program?.type || '';
+                })()}
             />
         </AppLayout>
     );

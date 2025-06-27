@@ -84,7 +84,7 @@ class LecturerScheduleController extends Controller
         }
 
 
-        $academicCalendars = AcademicCalendar::with('term', 'program')
+        $academicCalendars = AcademicCalendar::with(['term', 'program'])
                                 ->orderBy('school_year', 'desc')
                                 ->orderBy('id')
                                 ->get();
@@ -368,7 +368,6 @@ class LecturerScheduleController extends Controller
     public function getGroupSchedule(Request $request){
         $termFilter = $request->input('sy_term_id');
         $classFilter = $request->input('class_id');
-        $programFilter = $request->input('prog_code');
 
         $schedules = collect();
 
@@ -389,8 +388,8 @@ class LecturerScheduleController extends Controller
                                        ->get();
         }
 
-        // Get academic calendars for the filter dropdown
-        $academicCalendars = AcademicCalendar::with('term')
+        // Get academic calendars for the filter dropdown with program relationship
+        $academicCalendars = AcademicCalendar::with(['term', 'program'])
                             ->orderBy('school_year', 'desc')
                             ->orderBy('id')
                             ->get();
@@ -398,10 +397,14 @@ class LecturerScheduleController extends Controller
         // Get all programs for the program filter dropdown
         $programs = \App\Models\Program::orderBy('description')->get();
 
-        // Get groups/classes filtered by program if program is selected
+        // Get groups/classes filtered by program based on term selection
         $groupsQuery = Group::with('program');
-        if ($programFilter) {
-            $groupsQuery->where('prog_code', $programFilter);
+        if ($termFilter) {
+            // Get the associated program for the selected academic calendar
+            $selectedCalendar = AcademicCalendar::with('program')->find($termFilter);
+            if ($selectedCalendar && $selectedCalendar->program) {
+                $groupsQuery->where('prog_code', $selectedCalendar->program->code);
+            }
         }
         $groups = $groupsQuery->orderBy('name')->get();
 

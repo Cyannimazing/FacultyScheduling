@@ -228,12 +228,14 @@ function ScheduleDialog({ isOpen, onClose, schedule = null, onSave, lecturers, a
     const [isLoadingSubjects, setIsLoadingSubjects] = useState(false);
     const [isLoadingClasses, setIsLoadingClasses] = useState(false);
     const [isLoadingTimeSlots, setIsLoadingTimeSlots] = useState(false);
+    const [isDialogLoading, setIsDialogLoading] = useState(false);
 
     React.useEffect(() => {
         if (isOpen) {
             if (schedule) {
                 console.log(schedule)
                 // Edit mode - populate form with existing schedule data
+                setIsDialogLoading(true);
                 setFormData({
                     lecturer_id: schedule.lecturer_id?.toString() || '',
                     sy_term_id: schedule.sy_term_id?.toString() || '',
@@ -249,10 +251,16 @@ function ScheduleDialog({ isOpen, onClose, schedule = null, onSave, lecturers, a
                 // Load subjects first, then classes
                 if (schedule.lecturer_id && schedule.sy_term_id) {
                     console.log('Edit mode: Loading subjects for lecturer', schedule.lecturer_id, 'and term', schedule.sy_term_id);
-                    loadSubjects(schedule.sy_term_id, schedule.lecturer_id);
+                    loadSubjects(schedule.sy_term_id, schedule.lecturer_id, schedule.prog_subj_id)
+                        .finally(() => {
+                            setIsDialogLoading(false);
+                        });
+                } else {
+                    setIsDialogLoading(false);
                 }
             } else {
                 // Add mode - clear form
+                setIsDialogLoading(false);
                 setFormData({
                     lecturer_id: '',
                     sy_term_id: '',
@@ -273,10 +281,10 @@ function ScheduleDialog({ isOpen, onClose, schedule = null, onSave, lecturers, a
         setValidationError('');
     }, [schedule, isOpen]);
 
-    const loadSubjects = async (syTermId, lecturerId) => {
-        if (!syTermId || !lecturerId) return Promise.resolve();
+    const loadSubjects = async (syTermId, lecturerId, progSubjId = null) => {
+        if (!syTermId || !lecturerId) return Promise.resolve([]);
 
-        console.log('loadSubjects called with:', { syTermId, lecturerId });
+        console.log('loadSubjects called with:', { syTermId, lecturerId, progSubjId });
         setIsLoadingSubjects(true);
         try {
             const url = `/api/subject-by-lecturer-schoolyear/${syTermId}/${lecturerId}`;
@@ -290,6 +298,29 @@ function ScheduleDialog({ isOpen, onClose, schedule = null, onSave, lecturers, a
             const subjects = await response.json();
             console.log('Loaded subjects:', subjects);
             setAvailableSubjects(subjects);
+            
+            // In edit mode, if we have a prog_subj_id, ensure the selectedSubjectValue is set and load classes
+            if (schedule && progSubjId) {
+                const matchingSubject = subjects.find(s => s.id === parseInt(progSubjId));
+                if (matchingSubject) {
+                    console.log('Edit mode: Found matching subject, updating form data and loading classes');
+                    setFormData(prev => ({
+                        ...prev,
+                        selectedSubjectValue: progSubjId.toString()
+                    }));
+                    
+                    // Also load classes if we have the program code
+                    if (matchingSubject.prog_code) {
+                        console.log('Loading classes for program code:', matchingSubject.prog_code);
+                        await loadClasses(matchingSubject.prog_code);
+                    } else {
+                        console.warn('No program code found for subject:', matchingSubject);
+                    }
+                } else {
+                    console.warn('No matching subject found for prog_subj_id:', progSubjId);
+                }
+            }
+            
             return subjects; // Return the subjects for chaining
         } catch (error) {
             console.error('Error fetching subjects:', error);
@@ -301,16 +332,22 @@ function ScheduleDialog({ isOpen, onClose, schedule = null, onSave, lecturers, a
     };
 
     const loadClasses = async (progCode) => {
-        if (!progCode) return;
+        if (!progCode) return [];
 
         setIsLoadingClasses(true);
         try {
             const response = await fetch(`/api/classes-by-prog-code/${progCode}`);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
             const classes = await response.json();
+            console.log('Loaded classes for program code:', progCode, classes);
             setAvailableClasses(classes);
+            return classes;
         } catch (error) {
             console.error('Error fetching classes:', error);
             setAvailableClasses([]);
+            return [];
         } finally {
             setIsLoadingClasses(false);
         }
@@ -458,6 +495,8 @@ function ScheduleDialog({ isOpen, onClose, schedule = null, onSave, lecturers, a
             // Load classes based on the program code
             if (selectedProgramSubject.prog_code) {
                 await loadClasses(selectedProgramSubject.prog_code);
+            } else {
+                console.warn('Selected program subject does not have a program code.');
             }
         } else {
             console.warn('No program subject found for ID:', progSubjId);
@@ -465,45 +504,50 @@ function ScheduleDialog({ isOpen, onClose, schedule = null, onSave, lecturers, a
     };
 
     React.useEffect(() => {
-        handleLecturerTermChange();
-    }, [formData.lecturer_id, formData.sy_term_id]);
+        if (!schedule) { // Only for add mode, not edit mode
+            handleLecturerTermChange();
+        }
+    }, [formData.lecturer_id, formData.sy_term_id, schedule]);
 
-    // Watch for availableSubjects changes in edit mode to set up existing subject and load classes
+    // This useEffect is no longer needed since we handle class loading directly in loadSubjects
+    // Keeping it commented for reference
+    // React.useEffect(() => {
+    //     if (schedule && availableSubjects.length > 0 && formData.prog_subj_id) {
+    //         // This logic is now handled in loadSubjects function
+    //     }
+    // }, [availableSubjects, schedule?.id]);
+
+    // Watch for class loading completion in edit mode
     React.useEffect(() => {
-        if (schedule && availableSubjects.length > 0 && formData.prog_subj_id) {
-            // This is edit mode and subjects have been loaded
-            console.log('Edit mode: Setting up existing program subject', formData.prog_subj_id);
-            console.log('Available subjects count:', availableSubjects.length);
-
-            // Find the matching program subject
-            const progSubjIdInt = parseInt(formData.prog_subj_id);
-            const matchingProgramSubject = availableSubjects.find((ps) => ps.id === progSubjIdInt);
-
-            if (matchingProgramSubject) {
-                console.log('Found matching program subject:', matchingProgramSubject);
-
-                // Update selectedSubjectValue to match the prog_subj_id (only if it's different)
-                if (formData.selectedSubjectValue !== formData.prog_subj_id) {
-                    console.log('Setting selectedSubjectValue to:', formData.prog_subj_id);
-                    setFormData((prev) => ({
-                        ...prev,
-                        selectedSubjectValue: formData.prog_subj_id
-                    }));
-                }
-
-                // Load classes for this program subject if we have the program code
-                if (matchingProgramSubject.prog_code) {
-                    console.log('Loading classes for program code:', matchingProgramSubject.prog_code);
-                    loadClasses(matchingProgramSubject.prog_code);
-                } else {
-                    console.warn('No program code found for subject:', matchingProgramSubject);
-                }
+        if (schedule && availableClasses.length > 0 && formData.class_id) {
+            // In edit mode, once classes are loaded, ensure the selected class is available
+            const classIdInt = parseInt(formData.class_id);
+            const classExists = availableClasses.some(cls => cls.id === classIdInt);
+            
+            if (classExists) {
+                console.log('Edit mode: Class found in available classes, class_id:', formData.class_id);
             } else {
-                console.warn('No matching program subject found for ID:', formData.prog_subj_id);
-                console.warn('Available subjects:', availableSubjects.map(s => ({ id: s.id, code: s.prog_subj_code || 'No code' })));
+                console.warn('Edit mode: Selected class not found in available classes:', {
+                    selectedClassId: formData.class_id,
+                    availableClasses: availableClasses.map(c => ({ id: c.id, name: c.name }))
+                });
             }
         }
-    }, [availableSubjects.length, schedule?.id, formData.prog_subj_id]);
+    }, [availableClasses, schedule?.id, formData.class_id]);
+
+    // Additional effect to ensure classes are loaded when both subjects are available and we have a class_id in edit mode
+    React.useEffect(() => {
+        if (schedule && availableSubjects.length > 0 && formData.class_id && availableClasses.length === 0) {
+            // In edit mode, if we have a class_id but no classes are loaded yet, trigger class loading
+            const progSubjIdInt = parseInt(formData.prog_subj_id);
+            const matchingProgramSubject = availableSubjects.find((ps) => ps.id === progSubjIdInt);
+            
+            if (matchingProgramSubject && matchingProgramSubject.prog_code) {
+                console.log('Edit mode: Re-loading classes to ensure class selection is available');
+                loadClasses(matchingProgramSubject.prog_code);
+            }
+        }
+    }, [availableSubjects, schedule?.id, formData.class_id, availableClasses.length, formData.prog_subj_id]);
 
     // Load available time slots when relevant form data changes
     React.useEffect(() => {
@@ -584,6 +628,16 @@ function ScheduleDialog({ isOpen, onClose, schedule = null, onSave, lecturers, a
                         </div>
                     )}
 
+                    {isDialogLoading ? (
+                        <div className="flex items-center justify-center py-12">
+                            <div className="flex flex-col items-center gap-4">
+                                <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent"></div>
+                                <span className="text-sm text-muted-foreground">Loading schedule data...</span>
+                                <span className="text-xs text-muted-foreground">Please wait while we fetch the details</span>
+                            </div>
+                        </div>
+                    ) : (
+                        <>
                     <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
                             <Label htmlFor="lecturer_id">Lecturer *</Label>
@@ -618,7 +672,7 @@ function ScheduleDialog({ isOpen, onClose, schedule = null, onSave, lecturers, a
                                             <div className="flex items-center gap-2">
                                                 <CalendarIcon className="h-4 w-4" />
                                                 <span>
-                                                    {calendar.term?.name} - {calendar.school_year}
+                                                    {calendar.term?.name} - {calendar.school_year} ({calendar.program?.code || "N/A"})
                                                 </span>
                                             </div>
                                         </SelectItem>
@@ -798,12 +852,14 @@ function ScheduleDialog({ isOpen, onClose, schedule = null, onSave, lecturers, a
                             </Select>
                         </div>
                     </div>
+                        </>
+                    )}
                 </div>
                 <DialogFooter>
-                    <Button variant="outline" onClick={onClose}>
+                    <Button variant="outline" onClick={onClose} disabled={isDialogLoading}>
                         Cancel
                     </Button>
-                    <Button onClick={handleSave}>{schedule ? 'Update' : 'Create'} Schedule</Button>
+                    <Button onClick={handleSave} disabled={isDialogLoading}>{schedule ? 'Update' : 'Create'} Schedule</Button>
                 </DialogFooter>
             </DialogContent>
         </Dialog>
@@ -1025,21 +1081,10 @@ export default function FacultySchedule() {
     const handleSaveSchedule = (formData) => {
         setScheduleErrors(null); // Clear previous errors
 
-        // Map the term_filter to sy_term_id and add current filter parameters to preserve them after redirect
-        // For storage, we need to find a matching academic calendar ID from the term_filter (format: "termId_schoolYear")
-        if (!selectedCalendar || !selectedCalendar.includes('_')) {
-            setScheduleErrors({ term_filter: ['Please select a valid term'] });
-            return;
-        }
-
-        const [termId, schoolYear] = selectedCalendar.split('_');
-        const matchingCalendar = academicCalendars.find(cal =>
-            cal.term?.id.toString() === termId && cal.school_year === schoolYear
-        );
-
+        // For the save operation, we need the actual sy_term_id from formData
+        // The term_filter is used for filtering/display purposes only
         const dataWithFilters = {
             ...formData,
-            sy_term_id: matchingCalendar ? matchingCalendar.id : formData.sy_term_id, // Use the actual calendar ID for storage
             term_filter: selectedCalendar,
             lecturer_filter: selectedLecturer,
             class_filter: selectedClass || null,
