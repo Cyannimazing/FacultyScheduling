@@ -317,7 +317,7 @@ function ScheduleDialog({ isOpen, onClose, schedule = null, onSave, lecturers, a
 
     const loadAvailableTimeSlots = async () => {
         const { day, sy_term_id, lecturer_id, room_code, class_id, start_time } = formData;
-        
+
         // Only load if we have the required data
         if (!day || !sy_term_id) {
             setAvailableTimeSlots([]);
@@ -338,10 +338,10 @@ function ScheduleDialog({ isOpen, onClose, schedule = null, onSave, lecturers, a
 
             const response = await fetch(`/api/available-time-slots?${params}`);
             const data = await response.json();
-            
+
             console.log('Available time slots:', data);
             setAvailableTimeSlots(data.available_time_slots || []);
-            
+
             // Set available end times based on current start time
             // In edit mode, preserve the existing start_time value from formData
             updateAvailableEndTimes(start_time, data.available_time_slots || []);
@@ -363,7 +363,7 @@ function ScheduleDialog({ isOpen, onClose, schedule = null, onSave, lecturers, a
         const matchingSlot = timeSlots.find(slot => slot.start_time === startTime);
         if (matchingSlot) {
             const newEndTimes = matchingSlot.possible_end_times || [];
-            
+
             // In edit mode, always include the current end_time if it exists and is valid
             if (schedule && formData.end_time && formData.end_time > startTime) {
                 // Create a merged list that includes both available times and the current end_time
@@ -462,11 +462,11 @@ function ScheduleDialog({ isOpen, onClose, schedule = null, onSave, lecturers, a
             // In edit mode, we need to reload time slots to ensure proper availability validation
             // but we must preserve the existing start and end times
             console.log('Edit mode: Loading time slots while preserving existing times');
-            
+
             const loadTimeSlotsForEditMode = async () => {
                 const preservedStartTime = formData.start_time;
                 const preservedEndTime = formData.end_time;
-                
+
                 setIsLoadingTimeSlots(true);
                 try {
                     const params = new URLSearchParams({
@@ -480,26 +480,26 @@ function ScheduleDialog({ isOpen, onClose, schedule = null, onSave, lecturers, a
 
                     const response = await fetch(`/api/available-time-slots?${params}`);
                     const data = await response.json();
-                    
+
                     console.log('Edit mode: Available time slots loaded:', data.available_time_slots?.length);
                     setAvailableTimeSlots(data.available_time_slots || []);
-                    
+
                     // For edit mode, we need to ensure the current start time is in the available options
                     const availableSlots = data.available_time_slots || [];
                     const startTimeExists = availableSlots.some(slot => slot.start_time === preservedStartTime);
-                    
+
                     if (!startTimeExists) {
                         // Add the preserved start time to available slots for edit mode
                         console.log('Edit mode: Adding preserved start time to available options');
                         setAvailableTimeSlots(prev => [...prev, { start_time: preservedStartTime, possible_end_times: [preservedEndTime] }]);
                     }
-                    
+
                     // Handle end times with preservation
                     const matchingSlot = availableSlots.find(slot => slot.start_time === preservedStartTime);
                     if (matchingSlot) {
                         const newEndTimes = matchingSlot.possible_end_times || [];
-                        const endTimesWithPreserved = newEndTimes.includes(preservedEndTime) 
-                            ? newEndTimes 
+                        const endTimesWithPreserved = newEndTimes.includes(preservedEndTime)
+                            ? newEndTimes
                             : [...newEndTimes, preservedEndTime].sort();
                         setAvailableEndTimes(endTimesWithPreserved);
                         console.log('Edit mode: End times set with preservation:', endTimesWithPreserved);
@@ -508,7 +508,7 @@ function ScheduleDialog({ isOpen, onClose, schedule = null, onSave, lecturers, a
                         setAvailableEndTimes([preservedEndTime]);
                         console.log('Edit mode: Using only preserved end time');
                     }
-                    
+
                 } catch (error) {
                     console.error('Error loading time slots in edit mode:', error);
                     // On error, at least preserve the existing times
@@ -518,7 +518,7 @@ function ScheduleDialog({ isOpen, onClose, schedule = null, onSave, lecturers, a
                     setIsLoadingTimeSlots(false);
                 }
             };
-            
+
             // Small delay to ensure form data is fully set
             const timeoutId = setTimeout(loadTimeSlotsForEditMode, 100);
             return () => clearTimeout(timeoutId);
@@ -730,13 +730,13 @@ function ScheduleDialog({ isOpen, onClose, schedule = null, onSave, lecturers, a
 
                         <div className="space-y-2">
                             <Label htmlFor="start_time">Start Time *</Label>
-                            <Select 
-                                value={formData.start_time} 
+                            <Select
+                                value={formData.start_time}
                                 onValueChange={handleStartTimeChange}
                                 disabled={!formData.day || !formData.sy_term_id || isLoadingTimeSlots}
                             >
                                 <SelectTrigger className="w-full">
-                                    <SelectValue 
+                                    <SelectValue
                                         placeholder={
                                             !formData.day || !formData.sy_term_id
                                                 ? 'Select day and term first'
@@ -763,15 +763,15 @@ function ScheduleDialog({ isOpen, onClose, schedule = null, onSave, lecturers, a
 
                         <div className="space-y-2">
                             <Label htmlFor="end_time">End Time *</Label>
-                            <Select 
-                                value={formData.end_time} 
+                            <Select
+                                value={formData.end_time}
                                 onValueChange={(value) => setFormData({ ...formData, end_time: value })}
                                 disabled={!formData.start_time || availableEndTimes.length === 0}
                             >
                                 <SelectTrigger className="w-full">
-                                    <SelectValue 
+                                    <SelectValue
                                         placeholder={
-                                            !formData.start_time 
+                                            !formData.start_time
                                                 ? 'Select start time first'
                                                 : availableEndTimes.length === 0
                                                   ? 'No available end times'
@@ -1389,6 +1389,10 @@ export default function FacultySchedule() {
             .program-title {
                 font-size: 18px;
                 font-weight: bold;
+                text-align: center;
+                font-family: 'Times New Roman', Times, serif;
+            }
+            .program-subtitle {
                 margin-bottom: 5px;
                 text-align: center;
                 font-family: 'Times New Roman', Times, serif;
@@ -1410,8 +1414,10 @@ export default function FacultySchedule() {
                 flex: 1;
             }
             .info-right{
-                text-align: end;
+                display:flex;
+                flex-direction: column;
                 margin-right: 20px;
+                text-align: end;
             }
             .schedule-container {
                 width: 100%;
@@ -1536,6 +1542,12 @@ export default function FacultySchedule() {
                 z-index: 100;
                 font-family: 'Times New Roman', Times, serif;
             }
+            .load-format{
+                display: inline-block;
+                border-bottom: 1px solid #000;
+                width: 50px;
+                text-align: center;
+            }
         </style>
     </head>
     <body>
@@ -1543,13 +1555,16 @@ export default function FacultySchedule() {
             <img class="logo" src="${logo}" alt="logo"/>
         </div>
         <div class="program-title">${programTitle} <br/> LECTURER'S LOAD</div>
+        <div class="program-subtitle">${term.term.name} ${term.school_year}</div>
         <div class="info-section">
             <div class="info-left">
                 <strong>Lecturer Name:</strong> <u>${lecturerName}</u><br>
                 <strong>Subjects Assigned:</strong> ${subjects.join(', ')}
             </div>
             <div class="info-right">
-                <strong>No. of Teaching Load:</strong> ${teachingLoad}<br>
+                <span>No. of Teaching Load:<span class="load-format">${teachingLoad}</span></span>
+                <span>No. of Overload:<span class="load-format"></span></span>
+                <span>Total No. of Load:<span class="load-format"></span></span>
             </div>
         </div>
 

@@ -206,7 +206,23 @@ class LecturerSubjectController extends Controller
      */
     public function destroy(LecturerSubject $lecturerSubject)
     {
-        $lecturerSubject->delete();
+        DB::beginTransaction();
+        try {
+            // Delete related LecturerSchedule records first
+            LecturerSchedule::where('lecturer_id', $lecturerSubject->lecturer_id)
+                ->where('prog_subj_id', $lecturerSubject->prog_subj_id)
+                ->where('sy_term_id', $lecturerSubject->sy_term_id)
+                ->delete();
+            
+            // Then delete the LecturerSubject record
+            $lecturerSubject->delete();
+            
+            DB::commit();
+        } catch (\Exception $e) {
+            DB::rollback();
+            Log::error('Failed to delete Lecturer Subject and related schedules: ' . $e->getMessage());
+            return redirect()->route('subject-allocation')->withErrors(['error' => 'Failed to delete Lecturer Subject.']);
+        }
 
         return redirect()->route('subject-allocation')->with('success', 'Lecturer Subject deleted successfully.');
     }

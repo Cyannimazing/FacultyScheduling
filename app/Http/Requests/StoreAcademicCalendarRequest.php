@@ -63,6 +63,11 @@ class StoreAcademicCalendarRequest extends FormRequest
                 },
             ],
             'end_date' => 'required|date|after:start_date',
+            'prog_id' => [
+                'required',
+                'integer',
+                'exists:programs,id',
+            ],
         ];
     }
 

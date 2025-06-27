@@ -18,50 +18,18 @@ return new class extends Migration
             $table->string('school_year');
             $table->date('start_date');
             $table->date('end_date');
+            $table->unsignedBigInteger('prog_id');
             $table->timestamps();
 
             // Unique constraint
             $table->unique(['start_date', 'end_date'], 'academic_calendar_start_end_date');
             $table->unique(['term_id', 'school_year'], 'academic_calendar_school_term');
 
-            // Foreign key
+            // Foreign keys
             $table->foreign('term_id')->references('id')->on('terms')->onDelete('cascade');
+            $table->foreign('prog_id')->references('id')->on('programs')->onDelete('cascade');
 
         });
-        DB::unprepared("
-        CREATE TRIGGER check_calendar_availability_before_insert
-        BEFORE INSERT ON academic_calendars
-        FOR EACH ROW
-        BEGIN
-            SELECT
-                CASE
-                    WHEN (
-                        SELECT COUNT(*)
-                        FROM academic_calendars
-                        WHERE (start_date < NEW.end_date AND end_date > NEW.start_date)
-                    ) > 0
-                    THEN RAISE(ABORT, 'Academic Calendar dates overlap with an existing calendar')
-                END;
-        END;
-        ");
-
-        DB::unprepared("
-        CREATE TRIGGER check_calendar_availability_before_update
-        BEFORE UPDATE ON academic_calendars
-        FOR EACH ROW
-        BEGIN
-            SELECT
-                CASE
-                    WHEN (
-                        SELECT COUNT(*)
-                        FROM academic_calendars
-                        WHERE id != NEW.id
-                        AND (start_date < NEW.end_date AND end_date > NEW.start_date)
-                    ) > 0
-                    THEN RAISE(ABORT, 'Academic Calendar dates overlap with an existing calendar')
-                END;
-        END;
-        ");
     }
 
     /**

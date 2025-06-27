@@ -40,4 +40,9 @@ class Program extends Model
     {
         return $this->hasMany(ProgramSubject::class, 'prog_code', 'code');
     }
+
+    public function academicCalendars():HasMany
+    {
+        return $this->hasMany(AcademicCalendar::class, 'prog_id', 'id');
+    }
 }

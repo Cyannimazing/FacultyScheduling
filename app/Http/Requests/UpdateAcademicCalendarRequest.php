@@ -22,7 +22,7 @@ class UpdateAcademicCalendarRequest extends FormRequest
     public function rules(): array
     {
         $academicCalendarId = $this->route('academicCalendar') ?? $this->route('calendar');
-        
+
         return [
             'term_id' => [
                 'required',
@@ -32,11 +32,11 @@ class UpdateAcademicCalendarRequest extends FormRequest
                 function ($attribute, $value, $fail) use ($academicCalendarId) {
                     $query = \App\Models\AcademicCalendar::where('term_id', $value)
                         ->where('school_year', $this->input('school_year'));
-                    
+
                     if ($academicCalendarId) {
                         $query->where('id', '!=', $academicCalendarId);
                     }
-                    
+
                     if ($query->exists()) {
                         $fail('This term already exists for the selected school year.');
                     }
@@ -51,28 +51,33 @@ class UpdateAcademicCalendarRequest extends FormRequest
                 function ($attribute, $value, $fail) use ($academicCalendarId) {
                     $startDate = $value;
                     $endDate = $this->input('end_date');
-                    
+
                     if (!$endDate) {
                         return; // Let end_date validation handle missing end_date
                     }
-                    
+
                     // Check for any overlapping academic calendars
                     $query = \App\Models\AcademicCalendar::where(function ($q) use ($startDate, $endDate) {
                         $q->where('start_date', '<', $endDate)
                           ->where('end_date', '>', $startDate);
                     });
-                    
+
                     // Exclude current record from validation
                     if ($academicCalendarId) {
                         $query->where('id', '!=', $academicCalendarId);
                     }
-                    
+
                     if ($query->exists()) {
                         $fail('The selected dates overlap with an existing academic calendar.');
                     }
                 },
             ],
             'end_date' => 'required|date|after:start_date',
+            'prog_id' => [
+                'required',
+                'integer',
+                'exists:programs,id',
+            ],
         ];
     }
 

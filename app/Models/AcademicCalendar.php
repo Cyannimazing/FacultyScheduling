@@ -13,7 +13,7 @@ class AcademicCalendar extends Model
     use HasFactory;
 
     // UNIQUE (start_date, end_date),
-    protected $fillable = ['term_id', 'school_year', 'start_date', 'end_date', 'created_at', 'updated_at'];
+    protected $fillable = ['term_id', 'school_year', 'start_date', 'end_date', 'prog_id','created_at', 'updated_at'];
 
     protected $casts = [
         'start_date' => 'date',
@@ -26,6 +26,11 @@ class AcademicCalendar extends Model
     public function term(): BelongsTo
     {
         return $this->belongsTo(Term::class);
+    }
+
+    public function program(): BelongsTo
+    {
+        return $this->belongsTo(Program::class);
     }
 
     /**

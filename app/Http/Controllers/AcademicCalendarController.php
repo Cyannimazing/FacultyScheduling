@@ -6,6 +6,7 @@ use App\Models\AcademicCalendar;
 use App\Http\Requests\StoreAcademicCalendarRequest;
 use App\Http\Requests\UpdateAcademicCalendarRequest;
 use App\Models\Term;
+use App\Models\Program;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -20,20 +21,26 @@ class AcademicCalendarController extends Controller
         $page = $request->input('page', 1);
         $perPage = 5;
 
-        $academicCalendars = AcademicCalendar::with('term')
+        $academicCalendars = AcademicCalendar::with(['term', 'program'])
             ->where('school_year', 'LIKE', "%$search%")
             ->orWhereHas('term', function ($query) use ($search) {
                 $query->where('name', 'LIKE', "%$search%");
+            })
+            ->orWhereHas('program', function ($query) use ($search) {
+                $query->where('code', 'LIKE', "%$search%")
+                      ->orWhere('description', 'LIKE', "%$search%");
             })
             ->orderBy('school_year')
             ->paginate($perPage, ['*'], 'page', $page);
 
         $terms = Term::select(['id', 'name'])->orderBy('name')->get();
+        $programs = Program::select(['id', 'code', 'description'])->orderBy('code')->get();
 
         return Inertia::render('application/calendar', [
             'data'=> [
                 'academicCalendars' => $academicCalendars,
-                'terms' => $terms
+                'terms' => $terms,
+                'programs' => $programs
             ]
         ]);
     }
