@@ -14,6 +14,7 @@ import { useEffect, useState } from 'react';
 const breadcrumbs = [{ title: 'Term', href: '/term' }];
 
 const termOptions = ['1st Term', '2nd Term', '3rd Term', 'Summer'];
+const levelOptions = ['LVL1', 'LVL2', 'LVL3', 'LVL4', 'LVL5'];
 
 function LoadingSkeleton() {
     return (
@@ -31,21 +32,46 @@ function LoadingSkeleton() {
 }
 
 function TermDialog({ isOpen, onClose, term = null, onSave, existingTerms = [] }) {
-    const [formData, setFormData] = useState({ name: '' });
+    const [formData, setFormData] = useState({ baseTerm: '', level: '' });
 
     useEffect(() => {
         if (isOpen) {
-            setFormData({
-                name: term?.name || '',
-            });
+            if (term) {
+                // Parse existing term name to extract base term and level
+                const termName = term.name;
+                const levelMatch = termName.match(/\s\((LVL\d+)\)$/);
+                if (levelMatch) {
+                    const baseTerm = termName.replace(/\s\((LVL\d+)\)$/, '');
+                    setFormData({
+                        baseTerm: baseTerm,
+                        level: levelMatch[1]
+                    });
+                } else {
+                    setFormData({
+                        baseTerm: termName,
+                        level: 'none'
+                    });
+                }
+            } else {
+                setFormData({
+                    baseTerm: '',
+                    level: 'none'
+                });
+            }
         }
     }, [isOpen, term]);
 
-    const availableTerms = term ? termOptions : termOptions.filter((option) => !existingTerms.some((t) => t.name === option));
+    const availableTerms = termOptions; // Always show all term options since we can have different levels
+
+    const generateFinalName = () => {
+        if (!formData.baseTerm) return '';
+        return formData.level && formData.level !== 'none' ? `${formData.baseTerm} (${formData.level})` : formData.baseTerm;
+    };
 
     const handleSave = () => {
-        if (formData.name) {
-            onSave(formData);
+        if (formData.baseTerm) {
+            const finalName = generateFinalName();
+            onSave({ name: finalName });
         }
     };
 
@@ -58,10 +84,10 @@ function TermDialog({ isOpen, onClose, term = null, onSave, existingTerms = [] }
                 </DialogHeader>
                 <div className="grid gap-4 py-4">
                     <div className="grid grid-cols-4 items-center gap-4">
-                        <label htmlFor="name" className="text-right text-sm font-medium">
+                        <label htmlFor="baseTerm" className="text-right text-sm font-medium">
                             Term
                         </label>
-                        <Select value={formData.name} onValueChange={(value) => setFormData({ name: value })}>
+                        <Select value={formData.baseTerm} onValueChange={(value) => setFormData(prev => ({ ...prev, baseTerm: value }))}>
                             <SelectTrigger className="col-span-3">
                                 <SelectValue placeholder="Select a term" />
                             </SelectTrigger>
@@ -74,15 +100,40 @@ function TermDialog({ isOpen, onClose, term = null, onSave, existingTerms = [] }
                             </SelectContent>
                         </Select>
                     </div>
-                    {availableTerms.length === 0 && !term && (
-                        <div className="text-muted-foreground col-span-4 text-center text-sm">All terms have been added already.</div>
+                    <div className="grid grid-cols-4 items-center gap-4">
+                        <label htmlFor="level" className="text-right text-sm font-medium">
+                            Level <span className="text-muted-foreground text-xs">(Optional)</span>
+                        </label>
+                        <Select value={formData.level || 'none'} onValueChange={(value) => setFormData(prev => ({ ...prev, level: value === 'none' ? '' : value }))}>
+                            <SelectTrigger className="col-span-3">
+                                <SelectValue placeholder="Select level (optional)" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="none">No Level</SelectItem>
+                                {levelOptions.map((levelOption) => (
+                                    <SelectItem key={levelOption} value={levelOption}>
+                                        {levelOption}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                    {formData.baseTerm && (
+                        <div className="grid grid-cols-4 items-center gap-4">
+                            <label className="text-right text-sm font-medium text-muted-foreground">
+                                Preview
+                            </label>
+                            <div className="col-span-3 text-sm font-medium border rounded-md px-3 py-2 bg-muted">
+                                {generateFinalName() || 'Select a term'}
+                            </div>
+                        </div>
                     )}
                 </div>
                 <DialogFooter>
                     <Button variant="outline" onClick={onClose}>
                         Cancel
                     </Button>
-                    <Button onClick={handleSave} disabled={!formData.name || (availableTerms.length === 0 && !term)}>
+                    <Button onClick={handleSave} disabled={!formData.baseTerm}>
                         {term ? 'Update' : 'Create'} Term
                     </Button>
                 </DialogFooter>
