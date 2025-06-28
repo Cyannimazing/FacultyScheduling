@@ -14,7 +14,7 @@ class LecturerSchedule extends Model
     //UNIQUE (room_code, day, start_time, end_time, sy_term_id),
     // UNIQUE (lecturer_id, day, start_time, end_time, sy_term_id),
     // UNIQUE (class_id, day, start_time, end_time, sy_term_id),
-    protected $fillable = ['lecturer_id', 'prog_subj_id', 'room_code', 'class_id', 'sy_term_id', 'day', 'start_time', 'end_time', 'created_at'];
+    protected $fillable = ['lecturer_id', 'prog_subj_id', 'room_code', 'class_id', 'sy_term_id', 'batch_no', 'day', 'start_time', 'end_time', 'created_at'];
 
     /**
      * Get the lecturer that owns the lecturer schedule.

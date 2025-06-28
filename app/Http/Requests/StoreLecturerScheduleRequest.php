@@ -28,16 +28,16 @@ class StoreLecturerScheduleRequest extends FormRequest
                 'required',
                 'integer',
                 'exists:lecturers,id',
-                // Note: Conflict checking is now handled by database triggers
-                // which check for overlapping academic calendar periods
+                // Note: Conflict checking is now handled by custom validation
+                // which checks for overlapping schedules within the same batch
             ],
             'prog_subj_id' => 'required|integer|exists:program_subjects,id',
             'room_code' => [
                 'required',
                 'string',
                 'exists:rooms,name',
-                // Note: Conflict checking is now handled by database triggers
-                // which check for overlapping academic calendar periods
+                // Note: Conflict checking is now handled by custom validation
+                // which checks for overlapping schedules within the same batch
             ],
             'day' => 'required|string|in:Monday,Tuesday,Wednesday,Thursday,Friday,Saturday,Sunday',
             'start_time' => 'required|date_format:H:i',
@@ -50,10 +50,11 @@ class StoreLecturerScheduleRequest extends FormRequest
                 'required',
                 'integer',
                 'exists:groups,id',
-                // Note: Conflict checking is now handled by database triggers
-                // which check for overlapping academic calendar periods
+                // Note: Conflict checking is now handled by custom validation
+                // which checks for overlapping schedules within the same batch
             ],
             'sy_term_id' => 'required|integer|exists:academic_calendars,id',
+            'batch_no' => 'required|integer|min:1',
         ];
     }
 
@@ -114,83 +115,65 @@ class StoreLecturerScheduleRequest extends FormRequest
     }
 
     /**
-     * Check room availability - mirrors the room availability trigger logic
+     * Check room availability - only within the same batch, regardless of term
      */
     protected function checkRoomAvailability(Validator $validator): void
     {
-        $conflicts = DB::table('lecturer_schedules as ls')
-            ->join('academic_calendars as ac_existing', 'ac_existing.id', '=', 'ls.sy_term_id')
-            ->join('academic_calendars as ac_new', 'ac_new.id', '=', $this->input('sy_term_id'))
-            ->where('ls.room_code', $this->input('room_code'))
-            ->where('ls.day', $this->input('day'))
-            ->where(function ($query) {
-                // Check if academic calendar periods overlap
-                $query->whereRaw('ac_existing.start_date < ac_new.end_date')
-                      ->whereRaw('ac_existing.end_date > ac_new.start_date');
-            })
+        $conflicts = DB::table('lecturer_schedules')
+            ->where('room_code', $this->input('room_code'))
+            ->where('day', $this->input('day'))
+            ->where('batch_no', $this->input('batch_no')) // Only check within same batch
             ->where(function ($query) {
                 // Check if time slots overlap
-                $query->whereRaw('ls.start_time < ?', [$this->input('end_time')])
-                      ->whereRaw('ls.end_time > ?', [$this->input('start_time')]);
+                $query->whereRaw('start_time < ?', [$this->input('end_time')])
+                      ->whereRaw('end_time > ?', [$this->input('start_time')]);
             })
             ->exists();
 
         if ($conflicts) {
-            $validator->errors()->add('room_code', 'Room is not available for this time slot - conflicts with existing schedule during overlapping academic periods');
+            $validator->errors()->add('room_code', 'Room is not available for this time slot - conflicts with existing schedule within the same batch');
         }
     }
 
     /**
-     * Check lecturer availability - mirrors the lecturer availability trigger logic
+     * Check lecturer availability - only within the same batch, regardless of term
      */
     protected function checkLecturerAvailability(Validator $validator): void
     {
-        $conflicts = DB::table('lecturer_schedules as ls')
-            ->join('academic_calendars as ac_existing', 'ac_existing.id', '=', 'ls.sy_term_id')
-            ->join('academic_calendars as ac_new', 'ac_new.id', '=', $this->input('sy_term_id'))
-            ->where('ls.lecturer_id', $this->input('lecturer_id'))
-            ->where('ls.day', $this->input('day'))
-            ->where(function ($query) {
-                // Check if academic calendar periods overlap
-                $query->whereRaw('ac_existing.start_date < ac_new.end_date')
-                      ->whereRaw('ac_existing.end_date > ac_new.start_date');
-            })
+        $conflicts = DB::table('lecturer_schedules')
+            ->where('lecturer_id', $this->input('lecturer_id'))
+            ->where('day', $this->input('day'))
+            ->where('batch_no', $this->input('batch_no')) // Only check within same batch
             ->where(function ($query) {
                 // Check if time slots overlap
-                $query->whereRaw('ls.start_time < ?', [$this->input('end_time')])
-                      ->whereRaw('ls.end_time > ?', [$this->input('start_time')]);
+                $query->whereRaw('start_time < ?', [$this->input('end_time')])
+                      ->whereRaw('end_time > ?', [$this->input('start_time')]);
             })
             ->exists();
 
         if ($conflicts) {
-            $validator->errors()->add('lecturer_id', 'Lecturer is not available for this time slot - conflicts with existing schedule during overlapping academic periods');
+            $validator->errors()->add('lecturer_id', 'Lecturer is not available for this time slot - conflicts with existing schedule within the same batch');
         }
     }
 
     /**
-     * Check class availability - mirrors the class availability trigger logic
+     * Check class availability - only within the same batch, regardless of term
      */
     protected function checkClassAvailability(Validator $validator): void
     {
-        $conflicts = DB::table('lecturer_schedules as ls')
-            ->join('academic_calendars as ac_existing', 'ac_existing.id', '=', 'ls.sy_term_id')
-            ->join('academic_calendars as ac_new', 'ac_new.id', '=', $this->input('sy_term_id'))
-            ->where('ls.class_id', $this->input('class_id'))
-            ->where('ls.day', $this->input('day'))
-            ->where(function ($query) {
-                // Check if academic calendar periods overlap
-                $query->whereRaw('ac_existing.start_date < ac_new.end_date')
-                      ->whereRaw('ac_existing.end_date > ac_new.start_date');
-            })
+        $conflicts = DB::table('lecturer_schedules')
+            ->where('class_id', $this->input('class_id'))
+            ->where('day', $this->input('day'))
+            ->where('batch_no', $this->input('batch_no')) // Only check within same batch
             ->where(function ($query) {
                 // Check if time slots overlap
-                $query->whereRaw('ls.start_time < ?', [$this->input('end_time')])
-                      ->whereRaw('ls.end_time > ?', [$this->input('start_time')]);
+                $query->whereRaw('start_time < ?', [$this->input('end_time')])
+                      ->whereRaw('end_time > ?', [$this->input('start_time')]);
             })
             ->exists();
 
         if ($conflicts) {
-            $validator->errors()->add('class_id', 'This group/class is not available for this time slot - conflicts with existing schedule during overlapping academic periods');
+            $validator->errors()->add('class_id', 'This group/class is not available for this time slot - conflicts with existing schedule within the same batch');
         }
     }
 }

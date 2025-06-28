@@ -22,7 +22,7 @@ class LecturerScheduleController extends Controller
      */
     public function index(Request $request)
     {
-        $termFilter = $request->input('term_filter');
+        $batchFilter = $request->input('batch_filter');
         $lecturerFilter = $request->input('lecturer_filter');
         $programTypeFilter = $request->input('program_type_filter');
         $classFilter = $request->input('class_filter');
@@ -30,40 +30,20 @@ class LecturerScheduleController extends Controller
         // Initialize empty schedules if required filters are not provided
         $schedules = collect();
 
-        // Only fetch schedules if both lecturer and term are selected
-        if ($lecturerFilter && $termFilter) {
-            // Parse term filter to extract term_id and school_year
-            if (strpos($termFilter, '_') !== false) {
-                list($termId, $schoolYear) = explode('_', $termFilter);
-                
-                // Get schedules with relationships
-                $schedulesQuery = LecturerSchedule::with([
-                    'lecturer',
-                    'programSubject.subject',
-                    'room',
-                    'group',
-                    'academicCalendar.term'
-                ]);
+        // Only fetch schedules if both lecturer and batch are selected
+        if ($lecturerFilter && $batchFilter) {
+            // Get schedules with relationships
+            $schedulesQuery = LecturerSchedule::with([
+                'lecturer',
+                'programSubject.subject',
+                'room',
+                'group',
+                'academicCalendar.term'
+            ]);
 
-                // Apply required filters using term_id and school_year to get all subjects across programs
-                $schedulesQuery->whereHas('academicCalendar', function ($query) use ($termId, $schoolYear) {
-                        $query->where('term_id', $termId)
-                              ->where('school_year', $schoolYear);
-                    })
-                    ->where('lecturer_id', $lecturerFilter);
-            } else {
-                // Fallback to original logic if term_filter format is unexpected
-                $schedulesQuery = LecturerSchedule::with([
-                    'lecturer',
-                    'programSubject.subject',
-                    'room',
-                    'group',
-                    'academicCalendar.term'
-                ]);
-
-                $schedulesQuery->where('sy_term_id', $termFilter)
-                ->where('lecturer_id', $lecturerFilter);
-            }
+            // Apply required filters using batch_no
+            $schedulesQuery->where('batch_no', $batchFilter)
+                          ->where('lecturer_id', $lecturerFilter);
 
             if ($programTypeFilter){
                 $schedulesQuery->whereHas('group.program', function($query) use($programTypeFilter) {
@@ -98,6 +78,13 @@ class LecturerScheduleController extends Controller
 
         $rooms = Room::orderBy('name')->get();
 
+        // Get existing batch numbers
+        $existingBatches = LecturerSchedule::distinct('batch_no')
+                                          ->whereNotNull('batch_no')
+                                          ->orderBy('batch_no')
+                                          ->pluck('batch_no')
+                                          ->toArray();
+
         // Calculate overall statistics (independent of current filters)
         $totalSchedules = LecturerSchedule::count();
         $totalActiveLecturers = LecturerSchedule::distinct('lecturer_id')->count('lecturer_id');
@@ -110,6 +97,7 @@ class LecturerScheduleController extends Controller
                 'academicCalendars' => $academicCalendars,
                 'lecturers' => $lecturers,
                 'rooms' => $rooms,
+                'existingBatches' => $existingBatches,
                 'statistics' => [
                     'totalSchedules' => $totalSchedules,
                     'totalActiveLecturers' => $totalActiveLecturers,
@@ -176,17 +164,73 @@ class LecturerScheduleController extends Controller
         $termId = $selectedAcademicCalendar->term_id;
         $schoolYear = $selectedAcademicCalendar->school_year;
 
-        // Get existing schedules for the same day, term, and school year across ALL programs
-        // This ensures we consider occupied timeslots from all programs with the same term and school year
-        $conflictingSchedules = LecturerSchedule::where('day', $day)
-            ->whereHas('academicCalendar', function ($query) use ($termId, $schoolYear) {
-                $query->where('term_id', $termId)
-                      ->where('school_year', $schoolYear);
-            })
-            ->when($excludeScheduleId, function ($query) use ($excludeScheduleId) {
-                return $query->where('id', '!=', $excludeScheduleId);
-            })
-            ->get();
+        // Get existing schedules for the same day and batch across ALL terms
+        // When creating a new batch, also consider ongoing schedules from other batches
+        $batchNo = $request->input('batch_no');
+        $isNewBatch = $request->input('is_new_batch', false);
+        $today = now()->startOfDay(); // Use Carbon date for proper comparison
+        
+        // Debug: Log the date being used for comparison
+        \Log::info('Date comparison debug', [
+            'today' => $today->toDateString(),
+            'today_carbon' => $today->toISOString(),
+            'now_formatted' => now()->format('Y-m-d'),
+            'current_timestamp' => now()->timestamp,
+        ]);
+        
+        if ($isNewBatch) {
+            // For new batches, check conflicts with active/upcoming schedules from all batches
+            $conflictingSchedules = LecturerSchedule::with('academicCalendar')
+                ->where('day', $day)
+                ->whereHas('academicCalendar', function ($query) use ($today) {
+                    // Only consider schedules from terms that are active or upcoming
+                    // Active: start_date <= today <= end_date
+                    // Upcoming: start_date > today
+                    $query->where(function ($q) use ($today) {
+                        $q->where(function ($activeQuery) use ($today) {
+                            // Active terms (only if they end AFTER today)
+                            $activeQuery->where('start_date', '<=', $today)
+                                       ->where('end_date', '>', $today);
+                        })->orWhere(function ($upcomingQuery) use ($today) {
+                            // Upcoming terms
+                            $upcomingQuery->where('start_date', '>', $today);
+                        });
+                    });
+                })
+                ->when($excludeScheduleId, function ($query) use ($excludeScheduleId) {
+                    return $query->where('id', '!=', $excludeScheduleId);
+                })
+                ->get();
+                
+            // Debug: Log what schedules are being considered for conflicts
+            \Log::info('Time slot availability check for new batch', [
+                'day' => $day,
+                'today' => $today,
+                'is_new_batch' => $isNewBatch,
+                'total_conflicting_schedules' => $conflictingSchedules->count(),
+                'conflicting_schedules' => $conflictingSchedules->map(function($schedule) {
+                    return [
+                        'id' => $schedule->id,
+                        'batch_no' => $schedule->batch_no,
+                        'room_code' => $schedule->room_code,
+                        'start_time' => $schedule->start_time,
+                        'end_time' => $schedule->end_time,
+                        'start_date' => $schedule->academicCalendar->start_date ?? 'N/A',
+                        'end_date' => $schedule->academicCalendar->end_date ?? 'N/A',
+                        'lecturer_id' => $schedule->lecturer_id,
+                        'class_id' => $schedule->class_id,
+                    ];
+                })->toArray()
+            ]);
+        } else {
+            // For existing batches, only check within the same batch
+            $conflictingSchedules = LecturerSchedule::where('day', $day)
+                ->where('batch_no', $batchNo)
+                ->when($excludeScheduleId, function ($query) use ($excludeScheduleId) {
+                    return $query->where('id', '!=', $excludeScheduleId);
+                })
+                ->get();
+        }
 
         // Check conflicts for each resource type
         $blockedTimeSlots = [];
@@ -280,13 +324,27 @@ class LecturerScheduleController extends Controller
     public function store(StoreLecturerScheduleRequest $request)
     {
             $validated = $request->validated();
+            $batchNo = $validated['batch_no'];
+            
+            // Check if this is a new batch number
+            $existingBatchNumbers = LecturerSchedule::distinct('batch_no')
+                                                   ->whereNotNull('batch_no')
+                                                   ->pluck('batch_no')
+                                                   ->toArray();
+            
+            $isNewBatch = !in_array($batchNo, $existingBatchNumbers);
+            
+            if ($isNewBatch) {
+                // Copy all ongoing schedules from other batches to this new batch
+                $this->copyOngoingSchedulesToNewBatch($batchNo);
+            }
 
             LecturerSchedule::create($validated);
 
             // Preserve the current filters in the redirect
             $queryParams = [];
-            if ($request->input('term_filter')) {
-                $queryParams['term_filter'] = $request->input('term_filter');
+            if ($request->input('batch_filter')) {
+                $queryParams['batch_filter'] = $request->input('batch_filter');
             }
             if ($request->input('lecturer_filter')) {
                 $queryParams['lecturer_filter'] = $request->input('lecturer_filter');
@@ -330,8 +388,8 @@ class LecturerScheduleController extends Controller
 
             // Preserve the current filters in the redirect
             $queryParams = [];
-            if ($request->input('term_filter')) {
-                $queryParams['term_filter'] = $request->input('term_filter');
+            if ($request->input('batch_filter')) {
+                $queryParams['batch_filter'] = $request->input('batch_filter');
             }
             if ($request->input('lecturer_filter')) {
                 $queryParams['lecturer_filter'] = $request->input('lecturer_filter');
@@ -352,8 +410,8 @@ class LecturerScheduleController extends Controller
 
         // Preserve the current filters in the redirect
         $queryParams = [];
-        if ($request->input('term_filter')) {
-            $queryParams['term_filter'] = $request->input('term_filter');
+        if ($request->input('batch_filter')) {
+            $queryParams['batch_filter'] = $request->input('batch_filter');
         }
         if ($request->input('lecturer_filter')) {
             $queryParams['lecturer_filter'] = $request->input('lecturer_filter');
@@ -466,5 +524,89 @@ class LecturerScheduleController extends Controller
                 'rooms' => $rooms,
             ]
         ]);
+    }
+
+    /**
+     * Copy all ongoing schedules from existing batches to a new batch
+     */
+    private function copyOngoingSchedulesToNewBatch($newBatchNo)
+    {
+        $today = now()->startOfDay(); // Use Carbon date for proper comparison
+        
+        // Get schedules from active or upcoming terms only
+        $ongoingSchedules = LecturerSchedule::with(['academicCalendar'])
+            ->whereHas('academicCalendar', function ($query) use ($today) {
+                // Only copy schedules from terms that are active or upcoming
+                // Active: start_date <= today <= end_date
+                // Upcoming: start_date > today
+                $query->where(function ($q) use ($today) {
+                    $q->where(function ($activeQuery) use ($today) {
+                        // Active terms (only if they end AFTER today)
+                        $activeQuery->where('start_date', '<=', $today)
+                                   ->where('end_date', '>', $today);
+                    })->orWhere(function ($upcomingQuery) use ($today) {
+                        // Upcoming terms
+                        $upcomingQuery->where('start_date', '>', $today);
+                    });
+                });
+            })
+            ->get();
+        
+        // Debug: Log the schedules being considered
+        \Log::info('Copying schedules to new batch', [
+            'new_batch_no' => $newBatchNo,
+            'today' => $today,
+            'total_schedules_found' => $ongoingSchedules->count(),
+            'schedules' => $ongoingSchedules->map(function($schedule) {
+                return [
+                    'id' => $schedule->id,
+                    'batch_no' => $schedule->batch_no,
+                    'sy_term_id' => $schedule->sy_term_id,
+                    'end_date' => $schedule->academicCalendar->end_date ?? 'N/A',
+                    'lecturer_id' => $schedule->lecturer_id,
+                    'subject' => $schedule->prog_subj_id,
+                ];
+            })
+        ]);
+        
+        // Group schedules by unique combination (excluding id, timestamps, and batch_no)
+        $uniqueSchedules = [];
+        
+        foreach ($ongoingSchedules as $schedule) {
+            // Create a unique key based on schedule details (excluding batch_no)
+            $key = sprintf(
+                '%s_%s_%s_%s_%s_%s_%s_%s',
+                $schedule->lecturer_id,
+                $schedule->prog_subj_id,
+                $schedule->room_code,
+                $schedule->class_id,
+                $schedule->sy_term_id,
+                $schedule->day,
+                $schedule->start_time,
+                $schedule->end_time
+            );
+            
+            // Only store the first occurrence of each unique schedule
+            if (!isset($uniqueSchedules[$key])) {
+                $uniqueSchedules[$key] = $schedule;
+            }
+        }
+        
+        // Copy unique ongoing schedules to the new batch
+        foreach ($uniqueSchedules as $schedule) {
+            LecturerSchedule::create([
+                'lecturer_id' => $schedule->lecturer_id,
+                'prog_subj_id' => $schedule->prog_subj_id,
+                'room_code' => $schedule->room_code,
+                'class_id' => $schedule->class_id,
+                'sy_term_id' => $schedule->sy_term_id,
+                'day' => $schedule->day,
+                'start_time' => $schedule->start_time,
+                'end_time' => $schedule->end_time,
+                'batch_no' => $newBatchNo, // Assign to the new batch
+            ]);
+        }
+        
+        return count($uniqueSchedules);
     }
 }

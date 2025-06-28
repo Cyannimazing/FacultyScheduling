@@ -11,7 +11,7 @@ import AppLayout from '@/layouts/app-layout';
 import { Head, router, usePage } from '@inertiajs/react';
 import { BookOpen, Calendar as CalendarIcon, Clock, Edit, Grid3x3, List, MapPin, MoreHorizontal, Plus, Trash2, User, Users } from 'lucide-react';
 import React, { useState } from 'react';
-import { getTimeRangeDisplay, TIME_SLOTS , formatTime} from '../../lib/timeFormatter';
+import { formatTime, getTimeRangeDisplay, TIME_SLOTS } from '../../lib/timeFormatter';
 
 const breadcrumbs = [
     {
@@ -144,7 +144,7 @@ function ScheduleGrid({ schedules }) {
                 {/* Generate all time slots from TIME_SLOTS */}
                 {timeSlots.map((timeSlot, timeIndex) => {
                     const timeRangeDisplay = getTimeRangeDisplay(timeSlot);
-                    if(timeRangeDisplay){
+                    if (timeRangeDisplay) {
                         return (
                             <div key={timeSlot} className="relative mb-1 grid grid-cols-6 gap-1">
                                 {/* Time column */}
@@ -191,7 +191,9 @@ function ScheduleGrid({ schedules }) {
                                                         </div>
                                                         <div className="mb-1 text-xs opacity-75">Room: {schedule.room_code}</div>
                                                         <div className="text-xs opacity-75">
-                                                            <div>{formatTime(schedule.start_time)} - {formatTime(schedule.end_time)}</div>
+                                                            <div>
+                                                                {formatTime(schedule.start_time)} - {formatTime(schedule.end_time)}
+                                                            </div>
                                                         </div>
                                                     </div>
                                                 );
@@ -208,13 +210,14 @@ function ScheduleGrid({ schedules }) {
     );
 }
 
-function ScheduleDialog({ isOpen, onClose, schedule = null, onSave, lecturers, academicCalendars, rooms, errors = null }) {
+function ScheduleDialog({ isOpen, onClose, schedule = null, onSave, lecturers, academicCalendars, rooms, existingBatches = [], errors = null }) {
     const [formData, setFormData] = useState({
         lecturer_id: '',
         sy_term_id: '',
         prog_subj_id: '',
         room_code: '',
         class_id: '',
+        batch_no: '',
         day: '',
         start_time: '',
         end_time: '',
@@ -233,7 +236,7 @@ function ScheduleDialog({ isOpen, onClose, schedule = null, onSave, lecturers, a
     React.useEffect(() => {
         if (isOpen) {
             if (schedule) {
-                console.log(schedule)
+                console.log(schedule);
                 // Edit mode - populate form with existing schedule data
                 setIsDialogLoading(true);
                 setFormData({
@@ -242,6 +245,7 @@ function ScheduleDialog({ isOpen, onClose, schedule = null, onSave, lecturers, a
                     prog_subj_id: schedule.prog_subj_id?.toString() || '',
                     room_code: schedule.room_code || '',
                     class_id: schedule.class_id?.toString() || '',
+                    batch_no: schedule.batch_no?.toString() || '', // Read-only during edit
                     day: schedule.day || '',
                     start_time: schedule.start_time || '',
                     end_time: schedule.end_time || '',
@@ -251,10 +255,9 @@ function ScheduleDialog({ isOpen, onClose, schedule = null, onSave, lecturers, a
                 // Load subjects first, then classes
                 if (schedule.lecturer_id && schedule.sy_term_id) {
                     console.log('Edit mode: Loading subjects for lecturer', schedule.lecturer_id, 'and term', schedule.sy_term_id);
-                    loadSubjects(schedule.sy_term_id, schedule.lecturer_id, schedule.prog_subj_id)
-                        .finally(() => {
-                            setIsDialogLoading(false);
-                        });
+                    loadSubjects(schedule.sy_term_id, schedule.lecturer_id, schedule.prog_subj_id).finally(() => {
+                        setIsDialogLoading(false);
+                    });
                 } else {
                     setIsDialogLoading(false);
                 }
@@ -267,6 +270,7 @@ function ScheduleDialog({ isOpen, onClose, schedule = null, onSave, lecturers, a
                     prog_subj_id: '',
                     room_code: '',
                     class_id: '',
+                    batch_no: existingBatches.length > 0 ? (Math.max(...existingBatches) + 1).toString() : '1', // Auto-select next batch
                     day: '',
                     start_time: '',
                     end_time: '',
@@ -298,17 +302,17 @@ function ScheduleDialog({ isOpen, onClose, schedule = null, onSave, lecturers, a
             const subjects = await response.json();
             console.log('Loaded subjects:', subjects);
             setAvailableSubjects(subjects);
-            
+
             // In edit mode, if we have a prog_subj_id, ensure the selectedSubjectValue is set and load classes
             if (schedule && progSubjId) {
-                const matchingSubject = subjects.find(s => s.id === parseInt(progSubjId));
+                const matchingSubject = subjects.find((s) => s.id === parseInt(progSubjId));
                 if (matchingSubject) {
                     console.log('Edit mode: Found matching subject, updating form data and loading classes');
-                    setFormData(prev => ({
+                    setFormData((prev) => ({
                         ...prev,
-                        selectedSubjectValue: progSubjId.toString()
+                        selectedSubjectValue: progSubjId.toString(),
                     }));
-                    
+
                     // Also load classes if we have the program code
                     if (matchingSubject.prog_code) {
                         console.log('Loading classes for program code:', matchingSubject.prog_code);
@@ -320,7 +324,7 @@ function ScheduleDialog({ isOpen, onClose, schedule = null, onSave, lecturers, a
                     console.warn('No matching subject found for prog_subj_id:', progSubjId);
                 }
             }
-            
+
             return subjects; // Return the subjects for chaining
         } catch (error) {
             console.error('Error fetching subjects:', error);
@@ -367,6 +371,9 @@ function ScheduleDialog({ isOpen, onClose, schedule = null, onSave, lecturers, a
 
         setIsLoadingTimeSlots(true);
         try {
+            // Check if this is a new batch (not in existing batches)
+            const isNewBatch = formData.batch_no && !existingBatches.includes(parseInt(formData.batch_no));
+
             const params = new URLSearchParams({
                 day,
                 sy_term_id,
@@ -374,6 +381,8 @@ function ScheduleDialog({ isOpen, onClose, schedule = null, onSave, lecturers, a
                 ...(room_code && { room_code }),
                 ...(class_id && { class_id }),
                 ...(schedule && { exclude_schedule_id: schedule.id }), // Exclude current schedule when editing
+                ...(formData.batch_no && { batch_no: formData.batch_no }), // Include batch_no for conflict detection
+                ...(isNewBatch && { is_new_batch: true }), // Mark as new batch if applicable
             });
 
             const response = await fetch(`/api/available-time-slots?${params}`);
@@ -384,14 +393,14 @@ function ScheduleDialog({ isOpen, onClose, schedule = null, onSave, lecturers, a
 
             // In edit mode, ensure the existing start_time is available
             if (schedule && start_time) {
-                const startTimeExists = availableSlots.some(slot => slot.start_time === start_time);
+                const startTimeExists = availableSlots.some((slot) => slot.start_time === start_time);
 
                 if (!startTimeExists) {
                     console.log('Edit mode: Adding preserved start time to available options');
                     // Create a slot for the existing start time with the existing end time as an option
                     const preservedSlot = {
                         start_time: start_time,
-                        possible_end_times: end_time ? [end_time] : []
+                        possible_end_times: end_time ? [end_time] : [],
                     };
                     availableSlots.push(preservedSlot);
                 }
@@ -407,10 +416,12 @@ function ScheduleDialog({ isOpen, onClose, schedule = null, onSave, lecturers, a
 
             // In edit mode, provide fallback with existing times
             if (schedule && formData.start_time) {
-                const fallbackSlots = [{
-                    start_time: formData.start_time,
-                    possible_end_times: formData.end_time ? [formData.end_time] : []
-                }];
+                const fallbackSlots = [
+                    {
+                        start_time: formData.start_time,
+                        possible_end_times: formData.end_time ? [formData.end_time] : [],
+                    },
+                ];
                 setAvailableTimeSlots(fallbackSlots);
                 setAvailableEndTimes(formData.end_time ? [formData.end_time] : []);
             } else {
@@ -428,7 +439,7 @@ function ScheduleDialog({ isOpen, onClose, schedule = null, onSave, lecturers, a
             return;
         }
 
-        const matchingSlot = timeSlots.find(slot => slot.start_time === startTime);
+        const matchingSlot = timeSlots.find((slot) => slot.start_time === startTime);
         if (matchingSlot) {
             const newEndTimes = matchingSlot.possible_end_times || [];
 
@@ -461,7 +472,7 @@ function ScheduleDialog({ isOpen, onClose, schedule = null, onSave, lecturers, a
         const { lecturer_id, sy_term_id } = formData;
         if (lecturer_id && sy_term_id) {
             // Clear selected subject when term changes since subjects will be different
-            setFormData(prev => ({ ...prev, prog_subj_id: '', selectedSubjectValue: '', class_id: '' }));
+            setFormData((prev) => ({ ...prev, prog_subj_id: '', selectedSubjectValue: '', class_id: '' }));
             setAvailableSubjects([]);
             setAvailableClasses([]);
             await loadSubjects(sy_term_id, lecturer_id);
@@ -504,7 +515,8 @@ function ScheduleDialog({ isOpen, onClose, schedule = null, onSave, lecturers, a
     };
 
     React.useEffect(() => {
-        if (!schedule) { // Only for add mode, not edit mode
+        if (!schedule) {
+            // Only for add mode, not edit mode
             handleLecturerTermChange();
         }
     }, [formData.lecturer_id, formData.sy_term_id, schedule]);
@@ -522,14 +534,14 @@ function ScheduleDialog({ isOpen, onClose, schedule = null, onSave, lecturers, a
         if (schedule && availableClasses.length > 0 && formData.class_id) {
             // In edit mode, once classes are loaded, ensure the selected class is available
             const classIdInt = parseInt(formData.class_id);
-            const classExists = availableClasses.some(cls => cls.id === classIdInt);
-            
+            const classExists = availableClasses.some((cls) => cls.id === classIdInt);
+
             if (classExists) {
                 console.log('Edit mode: Class found in available classes, class_id:', formData.class_id);
             } else {
                 console.warn('Edit mode: Selected class not found in available classes:', {
                     selectedClassId: formData.class_id,
-                    availableClasses: availableClasses.map(c => ({ id: c.id, name: c.name }))
+                    availableClasses: availableClasses.map((c) => ({ id: c.id, name: c.name })),
                 });
             }
         }
@@ -541,7 +553,7 @@ function ScheduleDialog({ isOpen, onClose, schedule = null, onSave, lecturers, a
             // In edit mode, if we have a class_id but no classes are loaded yet, trigger class loading
             const progSubjIdInt = parseInt(formData.prog_subj_id);
             const matchingProgramSubject = availableSubjects.find((ps) => ps.id === progSubjIdInt);
-            
+
             if (matchingProgramSubject && matchingProgramSubject.prog_code) {
                 console.log('Edit mode: Re-loading classes to ensure class selection is available');
                 loadClasses(matchingProgramSubject.prog_code);
@@ -555,21 +567,20 @@ function ScheduleDialog({ isOpen, onClose, schedule = null, onSave, lecturers, a
         if (formData.day && formData.sy_term_id) {
             loadAvailableTimeSlots();
         }
-    }, [formData.day, formData.sy_term_id, formData.lecturer_id, formData.room_code, formData.class_id]);
+    }, [formData.day, formData.sy_term_id, formData.lecturer_id, formData.room_code, formData.class_id, formData.batch_no]);
 
     // In edit mode, reset start and end times when room or day changes
     React.useEffect(() => {
         if (schedule && isOpen) {
             // Only reset times if we're in edit mode and the dialog is open
-            setFormData(prev => ({
+            setFormData((prev) => ({
                 ...prev,
                 start_time: '',
-                end_time: ''
+                end_time: '',
             }));
             setAvailableEndTimes([]);
         }
     }, [formData.day, formData.room_code, schedule?.id, isOpen]);
-
 
     const handleSave = () => {
         console.log('Saving schedule with data:', formData);
@@ -579,6 +590,7 @@ function ScheduleDialog({ isOpen, onClose, schedule = null, onSave, lecturers, a
             !formData.prog_subj_id ||
             !formData.room_code ||
             !formData.class_id ||
+            (!schedule && !formData.batch_no) || // Only require batch_no for new schedules
             !formData.day ||
             !formData.start_time ||
             !formData.end_time
@@ -592,7 +604,7 @@ function ScheduleDialog({ isOpen, onClose, schedule = null, onSave, lecturers, a
             return;
         }
 
-        onSave({
+        const saveData = {
             lecturer_id: parseInt(formData.lecturer_id),
             sy_term_id: parseInt(formData.sy_term_id),
             prog_subj_id: parseInt(formData.prog_subj_id),
@@ -601,7 +613,14 @@ function ScheduleDialog({ isOpen, onClose, schedule = null, onSave, lecturers, a
             day: formData.day,
             start_time: formData.start_time,
             end_time: formData.end_time,
-        });
+        };
+
+        // Include batch_no only for new schedules (not editing)
+        if (!schedule && formData.batch_no) {
+            saveData.batch_no = parseInt(formData.batch_no);
+        }
+
+        onSave(saveData);
         // Don't close dialog here - let the parent component handle closing on success
     };
 
@@ -631,227 +650,263 @@ function ScheduleDialog({ isOpen, onClose, schedule = null, onSave, lecturers, a
                     {isDialogLoading ? (
                         <div className="flex items-center justify-center py-12">
                             <div className="flex flex-col items-center gap-4">
-                                <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent"></div>
-                                <span className="text-sm text-muted-foreground">Loading schedule data...</span>
-                                <span className="text-xs text-muted-foreground">Please wait while we fetch the details</span>
+                                <div className="border-primary h-8 w-8 animate-spin rounded-full border-2 border-t-transparent"></div>
+                                <span className="text-muted-foreground text-sm">Loading schedule data...</span>
+                                <span className="text-muted-foreground text-xs">Please wait while we fetch the details</span>
                             </div>
                         </div>
                     ) : (
                         <>
-                    <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                            <Label htmlFor="lecturer_id">Lecturer *</Label>
-                            <Select value={formData.lecturer_id} onValueChange={(value) => setFormData({ ...formData, lecturer_id: value })}>
-                                <SelectTrigger className="w-full">
-                                    <SelectValue placeholder="Select lecturer" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {lecturers.map((lecturer) => (
-                                        <SelectItem key={lecturer.id} value={lecturer.id.toString()}>
-                                            <div className="flex items-center gap-2">
-                                                <User className="h-4 w-4" />
-                                                <span>
-                                                    {lecturer.title} {lecturer.fname} {lecturer.lname}
-                                                </span>
-                                            </div>
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                        </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <Label htmlFor="lecturer_id">Lecturer *</Label>
+                                    <Select value={formData.lecturer_id} onValueChange={(value) => setFormData({ ...formData, lecturer_id: value })}>
+                                        <SelectTrigger className="w-full">
+                                            <SelectValue placeholder="Select lecturer" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {lecturers.map((lecturer) => (
+                                                <SelectItem key={lecturer.id} value={lecturer.id.toString()}>
+                                                    <div className="flex items-center gap-2">
+                                                        <User className="h-4 w-4" />
+                                                        <span>
+                                                            {lecturer.title} {lecturer.fname} {lecturer.lname}
+                                                        </span>
+                                                    </div>
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
 
-                        <div className="space-y-2">
-                            <Label htmlFor="sy_term_id">Academic Term *</Label>
-                            <Select value={formData.sy_term_id} onValueChange={(value) => setFormData({ ...formData, sy_term_id: value })}>
-                                <SelectTrigger className="w-full">
-                                    <SelectValue placeholder="Select term" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {academicCalendars.map((calendar) => (
-                                        <SelectItem key={calendar.id} value={calendar.id.toString()}>
-                                            <div className="flex items-center gap-2">
-                                                <CalendarIcon className="h-4 w-4" />
-                                                <span>
-                                                    {calendar.term?.name} - {calendar.school_year} ({calendar.program?.code || "N/A"})
-                                                </span>
-                                            </div>
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                        </div>
-                    </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="sy_term_id">Academic Term *</Label>
+                                    <Select value={formData.sy_term_id} onValueChange={(value) => setFormData({ ...formData, sy_term_id: value })}>
+                                        <SelectTrigger className="w-full">
+                                            <SelectValue placeholder="Select term" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {academicCalendars.map((calendar) => (
+                                                <SelectItem key={calendar.id} value={calendar.id.toString()}>
+                                                    <div className="flex items-center gap-2">
+                                                        <CalendarIcon className="h-4 w-4" />
+                                                        <span>
+                                                            {calendar.term?.name} - {calendar.school_year} ({calendar.program?.code || 'N/A'})
+                                                        </span>
+                                                    </div>
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                            </div>
 
-                    <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                            <Label htmlFor="prog_subj_id">Subject *</Label>
-                            <Select
-                                value={formData.selectedSubjectValue || ''}
-                                onValueChange={handleSubjectChange}
-                                disabled={!formData.lecturer_id || !formData.sy_term_id || isLoadingSubjects}
-                            >
-                                <SelectTrigger className="w-full">
-                                    <SelectValue
-                                        placeholder={
-                                            !formData.lecturer_id || !formData.sy_term_id
-                                                ? 'Select lecturer and term first'
-                                                : isLoadingSubjects
-                                                  ? 'Loading subjects...'
-                                                  : 'Select subject'
-                                        }
-                                    />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {availableSubjects.map((programSubject) => {
-                                        const subject = programSubject.subject;
-                                        const program = programSubject.program;
-                                        return subject ? (
-                                            <SelectItem key={programSubject.id} value={programSubject.id.toString()}>
-                                                <div className="flex items-center gap-2">
-                                                    <BookOpen className="h-4 w-4" />
-                                                    <span>
-                                                        {programSubject.prog_subj_code} - {subject.name} - {program?.code || programSubject.prog_code}
-                                                    </span>
-                                                </div>
-                                            </SelectItem>
-                                        ) : null;
-                                    })}
-                                </SelectContent>
-                            </Select>
-                        </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                {/* Batch Number Selection - Only show for new schedules */}
+                                {!schedule && (
+                                    <div className="space-y-2">
+                                        <Label htmlFor="batch_no">Batch Number *</Label>
+                                        <Select value={formData.batch_no} onValueChange={(value) => setFormData({ ...formData, batch_no: value })}>
+                                            <SelectTrigger className="w-full">
+                                                <SelectValue placeholder="Select batch number" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {existingBatches.map((batch) => (
+                                                    <SelectItem key={batch} value={batch.toString()}>
+                                                        {batch}
+                                                    </SelectItem>
+                                                ))}
+                                                <SelectItem value={existingBatches.length > 0 ? (Math.max(...existingBatches) + 1).toString() : '1'}>
+                                                    {existingBatches.length > 0 ? Math.max(...existingBatches) + 1 : 1} (New Batch)
+                                                </SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                )}
 
-                        <div className="space-y-2">
-                            <Label htmlFor="class_id">Class/Group *</Label>
-                            <Select
-                                value={formData.class_id}
-                                onValueChange={(value) => setFormData({ ...formData, class_id: value })}
-                                disabled={!formData.prog_subj_id || isLoadingClasses}
-                            >
-                                <SelectTrigger className="w-full">
-                                    <SelectValue
-                                        placeholder={
-                                            !formData.prog_subj_id ? 'Select subject first' : isLoadingClasses ? 'Loading classes...' : 'Select class'
-                                        }
-                                    />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {availableClasses.map((group) => (
-                                        <SelectItem key={group.id} value={group.id.toString()}>
-                                            <div className="flex items-center gap-2">
-                                                <Users className="h-4 w-4" />
-                                                <span>{group.name}</span>
-                                            </div>
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                        </div>
-                    </div>
+                                {/* Show current batch in read-only mode for editing */}
+                                {schedule && (
+                                    <div className="space-y-2">
+                                        <Label htmlFor="batch_no">Batch Number (Read-only)</Label>
+                                        <Input value={formData.batch_no || 'N/A'} disabled className="bg-gray-100" />
+                                    </div>
+                                )}
 
-                    <div className="space-y-2">
-                        <Label htmlFor="room_code">Room *</Label>
-                        <Select value={formData.room_code} onValueChange={(value) => setFormData({ ...formData, room_code: value })}>
-                            <SelectTrigger>
-                                <SelectValue placeholder="Select room" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {rooms.map((room) => (
-                                    <SelectItem key={room.name} value={room.name}>
-                                        <div className="flex items-center gap-2">
-                                            <MapPin className="h-4 w-4" />
-                                            <span>{room.name}</span>
-                                        </div>
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                    </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="room_code">Room *</Label>
+                                    <Select value={formData.room_code} onValueChange={(value) => setFormData({ ...formData, room_code: value })}>
+                                        <SelectTrigger className="w-full">
+                                            <SelectValue placeholder="Select room" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {rooms.map((room) => (
+                                                <SelectItem key={room.name} value={room.name}>
+                                                    <div>
+                                                        <span>{room.name}</span>
+                                                    </div>
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                            </div>
 
-                    <div className="grid grid-cols-3 gap-4">
-                        <div className="space-y-2">
-                            <Label htmlFor="day">Day *</Label>
-                            <Select value={formData.day} onValueChange={(value) => setFormData({ ...formData, day: value })}>
-                                <SelectTrigger className="w-full">
-                                    <SelectValue placeholder="Select day" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {DAYS_OF_WEEK.map((day) => (
-                                        <SelectItem key={day} value={day}>
-                                            {day}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                        </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <Label htmlFor="prog_subj_id">Subject *</Label>
+                                    <Select
+                                        value={formData.selectedSubjectValue || ''}
+                                        onValueChange={handleSubjectChange}
+                                        disabled={!formData.lecturer_id || !formData.sy_term_id || isLoadingSubjects}
+                                    >
+                                        <SelectTrigger className="w-full">
+                                            <SelectValue
+                                                placeholder={
+                                                    !formData.lecturer_id || !formData.sy_term_id
+                                                        ? 'Select lecturer and term first'
+                                                        : isLoadingSubjects
+                                                          ? 'Loading subjects...'
+                                                          : 'Select subject'
+                                                }
+                                            />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {availableSubjects.map((programSubject) => {
+                                                const subject = programSubject.subject;
+                                                const program = programSubject.program;
+                                                return subject ? (
+                                                    <SelectItem key={programSubject.id} value={programSubject.id.toString()}>
+                                                        <div className="flex items-center gap-2">
+                                                            <BookOpen className="h-4 w-4" />
+                                                            <span>
+                                                                {programSubject.prog_subj_code} - {subject.name} -{' '}
+                                                                {program?.code || programSubject.prog_code}
+                                                            </span>
+                                                        </div>
+                                                    </SelectItem>
+                                                ) : null;
+                                            })}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
 
-                        <div className="space-y-2">
-                            <Label htmlFor="start_time">Start Time *</Label>
-                            <Select
-                                value={formData.start_time}
-                                onValueChange={handleStartTimeChange}
-                                disabled={!formData.day || !formData.sy_term_id || isLoadingTimeSlots}
-                            >
-                                <SelectTrigger className="w-full">
-                                    <SelectValue
-                                        placeholder={
-                                            !formData.day || !formData.sy_term_id
-                                                ? 'Select day and term first'
-                                                : isLoadingTimeSlots
-                                                  ? 'Loading available times...'
-                                                  : availableTimeSlots.length === 0
-                                                    ? 'No available times'
-                                                    : schedule && schedule.start_time
-                                                      ? `Current: ${TIME_SLOTS[schedule.start_time] || schedule.start_time}`
-                                                      : 'Select start time'
-                                        }
-                                    />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {availableTimeSlots.map((slot) => (
-                                        <SelectItem key={slot.start_time} value={slot.start_time}>
-                                            <div className="flex items-center gap-2">
-                                                <Clock className="h-4 w-4" />
-                                                <span>{TIME_SLOTS[slot.start_time]}</span>
-                                            </div>
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                        </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="class_id">Class/Group *</Label>
+                                    <Select
+                                        value={formData.class_id}
+                                        onValueChange={(value) => setFormData({ ...formData, class_id: value })}
+                                        disabled={!formData.prog_subj_id || isLoadingClasses}
+                                    >
+                                        <SelectTrigger className="w-full">
+                                            <SelectValue
+                                                placeholder={
+                                                    !formData.prog_subj_id
+                                                        ? 'Select subject first'
+                                                        : isLoadingClasses
+                                                          ? 'Loading classes...'
+                                                          : 'Select class'
+                                                }
+                                            />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {availableClasses.map((group) => (
+                                                <SelectItem key={group.id} value={group.id.toString()}>
+                                                    <div className="flex items-center gap-2">
+                                                        <Users className="h-4 w-4" />
+                                                        <span>{group.name}</span>
+                                                    </div>
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                            </div>
 
-                        <div className="space-y-2">
-                            <Label htmlFor="end_time">End Time *</Label>
-                            <Select
-                                value={formData.end_time}
-                                onValueChange={(value) => setFormData({ ...formData, end_time: value })}
-                                disabled={!formData.start_time || availableEndTimes.length === 0}
-                            >
-                                <SelectTrigger className="w-full">
-                                    <SelectValue
-                                        placeholder={
-                                            !formData.start_time
-                                                ? 'Select start time first'
-                                                : availableEndTimes.length === 0
-                                                  ? 'No available end times'
-                                                  : schedule && schedule.end_time
-                                                    ? `Current: ${TIME_SLOTS[schedule.end_time] || schedule.end_time}`
-                                                    : 'Select end time'
-                                        }
-                                    />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {availableEndTimes.map((endTime) => (
-                                        <SelectItem key={endTime} value={endTime}>
-                                            <div className="flex items-center gap-2">
-                                                <Clock className="h-4 w-4" />
-                                                <span>{TIME_SLOTS[endTime]}</span>
-                                            </div>
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                        </div>
-                    </div>
+                            <div className="grid grid-cols-3 gap-4">
+                                <div className="space-y-2">
+                                    <Label htmlFor="day">Day *</Label>
+                                    <Select value={formData.day} onValueChange={(value) => setFormData({ ...formData, day: value })}>
+                                        <SelectTrigger className="w-full">
+                                            <SelectValue placeholder="Select day" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {DAYS_OF_WEEK.map((day) => (
+                                                <SelectItem key={day} value={day}>
+                                                    {day}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+
+                                <div className="space-y-2">
+                                    <Label htmlFor="start_time">Start Time *</Label>
+                                    <Select
+                                        value={formData.start_time}
+                                        onValueChange={handleStartTimeChange}
+                                        disabled={!formData.day || !formData.sy_term_id || isLoadingTimeSlots}
+                                    >
+                                        <SelectTrigger className="w-full">
+                                            <SelectValue
+                                                placeholder={
+                                                    !formData.day || !formData.sy_term_id
+                                                        ? 'Select day and term first'
+                                                        : isLoadingTimeSlots
+                                                          ? 'Loading available times...'
+                                                          : availableTimeSlots.length === 0
+                                                            ? 'No available times'
+                                                            : schedule && schedule.start_time
+                                                              ? `Current: ${TIME_SLOTS[schedule.start_time] || schedule.start_time}`
+                                                              : 'Select start time'
+                                                }
+                                            />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {availableTimeSlots.map((slot) => (
+                                                <SelectItem key={slot.start_time} value={slot.start_time}>
+                                                    <div className="flex items-center gap-2">
+                                                        <Clock className="h-4 w-4" />
+                                                        <span>{TIME_SLOTS[slot.start_time]}</span>
+                                                    </div>
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+
+                                <div className="space-y-2">
+                                    <Label htmlFor="end_time">End Time *</Label>
+                                    <Select
+                                        value={formData.end_time}
+                                        onValueChange={(value) => setFormData({ ...formData, end_time: value })}
+                                        disabled={!formData.start_time || availableEndTimes.length === 0}
+                                    >
+                                        <SelectTrigger className="w-full">
+                                            <SelectValue
+                                                placeholder={
+                                                    !formData.start_time
+                                                        ? 'Select start time first'
+                                                        : availableEndTimes.length === 0
+                                                          ? 'No available end times'
+                                                          : schedule && schedule.end_time
+                                                            ? `Current: ${TIME_SLOTS[schedule.end_time] || schedule.end_time}`
+                                                            : 'Select end time'
+                                                }
+                                            />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {availableEndTimes.map((endTime) => (
+                                                <SelectItem key={endTime} value={endTime}>
+                                                    <div className="flex items-center gap-2">
+                                                        <Clock className="h-4 w-4" />
+                                                        <span>{TIME_SLOTS[endTime]}</span>
+                                                    </div>
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                            </div>
                         </>
                     )}
                 </div>
@@ -859,7 +914,9 @@ function ScheduleDialog({ isOpen, onClose, schedule = null, onSave, lecturers, a
                     <Button variant="outline" onClick={onClose} disabled={isDialogLoading}>
                         Cancel
                     </Button>
-                    <Button onClick={handleSave} disabled={isDialogLoading}>{schedule ? 'Update' : 'Create'} Schedule</Button>
+                    <Button onClick={handleSave} disabled={isDialogLoading}>
+                        {schedule ? 'Update' : 'Create'} Schedule
+                    </Button>
                 </DialogFooter>
             </DialogContent>
         </Dialog>
@@ -997,6 +1054,7 @@ export default function FacultySchedule() {
         academicCalendars = [],
         lecturers = [],
         rooms = [],
+        existingBatches = [],
         statistics = {
             totalSchedules: 0,
             totalActiveLecturers: 0,
@@ -1017,21 +1075,44 @@ export default function FacultySchedule() {
     const [isReportDialogOpen, setIsReportDialogOpen] = useState(false);
 
     const [logo, setLogo] = useState('');
-    const toBase64 = async (url) => {
-        const response = await fetch(url);
-        const blob = await response.blob();
+    const [logoLoading, setLogoLoading] = useState(true);
+    const [logoError, setLogoError] = useState(false);
 
-        return new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onloadend = () => resolve(reader.result);
-            reader.onerror = reject;
-            reader.readAsDataURL(blob);
-        });
+    const toBase64 = async (url) => {
+        try {
+            const response = await fetch(url);
+            if (!response.ok) {
+                throw new Error(`Failed to fetch logo: ${response.status}`);
+            }
+            const blob = await response.blob();
+
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onloadend = () => resolve(reader.result);
+                reader.onerror = () => reject(new Error('Failed to read file as base64'));
+                reader.readAsDataURL(blob);
+            });
+        } catch (error) {
+            console.error('Error converting logo to base64:', error);
+            throw error;
+        }
     };
 
-    toBase64('/PDFLogo.svg').then((base64) => {
-        setLogo(base64);
-    });
+    React.useEffect(() => {
+        toBase64('/PDFLogo.svg')
+            .then((base64) => {
+                setLogo(base64);
+                setLogoError(false);
+            })
+            .catch((error) => {
+                console.error('Failed to load logo:', error);
+                setLogoError(true);
+                setLogo(''); // Use empty string as fallback
+            })
+            .finally(() => {
+                setLogoLoading(false);
+            });
+    }, []);
 
     // Use statistics from backend (independent of current filters)
     const { totalSchedules, totalActiveLecturers, totalRoomsInUse } = statistics;
@@ -1082,10 +1163,10 @@ export default function FacultySchedule() {
         setScheduleErrors(null); // Clear previous errors
 
         // For the save operation, we need the actual sy_term_id from formData
-        // The term_filter is used for filtering/display purposes only
+        // The batch_filter is used for filtering/display purposes only
         const dataWithFilters = {
             ...formData,
-            term_filter: selectedCalendar,
+            batch_filter: selectedCalendar,
             lecturer_filter: selectedLecturer,
             class_filter: selectedClass || null,
         };
@@ -1126,7 +1207,7 @@ export default function FacultySchedule() {
 
             // Add current filter parameters to preserve them after redirect
             const dataWithFilters = {
-                term_filter: selectedCalendar,
+                batch_filter: selectedCalendar,
                 lecturer_filter: selectedLecturer,
                 class_filter: selectedClass || null,
             };
@@ -1152,7 +1233,7 @@ export default function FacultySchedule() {
         });
     };
 
-    // Apply filters - only when both lecturer and term are selected
+    // Apply filters - only when both lecturer and batch are selected
     React.useEffect(() => {
         if (selectedLecturer && selectedCalendar) {
             applyFilters();
@@ -1160,14 +1241,14 @@ export default function FacultySchedule() {
     }, [selectedCalendar, selectedLecturer, selectedClass]);
 
     const applyFilters = React.useCallback(() => {
-        // Don't make API call if required filters are missing or invalid
-        if (!selectedLecturer || !selectedCalendar || !selectedCalendar.includes('_')) {
+        // Don't make API call if required filters are missing
+        if (!selectedLecturer || !selectedCalendar) {
             return;
         }
 
         const params = new URLSearchParams();
 
-        params.append('term_filter', selectedCalendar);
+        params.append('batch_filter', selectedCalendar);
         params.append('lecturer_filter', selectedLecturer);
         if (selectedClass) params.append('class_filter', selectedClass);
 
@@ -1189,15 +1270,50 @@ export default function FacultySchedule() {
 
     const handleGenerateReportWithParams = (reportData) => {
         try {
+            // Validate inputs first
+            if (!selectedLecturer || !selectedCalendar) {
+                throw new Error('Missing lecturer or calendar selection');
+            }
+
+            if (!reportData || !reportData.programTitle || !reportData.preparedBy) {
+                throw new Error('Missing required report data');
+            }
+
+            if (logoLoading) {
+                alert('Please wait for the logo to load before generating the report.');
+                return;
+            }
+
             // Get lecturer details
             const selectedLecturerData = lecturers.find((l) => l.id.toString() === selectedLecturer);
-            const selectedTermData = academicCalendars.find((c) => c.id.toString() === selectedCalendar);
 
-            // Get unique subjects taught
-            const uniqueSubjects = [...new Set(schedules.map((s) => s.program_subject.prog_subj_code))];
+            // Note: selectedCalendar actually contains the batch number, not academic calendar ID
+            // We need to get the term data from the first schedule since all schedules in the batch
+            // should have the same academic calendar/term
+            const selectedTermData = schedules.length > 0 ? schedules[0].academic_calendar : null;
+
+            if (!selectedLecturerData) {
+                throw new Error('Selected lecturer not found');
+            }
+
+            if (!selectedTermData) {
+                throw new Error('No term data found for the selected batch/schedule');
+            }
+
+            if (!schedules || schedules.length === 0) {
+                throw new Error('No schedules available to generate report');
+            }
+
+            // Get unique subjects taught - with null checks
+            const uniqueSubjects = [
+                ...new Set(
+                    schedules.map((s) => s.program_subject?.prog_subj_code).filter((code) => code), // Remove null/undefined values
+                ),
+            ];
+
             const teachingLoad = calculateTotalOccupiedHours(schedules);
 
-            // Create print content
+            // Create print content with error handling
             const printContent = createPrintableReport({
                 lecturer: selectedLecturerData,
                 term: selectedTermData,
@@ -1209,32 +1325,92 @@ export default function FacultySchedule() {
                 reviewers: reportData.reviewers,
             });
 
+            if (!printContent) {
+                throw new Error('Failed to create printable report content');
+            }
+
             // Create a hidden iframe and print
             const iframe = document.createElement('iframe');
             iframe.style.position = 'absolute';
             iframe.style.left = '-9999px';
             iframe.style.width = '210mm';
             iframe.style.height = '297mm';
+
+            // Add error handling for iframe operations
+            iframe.onerror = (err) => {
+                console.error('Iframe error:', err);
+                document.body.removeChild(iframe);
+                throw new Error('Failed to create print iframe');
+            };
+
             document.body.appendChild(iframe);
 
-            // Write content to iframe
-            iframe.contentDocument.open();
-            iframe.contentDocument.write(printContent);
-            iframe.contentDocument.close();
+            // Check if iframe was created successfully
+            if (!iframe.contentDocument) {
+                throw new Error('Failed to access iframe document');
+            }
+
+            // Write content to iframe with error handling
+            try {
+                iframe.contentDocument.open();
+                iframe.contentDocument.write(printContent);
+                iframe.contentDocument.close();
+            } catch (writeError) {
+                console.error('Error writing to iframe:', writeError);
+                document.body.removeChild(iframe);
+                throw new Error('Failed to write content to print document');
+            }
 
             // Wait for content to load then print
             setTimeout(() => {
-                iframe.contentWindow.focus();
-                iframe.contentWindow.print();
+                try {
+                    if (iframe.contentWindow) {
+                        iframe.contentWindow.focus();
+                        iframe.contentWindow.print();
+                    } else {
+                        throw new Error('Iframe window not available');
+                    }
 
-                // Clean up after print dialog
-                setTimeout(() => {
-                    document.body.removeChild(iframe);
-                }, 1000);
+                    // Clean up after print dialog
+                    setTimeout(() => {
+                        try {
+                            if (iframe.parentNode) {
+                                document.body.removeChild(iframe);
+                            }
+                        } catch (cleanupError) {
+                            console.warn('Error cleaning up iframe:', cleanupError);
+                        }
+                    }, 1000);
+                } catch (printError) {
+                    console.error('Error during print operation:', printError);
+                    // Clean up iframe on error
+                    try {
+                        if (iframe.parentNode) {
+                            document.body.removeChild(iframe);
+                        }
+                    } catch (cleanupError) {
+                        console.warn('Error cleaning up iframe after print error:', cleanupError);
+                    }
+                    throw printError;
+                }
             }, 500);
         } catch (error) {
             console.error('Error generating report with parameters:', error);
-            alert('An error occurred while generating the report.');
+
+            // Provide more specific error messages
+            let errorMessage = 'An error occurred while generating the report.';
+
+            if (error.message.includes('Missing')) {
+                errorMessage = `Report generation failed: ${error.message}`;
+            } else if (error.message.includes('not found')) {
+                errorMessage = `Data error: ${error.message}. Please refresh the page and try again.`;
+            } else if (error.message.includes('logo')) {
+                errorMessage = 'Logo is still loading. Please wait a moment and try again.';
+            } else if (error.message.includes('iframe') || error.message.includes('print')) {
+                errorMessage = 'Print system error. Please try again or check your browser settings.';
+            }
+
+            alert(errorMessage);
         }
     };
 
@@ -1294,7 +1470,7 @@ export default function FacultySchedule() {
             const colors = ['blue-card', 'green-card', 'purple-card', 'orange-card', 'pink-card', 'indigo-card', 'yellow-card', 'red-card'];
             // Define base height for each time slot
             const BASE_SLOT_HEIGHT = 30; // Height for each 30-minute slot
-            const GAP_HEIGHT = 5; // Gap between rows
+            const GAP_HEIGHT = 4; // Gap between rows
 
             // Create color mapping for each unique class-subject combination
             const getClassSubjectKey = (schedule) => `${schedule.class_id}-${schedule.prog_subj_id}`;
@@ -1378,7 +1554,7 @@ export default function FacultySchedule() {
             timeSlots.forEach((timeSlot, timeIndex) => {
                 const timeRangeDisplay = getTimeRangeDisplay(timeSlot);
 
-                if(timeRangeDisplay){
+                if (timeRangeDisplay) {
                     gridHTML += `<div class="grid-row">`;
                     gridHTML += `<div class="time-cell">${timeRangeDisplay}</div>`;
 
@@ -1404,7 +1580,7 @@ export default function FacultySchedule() {
                             const classSubjectKey = getClassSubjectKey(schedule);
                             const colorClass = colorMap[classSubjectKey];
                             const span = schedule.span;
-                            const spanHeight = span * BASE_SLOT_HEIGHT + (span - 1) * GAP_HEIGHT;
+                            const spanHeight = span * BASE_SLOT_HEIGHT + (span - 0.5) * GAP_HEIGHT;
 
                             gridHTML += `
                             <div class="schedule-card ${colorClass}" style="height: ${spanHeight}px;">
@@ -1757,31 +1933,15 @@ export default function FacultySchedule() {
                                 </Select>
                                 <Select value={selectedCalendar} onValueChange={setSelectedCalendar}>
                                     <SelectTrigger className="w-full md:w-[200px]">
-                                        <SelectValue placeholder="Select Term *" />
+                                        <SelectValue placeholder="Select Schedule No *" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        {/* Group calendars by term and school year combination */}
-                                        {(() => {
-                                            const groupedCalendars = academicCalendars.reduce((acc, calendar) => {
-                                                const key = `${calendar.term?.id}_${calendar.school_year}`;
-                                                if (!acc[key]) {
-                                                    acc[key] = {
-                                                        term_id: calendar.term?.id,
-                                                        term_name: calendar.term?.name,
-                                                        school_year: calendar.school_year,
-                                                        programs: []
-                                                    };
-                                                }
-                                                acc[key].programs.push(calendar.program.code);
-                                                return acc;
-                                            }, {});
-
-                                            return Object.entries(groupedCalendars).map(([key, group]) => (
-                                                <SelectItem key={key} value={key}>
-                                                    {group.term_name} {group.school_year}
-                                                </SelectItem>
-                                            ));
-                                        })()}
+                                        {/* Show existing batch numbers from backend */}
+                                        {existingBatches.map((batchNo) => (
+                                            <SelectItem key={batchNo} value={batchNo.toString()}>
+                                                Schedule No: {batchNo}
+                                            </SelectItem>
+                                        ))}
                                     </SelectContent>
                                 </Select>
 
@@ -1935,6 +2095,7 @@ export default function FacultySchedule() {
                 lecturers={lecturers}
                 academicCalendars={academicCalendars}
                 rooms={rooms}
+                existingBatches={existingBatches}
                 errors={scheduleErrors}
             />
 
