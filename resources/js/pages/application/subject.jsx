@@ -1,4 +1,3 @@
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
@@ -12,7 +11,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import AppLayout from '@/layouts/app-layout';
 import { Head, router, usePage } from '@inertiajs/react';
-import { AlertCircle, BookOpen, Calendar, ChevronLeft, ChevronRight, Code, Edit, MoreHorizontal, Plus, Search, Trash2, X } from 'lucide-react';
+import { BookOpen, Calendar, ChevronLeft, ChevronRight, Code, Edit, MoreHorizontal, Plus, Search, Trash2 } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
 
 const breadcrumbs = [
@@ -21,7 +20,6 @@ const breadcrumbs = [
         href: '/subject',
     },
 ];
-
 
 function LoadingSkeleton() {
     return (
@@ -65,8 +63,8 @@ function SubjectDialog({ isOpen, onClose, subjectData = null, onSave, errors = n
 
     const handleSave = () => {
         if (formData.name) {
-            if(!formData.unit){
-                formData.unit = 1
+            if (!formData.unit) {
+                formData.unit = 1;
             }
             onSave({
                 ...formData,
@@ -156,7 +154,7 @@ function SubjectDialog({ isOpen, onClose, subjectData = null, onSave, errors = n
 }
 
 export default function Subject() {
-    const { data } = usePage().props
+    const { data } = usePage().props;
     const [isLoading, setIsLoading] = useState(false);
     const [searchSubject, setSearchSubject] = useState('');
     const [typeFilter, setTypeFilter] = useState('');
@@ -171,29 +169,30 @@ export default function Subject() {
     const totalPages = data.subjects.last_page;
 
     const handlePageChange = (page) => {
-         setIsLoading(true);
+        setIsLoading(true);
         router.get(
             '/subject',
             { page },
             {
                 preserveState: true,
                 onFinish: () => setIsLoading(false),
-            })
+            },
+        );
     };
 
     useEffect(() => {
-        if (typeFilter !== "") {
+        if (typeFilter !== '') {
             handleSearch('');
         }
     }, [typeFilter]);
 
     const handleSearch = (search) => {
-        var s ;
-        if(search){
-            s = search?.target?.value
-            setSearchSubject(search.target.value)
-        }else{
-            s = searchSubject
+        var s;
+        if (search) {
+            s = search?.target?.value;
+            setSearchSubject(search.target.value);
+        } else {
+            s = searchSubject;
         }
         setIsLoading(true);
         router.get(
@@ -313,14 +312,13 @@ export default function Subject() {
                                         placeholder="Search subjects..."
                                         value={searchSubject}
                                         onChange={(e) => {
-                                            setSearchSubject(e.target.value)
-                                            handleSearch(e, typeFilter)
+                                            setSearchSubject(e.target.value);
+                                            handleSearch(e, typeFilter);
                                         }}
                                         className="pl-9"
                                     />
                                 </div>
-                                <Select value={typeFilter}
-                                onValueChange={setTypeFilter}>
+                                <Select value={typeFilter} onValueChange={setTypeFilter}>
                                     <SelectTrigger className="w-full md:w-[200px]">
                                         <SelectValue placeholder="Filter by type" />
                                     </SelectTrigger>
@@ -344,7 +342,7 @@ export default function Subject() {
                                 <Table>
                                     <TableHeader>
                                         <TableRow>
-                                            <TableHead>Id</TableHead>
+                                            <TableHead>ID</TableHead>
                                             <TableHead>Subject Name</TableHead>
                                             <TableHead className="text-center">Units</TableHead>
                                             <TableHead className="text-center">Type</TableHead>
@@ -443,7 +441,12 @@ export default function Subject() {
                             Page {data.subjects.current_page} of {totalPages}
                         </div>
                         <div className="flex items-center space-x-2">
-                            <Button variant="outline" size="sm" onClick={() => handlePageChange(data.subjects.current_page - 1)} disabled={data.subjects.current_page === 1}>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handlePageChange(data.subjects.current_page - 1)}
+                                disabled={data.subjects.current_page === 1}
+                            >
                                 <ChevronLeft className="h-4 w-4" />
                                 Previous
                             </Button>
@@ -462,7 +465,13 @@ export default function Subject() {
             </div>
 
             {/* Add/Edit Subject Dialog */}
-            <SubjectDialog isOpen={isDialogOpen} onClose={() => setIsDialogOpen(false)} subjectData={editingSubject} onSave={handleSaveSubject} errors={saveErrors} />
+            <SubjectDialog
+                isOpen={isDialogOpen}
+                onClose={() => setIsDialogOpen(false)}
+                subjectData={editingSubject}
+                onSave={handleSaveSubject}
+                errors={saveErrors}
+            />
 
             {/* Delete Confirmation Dialog */}
             <Dialog open={deleteDialogOpen} onOpenChange={cancelDelete}>
@@ -483,7 +492,6 @@ export default function Subject() {
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
-
         </AppLayout>
     );
 }

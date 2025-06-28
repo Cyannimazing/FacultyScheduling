@@ -691,7 +691,7 @@ function ScheduleDialog({ isOpen, onClose, schedule = null, onSave, lecturers, a
                                                     <div className="flex items-center gap-2">
                                                         <CalendarIcon className="h-4 w-4" />
                                                         <span>
-                                                            {calendar.term?.name} - {calendar.school_year} ({calendar.program?.code || 'N/A'})
+                                                            {calendar.term?.name} - {calendar.school_year}
                                                         </span>
                                                     </div>
                                                 </SelectItem>
@@ -923,10 +923,11 @@ function ScheduleDialog({ isOpen, onClose, schedule = null, onSave, lecturers, a
     );
 }
 
-function ReportDialog({ isOpen, onClose, onGenerate }) {
+function ReportDialog({ isOpen, onClose, onGenerate, availableTerms = [] }) {
     const [formData, setFormData] = useState({
         programTitle: 'FOUNDATION PROGRAM',
         preparedBy: '',
+        selectedTermId: '',
         reviewerCount: 1,
         reviewers: [''],
     });
@@ -935,11 +936,12 @@ function ReportDialog({ isOpen, onClose, onGenerate }) {
             setFormData({
                 programTitle: 'FOUNDATION PROGRAM',
                 preparedBy: '',
+                selectedTermId: availableTerms.length > 0 ? availableTerms[0].id.toString() : '',
                 reviewerCount: 1,
                 reviewers: [''],
             });
         }
-    }, [isOpen]);
+    }, [isOpen, availableTerms]);
     const handleReviewerCountChange = (count) => {
         const newCount = parseInt(count);
         const newReviewers = Array(newCount)
@@ -959,7 +961,7 @@ function ReportDialog({ isOpen, onClose, onGenerate }) {
     };
 
     const handleGenerate = () => {
-        const hasRequiredFields = formData.programTitle && formData.preparedBy && formData.reviewers.every((reviewer) => reviewer.trim() !== '');
+        const hasRequiredFields = formData.programTitle && formData.preparedBy && formData.selectedTermId && formData.reviewers.every((reviewer) => reviewer.trim() !== '');
 
         if (hasRequiredFields) {
             onGenerate(formData);
@@ -986,6 +988,28 @@ function ReportDialog({ isOpen, onClose, onGenerate }) {
                             className="col-span-3"
                             placeholder="Enter program title (e.g., FOUNDATION PROGRAM)"
                         />
+                    </div>
+                    <div className="grid grid-cols-4 items-center gap-4">
+                        <label htmlFor="selectedTermId" className="text-right text-sm font-medium">
+                            Academic Term *
+                        </label>
+                        <Select value={formData.selectedTermId} onValueChange={(value) => setFormData({ ...formData, selectedTermId: value })}>
+                            <SelectTrigger className="col-span-3">
+                                <SelectValue placeholder="Select term for report" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                                {availableTerms.map((term) => (
+                                                    <SelectItem key={term.id} value={term.id.toString()}>
+                                                        <div className="flex items-center gap-2">
+                                                            <CalendarIcon className="h-4 w-4" />
+                                                            <span>
+                                                                {term.term?.name} - {term.school_year}
+                                                            </span>
+                                                        </div>
+                                                    </SelectItem>
+                                                ))}
+                            </SelectContent>
+                        </Select>
                     </div>
                     <div className="grid grid-cols-4 items-center gap-4">
                         <label htmlFor="preparedBy" className="text-right text-sm font-medium">
@@ -1037,7 +1061,7 @@ function ReportDialog({ isOpen, onClose, onGenerate }) {
                     </Button>
                     <Button
                         onClick={handleGenerate}
-                        disabled={!formData.programTitle || !formData.preparedBy || formData.reviewers.some((reviewer) => reviewer.trim() === '')}
+                        disabled={!formData.programTitle || !formData.preparedBy || !formData.selectedTermId || formData.reviewers.some((reviewer) => reviewer.trim() === '')}
                     >
                         Generate Report
                     </Button>
@@ -1287,10 +1311,13 @@ export default function FacultySchedule() {
             // Get lecturer details
             const selectedLecturerData = lecturers.find((l) => l.id.toString() === selectedLecturer);
 
-            // Note: selectedCalendar actually contains the batch number, not academic calendar ID
-            // We need to get the term data from the first schedule since all schedules in the batch
-            // should have the same academic calendar/term
-            const selectedTermData = schedules.length > 0 ? schedules[0].academic_calendar : null;
+            // Get the selected term data based on the user's selection in the report dialog
+            const selectedTermId = parseInt(reportData.selectedTermId);
+            const selectedTermData = schedules.find(s => s.academic_calendar?.id === selectedTermId)?.academic_calendar || 
+                                   (schedules.length > 0 ? schedules[0].academic_calendar : null);
+            
+            // Filter schedules to only include those from the selected term
+            const filteredSchedules = schedules.filter(s => s.academic_calendar?.id === selectedTermId);
 
             if (!selectedLecturerData) {
                 throw new Error('Selected lecturer not found');
@@ -1300,26 +1327,26 @@ export default function FacultySchedule() {
                 throw new Error('No term data found for the selected batch/schedule');
             }
 
-            if (!schedules || schedules.length === 0) {
-                throw new Error('No schedules available to generate report');
+            if (!filteredSchedules || filteredSchedules.length === 0) {
+                throw new Error('No schedules available for the selected term to generate report');
             }
 
-            // Get unique subjects taught - with null checks
+            // Get unique subjects taught for the selected term - with null checks
             const uniqueSubjects = [
                 ...new Set(
-                    schedules.map((s) => s.program_subject?.prog_subj_code).filter((code) => code), // Remove null/undefined values
+                    filteredSchedules.map((s) => s.program_subject?.prog_subj_code).filter((code) => code), // Remove null/undefined values
                 ),
             ];
 
-            const teachingLoad = calculateTotalOccupiedHours(schedules);
+            const teachingLoad = calculateTotalOccupiedHours(filteredSchedules);
 
-            // Create print content with error handling
+            // Create print content with error handling using filtered schedules
             const printContent = createPrintableReport({
                 lecturer: selectedLecturerData,
                 term: selectedTermData,
                 subjects: uniqueSubjects,
                 teachingLoad: teachingLoad,
-                schedules: schedules,
+                schedules: filteredSchedules, // Use filtered schedules for the selected term
                 programTitle: reportData.programTitle,
                 preparedBy: reportData.preparedBy,
                 reviewers: reportData.reviewers,
@@ -1412,6 +1439,21 @@ export default function FacultySchedule() {
 
             alert(errorMessage);
         }
+    };
+
+    // Helper function to get unique academic calendars from current schedules
+    const getAvailableTermsFromSchedules = (schedules) => {
+        if (!schedules || schedules.length === 0) return [];
+        
+        // Extract unique academic calendars based on ID
+        const uniqueTerms = schedules
+            .map(schedule => schedule.academic_calendar)
+            .filter(calendar => calendar) // Remove null/undefined
+            .filter((calendar, index, self) => 
+                self.findIndex(c => c.id === calendar.id) === index
+            ); // Remove duplicates by ID
+            
+        return uniqueTerms;
     };
 
     const createPrintableReport = ({ lecturer, term, subjects, teachingLoad, schedules, programTitle, preparedBy, reviewers }) => {
@@ -1982,6 +2024,15 @@ export default function FacultySchedule() {
                         </div>
                     </CardHeader>
                     <CardContent>
+                        {/* Teaching Load Display - below filters, above content */}
+                        {schedules.length > 0 && (
+                            <div className="mb-4 flex items-center gap-2 rounded-lg bg-blue-50 p-3">
+                                <Clock className="h-5 w-5 text-blue-600" />
+                                <span className="text-sm font-medium text-blue-900">
+                                    Teaching Load: <span className="font-bold">{totalOccupiedHours.toFixed(1)} hours</span>
+                                </span>
+                            </div>
+                        )}
                         {isLoading ? (
                             <LoadingSkeleton />
                         ) : schedules.length > 0 ? (
@@ -2117,7 +2168,12 @@ export default function FacultySchedule() {
                 </DialogContent>
             </Dialog>
 
-            <ReportDialog isOpen={isReportDialogOpen} onClose={() => setIsReportDialogOpen(false)} onGenerate={handleGenerateReportWithParams} />
+            <ReportDialog 
+                isOpen={isReportDialogOpen} 
+                onClose={() => setIsReportDialogOpen(false)} 
+                onGenerate={handleGenerateReportWithParams}
+                availableTerms={getAvailableTermsFromSchedules(schedules)}
+            />
         </AppLayout>
     );
 }

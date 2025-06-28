@@ -247,10 +247,11 @@ function ClassScheduleGrid({ schedules }) {
     );
 }
 
-function ReportDialog({ isOpen, onClose, onGenerate, program_type }) {
+function ReportDialog({ isOpen, onClose, onGenerate, program_type, availableTerms = [] }) {
     const [formData, setFormData] = useState({
         batchNumber: '',
         preparedBy: '',
+        selectedTermId: '',
         reviewerCount: 1,
         reviewers: [''],
     });
@@ -260,11 +261,12 @@ function ReportDialog({ isOpen, onClose, onGenerate, program_type }) {
             setFormData({
                 batchNumber: '',
                 preparedBy: '',
+                selectedTermId: availableTerms.length > 0 ? availableTerms[0].id.toString() : '',
                 reviewerCount: 1,
                 reviewers: [''],
             });
         }
-    }, [isOpen]);
+    }, [isOpen, availableTerms]);
 
     const handleReviewerCountChange = (count) => {
         const newCount = parseInt(count);
@@ -290,8 +292,9 @@ function ReportDialog({ isOpen, onClose, onGenerate, program_type }) {
         const basicFieldsValid = program_type === 'Vocational Foundation Program' ? formData.batchNumber && formData.preparedBy : formData.preparedBy;
 
         const reviewersValid = formData.reviewers.every((reviewer) => reviewer.trim() !== '');
+        const termSelected = formData.selectedTermId;
 
-        if (basicFieldsValid && reviewersValid) {
+        if (basicFieldsValid && reviewersValid && termSelected) {
             onGenerate(formData);
             onClose();
         }
@@ -319,6 +322,28 @@ function ReportDialog({ isOpen, onClose, onGenerate, program_type }) {
                             />
                         </div>
                     )}
+                    <div className="grid grid-cols-4 items-center gap-4">
+                        <label htmlFor="selectedTermId" className="text-right text-sm font-medium">
+                            Academic Term *
+                        </label>
+                        <Select value={formData.selectedTermId} onValueChange={(value) => setFormData({ ...formData, selectedTermId: value })}>
+                            <SelectTrigger className="col-span-3">
+                                <SelectValue placeholder="Select term for report" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {availableTerms.map((term) => (
+                                    <SelectItem key={term.id} value={term.id.toString()}>
+                                        <div className="flex items-center gap-2">
+                                            <CalendarIcon className="h-4 w-4" />
+                                            <span>
+                                                {term.term?.name} - {term.school_year}
+                                            </span>
+                                        </div>
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
                     <div className="grid grid-cols-4 items-center gap-4">
                         <label htmlFor="preparedBy" className="text-right text-sm font-medium">
                             Prepared By
@@ -371,8 +396,8 @@ function ReportDialog({ isOpen, onClose, onGenerate, program_type }) {
                         onClick={handleGenerate}
                         disabled={
                             program_type === 'Vocational Foundation Program'
-                                ? !formData.batchNumber || !formData.preparedBy || formData.reviewers.some((reviewer) => reviewer.trim() === '')
-                                : !formData.preparedBy || formData.reviewers.some((reviewer) => reviewer.trim() === '')
+                                ? !formData.batchNumber || !formData.preparedBy || !formData.selectedTermId || formData.reviewers.some((reviewer) => reviewer.trim() === '')
+                                : !formData.preparedBy || !formData.selectedTermId || formData.reviewers.some((reviewer) => reviewer.trim() === '')
                         }
                     >
                         Generate Report
@@ -385,9 +410,20 @@ function ReportDialog({ isOpen, onClose, onGenerate, program_type }) {
 
 export default function ClassSchedule() {
     const { data } = usePage().props;
-    const { schedules = [], academicCalendars = [], groups = [], programs = [] } = data;
+    const {
+        schedules = [],
+        academicCalendars = [],
+        groups = [],
+        programs = [],
+        existingBatches = [],
+        statistics = {
+            totalSchedules: 0,
+            totalActiveClasses: 0,
+            totalRoomsInUse: 0,
+        },
+    } = data;
     const [isLoading, setIsLoading] = useState(false);
-    const [selectedTerm, setSelectedTerm] = useState('');
+    const [selectedBatch, setSelectedBatch] = useState('');
     const [selectedGroup, setSelectedGroup] = useState('');
     const [isReportDialogOpen, setIsReportDialogOpen] = useState(false);
     const [logo, setLogo] = useState('');
@@ -410,13 +446,13 @@ export default function ClassSchedule() {
 
     // Apply filters and fetch schedules
     const applyFilters = React.useCallback(() => {
-        if (!selectedTerm || !selectedGroup) {
+        if (!selectedBatch || !selectedGroup) {
             return;
         }
 
         const params = {
-            sy_term_id: selectedTerm,
-            class_id: selectedGroup,
+            batch_filter: selectedBatch,
+            class_filter: selectedGroup,
         };
 
         setIsLoading(true);
@@ -425,67 +461,70 @@ export default function ClassSchedule() {
             preserveScroll: true,
             onFinish: () => setIsLoading(false),
         });
-    }, [selectedTerm, selectedGroup]);
+    }, [selectedBatch, selectedGroup]);
 
-    // Fetch groups when term changes (since academic calendar now contains program)
-    const fetchGroupsByTerm = React.useCallback(() => {
-        if (!selectedTerm) {
-            return;
-        }
-
-        const params = { sy_term_id: selectedTerm };
-
-        router.get('/class-schedule', params, {
-            preserveState: true,
-            preserveScroll: true,
-            only: ['data'],
-        });
-    }, [selectedTerm]);
-
-    // Reset group selection when term changes
+    // Apply filters when batch or group changes
     useEffect(() => {
-        if (selectedTerm) {
-            setSelectedGroup(''); // Reset group selection
-            fetchGroupsByTerm();
-        }
-    }, [selectedTerm, fetchGroupsByTerm]);
-
-    // Apply filters when term or group changes
-    useEffect(() => {
-        if (selectedTerm && selectedGroup) {
+        if (selectedBatch && selectedGroup) {
             applyFilters();
         }
-    }, [selectedTerm, selectedGroup, applyFilters]);
+    }, [selectedBatch, selectedGroup, applyFilters]);
 
     // Generate report function
     const handleGenerateReport = () => {
-        if (!selectedTerm || !selectedGroup) {
-            alert('Please select both term and group before generating report.');
+        if (!selectedBatch || !selectedGroup) {
+            alert('Please select both batch and group before generating report.');
             return;
         }
         setIsReportDialogOpen(true);
+    };
+
+    // Helper function to get unique academic calendars from current schedules
+    const getAvailableTermsFromSchedules = (schedules) => {
+        if (!schedules || schedules.length === 0) return [];
+        
+        // Extract unique academic calendars based on ID
+        const uniqueTerms = schedules
+            .map(schedule => schedule.academic_calendar)
+            .filter(calendar => calendar) // Remove null/undefined
+            .filter((calendar, index, self) => 
+                self.findIndex(c => c.id === calendar.id) === index
+            ); // Remove duplicates by ID
+            
+        return uniqueTerms;
     };
 
     // Handle report generation with parameters
     const handleGenerateReportWithParams = (reportData) => {
         try {
             const selectedGroupData = groups.find((g) => g.id.toString() === selectedGroup);
-            const selectedTermData = academicCalendars.find((c) => c.id.toString() === selectedTerm);
+            
+            // Get the selected term data based on the user's selection in the report dialog
+            const selectedTermId = parseInt(reportData.selectedTermId);
+            const selectedTermData = schedules.find(s => s.academic_calendar?.id === selectedTermId)?.academic_calendar || 
+                                   (schedules.length > 0 ? schedules[0].academic_calendar : null);
+            
+            // Filter schedules to only include those from the selected term
+            const filteredSchedules = schedules.filter(s => s.academic_calendar?.id === selectedTermId);
 
-            // Get unique subjects and lecturers
-            const uniqueSubjects = [...new Set(schedules.map((s) => s.program_subject.prog_subj_code))];
+            if (!filteredSchedules || filteredSchedules.length === 0) {
+                throw new Error('No schedules available for the selected term to generate report');
+            }
+
+            // Get unique subjects and lecturers for the selected term
+            const uniqueSubjects = [...new Set(filteredSchedules.map((s) => s.program_subject.prog_subj_code))];
             const uniqueLecturers = [
-                ...new Set(schedules.map((s) => `${s.lecturer?.title || ''} ${s.lecturer?.fname || ''} ${s.lecturer?.lname || ''}`.trim())),
+                ...new Set(filteredSchedules.map((s) => `${s.lecturer?.title || ''} ${s.lecturer?.fname || ''} ${s.lecturer?.lname || ''}`.trim())),
             ];
 
-            // Create print content with report parameters
+            // Create print content with report parameters using filtered schedules
             const printContent = createPrintableReport({
                 group: selectedGroupData,
                 term: selectedTermData,
                 subjects: uniqueSubjects,
                 lecturers: uniqueLecturers,
-                totalClasses: schedules.length,
-                schedules: schedules,
+                totalClasses: filteredSchedules.length,
+                schedules: filteredSchedules, // Use filtered schedules for the selected term
                 batchNumber: reportData.batchNumber,
                 preparedBy: reportData.preparedBy,
                 reviewers: reportData.reviewers,
@@ -969,34 +1008,30 @@ export default function ClassSchedule() {
                         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                             <div className="flex flex-col gap-2 md:flex-row md:items-center md:gap-4">
                                 {/* Primary Filters */}
-                                <Select value={selectedTerm} onValueChange={setSelectedTerm}>
-                                    <SelectTrigger className="w-full md:w-[280px]">
-                                        <SelectValue placeholder="Select Academic Term *" />
+                                <Select value={selectedBatch} onValueChange={setSelectedBatch}>
+                                    <SelectTrigger className="w-full md:w-[200px]">
+                                        <SelectValue placeholder="Select Schedule No *" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        {academicCalendars.map((calendar) => (
-                                            <SelectItem key={calendar.id} value={calendar.id.toString()}>
-                                                <div className="flex items-center gap-2">
-                                                    <CalendarIcon className="h-4 w-4" />
-                                                    <span>
-                                                        {calendar.term?.name} - {calendar.school_year} ({calendar.program?.code || 'N/A'})
-                                                    </span>
-                                                </div>
+                                        {/* Show existing batch numbers from backend */}
+                                        {existingBatches.map((batchNo) => (
+                                            <SelectItem key={batchNo} value={batchNo.toString()}>
+                                                Schedule No: {batchNo}
                                             </SelectItem>
                                         ))}
                                     </SelectContent>
                                 </Select>
 
-                                <Select value={selectedGroup} onValueChange={setSelectedGroup} disabled={!selectedTerm}>
+                                <Select value={selectedGroup} onValueChange={setSelectedGroup}>
                                     <SelectTrigger className="w-full md:w-[200px]">
-                                        <SelectValue placeholder={selectedTerm ? 'Select Group/Class *' : 'Select Academic Term First'} />
+                                        <SelectValue placeholder="Select Group/Class *" />
                                     </SelectTrigger>
                                     <SelectContent>
                                         {groups.map((group) => (
                                             <SelectItem key={group.id} value={group.id.toString()}>
                                                 <div className="flex items-center gap-2">
                                                     <Users className="h-4 w-4" />
-                                                    <span>{group.name}</span>
+                                                    <span>{group.name} ({group.prog_code})</span>
                                                 </div>
                                             </SelectItem>
                                         ))}
@@ -1004,7 +1039,7 @@ export default function ClassSchedule() {
                                 </Select>
 
                                 {/* Generate Report Button */}
-                                {selectedTerm && selectedGroup && (
+                                {selectedBatch && selectedGroup && (
                                     <Button
                                         onClick={handleGenerateReport}
                                         variant="outline"
@@ -1019,6 +1054,15 @@ export default function ClassSchedule() {
                         </div>
                     </CardHeader>
                     <CardContent>
+                        {/* Teaching Load Display - below filters, above content */}
+                        {schedules.length > 0 && (
+                            <div className="mb-4 flex items-center gap-2 rounded-lg bg-blue-50 p-3">
+                                <CalendarIcon className="h-5 w-5 text-blue-600" />
+                                <span className="text-sm font-medium text-blue-900">
+                                    Total Classes: <span className="font-bold">{schedules.length}</span>
+                                </span>
+                            </div>
+                        )}
                         {isLoading ? (
                             <LoadingSkeleton />
                         ) : schedules.length > 0 ? (
@@ -1028,9 +1072,9 @@ export default function ClassSchedule() {
                                 <CalendarIcon className="text-muted-foreground mb-4 h-12 w-12" />
                                 <h3 className="mb-2 text-lg font-semibold">No schedule found</h3>
                                 <p className="text-muted-foreground mb-4">
-                                    {selectedTerm && selectedGroup
-                                        ? 'No classes scheduled for this group and term.'
-                                        : 'Select a term and group to view the class schedule.'}
+                                    {selectedBatch && selectedGroup
+                                        ? 'No classes scheduled for this group and batch.'
+                                        : 'Select a batch and group to view the class schedule.'}
                                 </p>
                             </div>
                         )}
@@ -1043,9 +1087,10 @@ export default function ClassSchedule() {
                 onClose={() => setIsReportDialogOpen(false)}
                 onGenerate={handleGenerateReportWithParams}
                 program_type={(() => {
-                    const selectedCalendar = academicCalendars.find(cal => cal.id.toString() === selectedTerm);
-                    return selectedCalendar?.program?.type || '';
+                    const selectedGroupData = groups.find(g => g.id.toString() === selectedGroup);
+                    return selectedGroupData?.program?.type || '';
                 })()}
+                availableTerms={getAvailableTermsFromSchedules(schedules)}
             />
         </AppLayout>
     );

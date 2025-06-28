@@ -424,12 +424,16 @@ class LecturerScheduleController extends Controller
     }
 
     public function getGroupSchedule(Request $request){
-        $termFilter = $request->input('sy_term_id');
-        $classFilter = $request->input('class_id');
+        $batchFilter = $request->input('batch_filter');
+        $classFilter = $request->input('class_filter');
+        $programTypeFilter = $request->input('program_type_filter');
 
+        // Initialize empty schedules if required filters are not provided
         $schedules = collect();
 
-        if ($classFilter && $termFilter) {
+        // Only fetch schedules if both class and batch are selected
+        if ($classFilter && $batchFilter) {
+            // Get schedules with relationships
             $schedulesQuery = LecturerSchedule::with([
                 'lecturer',
                 'programSubject.subject',
@@ -438,40 +442,56 @@ class LecturerScheduleController extends Controller
                 'academicCalendar.term'
             ]);
 
-            $schedulesQuery->where('sy_term_id', $termFilter)
+            // Apply required filters using batch_no
+            $schedulesQuery->where('batch_no', $batchFilter)
                           ->where('class_id', $classFilter);
+
+            if ($programTypeFilter){
+                $schedulesQuery->whereHas('group.program', function($query) use($programTypeFilter) {
+                            $query->where('type', $programTypeFilter);
+                });
+            }
 
             $schedules = $schedulesQuery->orderBy('day')
                                        ->orderBy('start_time')
                                        ->get();
         }
 
-        // Get academic calendars for the filter dropdown with program relationship
         $academicCalendars = AcademicCalendar::with(['term', 'program'])
-                            ->orderBy('school_year', 'desc')
-                            ->orderBy('id')
-                            ->get();
+                                ->orderBy('school_year', 'desc')
+                                ->orderBy('id')
+                                ->get();
+
+        // Get existing batch numbers
+        $existingBatches = LecturerSchedule::distinct('batch_no')
+                                          ->whereNotNull('batch_no')
+                                          ->orderBy('batch_no')
+                                          ->pluck('batch_no')
+                                          ->toArray();
 
         // Get all programs for the program filter dropdown
         $programs = \App\Models\Program::orderBy('description')->get();
 
-        // Get groups/classes filtered by program based on term selection
-        $groupsQuery = Group::with('program');
-        if ($termFilter) {
-            // Get the associated program for the selected academic calendar
-            $selectedCalendar = AcademicCalendar::with('program')->find($termFilter);
-            if ($selectedCalendar && $selectedCalendar->program) {
-                $groupsQuery->where('prog_code', $selectedCalendar->program->code);
-            }
-        }
-        $groups = $groupsQuery->orderBy('name')->get();
+        // Get all groups/classes
+        $groups = Group::with('program')->orderBy('name')->get();
+
+        // Calculate overall statistics (independent of current filters)
+        $totalSchedules = LecturerSchedule::count();
+        $totalActiveClasses = LecturerSchedule::distinct('class_id')->count('class_id');
+        $totalRoomsInUse = LecturerSchedule::distinct('room_code')->count('room_code');
 
         return Inertia::render('application/class-schedule', [
             'data' => [
                 'schedules' => $schedules,
                 'academicCalendars' => $academicCalendars,
                 'groups' => $groups,
-                'programs' => $programs
+                'programs' => $programs,
+                'existingBatches' => $existingBatches,
+                'statistics' => [
+                    'totalSchedules' => $totalSchedules,
+                    'totalActiveClasses' => $totalActiveClasses,
+                    'totalRoomsInUse' => $totalRoomsInUse,
+                ]
             ]
         ]);
     }
