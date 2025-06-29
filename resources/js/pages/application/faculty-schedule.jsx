@@ -963,7 +963,8 @@ function ReportDialog({ isOpen, onClose, onGenerate, availableTerms = [] }) {
     };
 
     const handleGenerate = () => {
-        const hasRequiredFields = formData.programTitle && formData.preparedBy && formData.selectedTermId && formData.reviewers.every((reviewer) => reviewer.trim() !== '');
+        const hasRequiredFields =
+            formData.programTitle && formData.preparedBy && formData.selectedTermId && formData.reviewers.every((reviewer) => reviewer.trim() !== '');
 
         if (hasRequiredFields) {
             onGenerate(formData);
@@ -1000,16 +1001,16 @@ function ReportDialog({ isOpen, onClose, onGenerate, availableTerms = [] }) {
                                 <SelectValue placeholder="Select term for report" />
                             </SelectTrigger>
                             <SelectContent>
-                                                {availableTerms.map((term) => (
-                                                    <SelectItem key={term.id} value={term.id.toString()}>
-                                                        <div className="flex items-center gap-2">
-                                                            <CalendarIcon className="h-4 w-4" />
-                                                            <span>
-                                                                {term.term?.name} - {term.school_year}
-                                                            </span>
-                                                        </div>
-                                                    </SelectItem>
-                                                ))}
+                                {availableTerms.map((term) => (
+                                    <SelectItem key={term.id} value={term.id.toString()}>
+                                        <div className="flex items-center gap-2">
+                                            <CalendarIcon className="h-4 w-4" />
+                                            <span>
+                                                {term.term?.name} - {term.school_year}
+                                            </span>
+                                        </div>
+                                    </SelectItem>
+                                ))}
                             </SelectContent>
                         </Select>
                     </div>
@@ -1052,7 +1053,7 @@ function ReportDialog({ isOpen, onClose, onGenerate, availableTerms = [] }) {
                                 type="checkbox"
                                 checked={formData.considerLecturerLoad}
                                 onChange={(e) => setFormData({ ...formData, considerLecturerLoad: e.target.checked })}
-                                className="h-4 w-4 rounded border-gray-300 text-green-600 focus:ring-green-500 accent-gray-600"
+                                className="h-4 w-4 rounded border-gray-300 text-green-600 accent-gray-600 focus:ring-green-500"
                             />
                             <span className="text-sm text-gray-600">Include overload and total load calculations</span>
                         </div>
@@ -1079,7 +1080,12 @@ function ReportDialog({ isOpen, onClose, onGenerate, availableTerms = [] }) {
                     </Button>
                     <Button
                         onClick={handleGenerate}
-                        disabled={!formData.programTitle || !formData.preparedBy || !formData.selectedTermId || formData.reviewers.some((reviewer) => reviewer.trim() === '')}
+                        disabled={
+                            !formData.programTitle ||
+                            !formData.preparedBy ||
+                            !formData.selectedTermId ||
+                            formData.reviewers.some((reviewer) => reviewer.trim() === '')
+                        }
                     >
                         Generate Report
                     </Button>
@@ -1332,11 +1338,13 @@ export default function FacultySchedule() {
 
             // Get the selected term data based on the user's selection in the report dialog
             const selectedTermId = parseInt(reportData.selectedTermId);
-            const selectedTermData = schedules.find(s => s.academic_calendar?.id === selectedTermId)?.academic_calendar ||
-                                   (schedules.length > 0 ? schedules[0].academic_calendar : null);
+            const selectedTermData =
+                schedules.find((s) => s.academic_calendar?.id === selectedTermId)?.academic_calendar ||
+                (schedules.length > 0 ? schedules[0].academic_calendar : null);
 
-            // Filter schedules to only include those from the selected term
-            const filteredSchedules = schedules.filter(s => s.academic_calendar?.id === selectedTermId);
+            // Use all schedules from the current batch instead of filtering by term
+            // This ensures we include all schedules regardless of which academic term they belong to
+            const filteredSchedules = schedules; // All schedules are already filtered by batch in the backend
 
             if (!selectedLecturerData) {
                 throw new Error('Selected lecturer not found');
@@ -1467,31 +1475,38 @@ export default function FacultySchedule() {
 
         // Extract unique academic calendars based on ID
         const uniqueTerms = schedules
-            .map(schedule => schedule.academic_calendar)
-            .filter(calendar => calendar) // Remove null/undefined
-            .filter((calendar, index, self) =>
-                self.findIndex(c => c.id === calendar.id) === index
-            ); // Remove duplicates by ID
+            .map((schedule) => schedule.academic_calendar)
+            .filter((calendar) => calendar) // Remove null/undefined
+            .filter((calendar, index, self) => self.findIndex((c) => c.id === calendar.id) === index); // Remove duplicates by ID
 
         return uniqueTerms;
     };
 
-    const createPrintableReport = ({ lecturer, term, subjects, teachingLoad, schedules, programTitle, preparedBy, reviewers, considerLecturerLoad = false }) => {
+    const createPrintableReport = ({
+        lecturer,
+        term,
+        subjects,
+        teachingLoad,
+        schedules,
+        programTitle,
+        preparedBy,
+        reviewers,
+        considerLecturerLoad = false,
+    }) => {
         const lecturerName = `${lecturer?.title || ''} ${lecturer?.fname || ''} ${lecturer?.lname || ''}`.trim();
         const termInfo = `${term?.term?.name || ''} - ${term?.school_year || ''}`;
         const startDate = formatDate(term.start_date);
         const endDate = formatDate(term.end_date);
-        var max_lecturer_load = 0
-        var overload = ""
-        var totalLoad = ""
+        var max_lecturer_load = 0;
+        var overload = '';
+        var totalLoad = '';
 
-
-        if(considerLecturerLoad && max_load[0]){
-            max_lecturer_load =  max_load[0].max_load
-            if(teachingLoad > max_lecturer_load){
-                overload = (teachingLoad - max_lecturer_load) + ""
-                totalLoad = teachingLoad + ""
-                teachingLoad = max_lecturer_load + ""
+        if (considerLecturerLoad && max_load[0]) {
+            max_lecturer_load = max_load[0].max_load;
+            if (teachingLoad > max_lecturer_load) {
+                overload = teachingLoad - max_lecturer_load + '';
+                totalLoad = teachingLoad + '';
+                teachingLoad = max_lecturer_load + '';
             }
         }
 
@@ -1877,10 +1892,14 @@ export default function FacultySchedule() {
             </div>
             <div class="info-right">
                 <span>No. of Teaching Load:<span class="load-format">${teachingLoad}</span></span>
-                ${considerLecturerLoad ? `
+                ${
+                    considerLecturerLoad
+                        ? `
                 <span>No. of Overload:<span class="load-format">${overload}</span></span>
                 <span>Total No. of Load:<span class="load-format">${totalLoad}</span></span>
-                ` : ''}
+                `
+                        : ''
+                }
             </div>
         </div>
 

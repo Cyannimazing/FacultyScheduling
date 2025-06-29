@@ -504,8 +504,9 @@ export default function ClassSchedule() {
             const selectedTermData = schedules.find(s => s.academic_calendar?.id === selectedTermId)?.academic_calendar || 
                                    (schedules.length > 0 ? schedules[0].academic_calendar : null);
             
-            // Filter schedules to only include those from the selected term
-            const filteredSchedules = schedules.filter(s => s.academic_calendar?.id === selectedTermId);
+            // Use all schedules from the current batch instead of filtering by term
+            // This ensures we include all schedules regardless of which academic term they belong to
+            const filteredSchedules = schedules; // All schedules are already filtered by batch in the backend
 
             if (!filteredSchedules || filteredSchedules.length === 0) {
                 throw new Error('No schedules available for the selected term to generate report');

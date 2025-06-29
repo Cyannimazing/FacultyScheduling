@@ -66,6 +66,7 @@ class LecturerScheduleController extends Controller
 
 
         $academicCalendars = AcademicCalendar::with(['term', 'program'])
+                                ->where('end_date', '>=', now()->toDateString()) // Only show terms that have not ended
                                 ->orderBy('school_year', 'desc')
                                 ->orderBy('id')
                                 ->get();
@@ -461,6 +462,7 @@ class LecturerScheduleController extends Controller
         }
 
         $academicCalendars = AcademicCalendar::with(['term', 'program'])
+                                ->where('end_date', '>=', now()->toDateString()) // Only show terms that have not ended
                                 ->orderBy('school_year', 'desc')
                                 ->orderBy('id')
                                 ->get();
@@ -523,6 +525,7 @@ class LecturerScheduleController extends Controller
 
         // Get academic calendars for the filter dropdown
         $academicCalendars = AcademicCalendar::with('term')
+                            ->where('end_date', '>=', now()->toDateString()) // Only show terms that have not ended
                             ->orderBy('school_year', 'desc')
                             ->orderBy('id')
                             ->get();

@@ -13,6 +13,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('api/classes-by-prog-code/{prog_code}', 'getClassByProgram');
         Route::get('api/time-slot-by-day/{day}', 'getTimeSlotByDay');
         Route::get('api/available-time-slots', 'getAvailableTimeSlots');
+        Route::get('api/batches-by-lecturer/{lecturer_id}', 'getBatchesByLecturer');
 
         Route::get('class-schedule', 'getGroupSchedule');
         Route::get('room-schedule', 'getRoomSchedule');
