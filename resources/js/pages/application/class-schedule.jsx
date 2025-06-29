@@ -19,7 +19,6 @@ const breadcrumbs = [
 
 const DAYS_OF_WEEK = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday'];
 
-
 function LoadingSkeleton() {
     return (
         <div className="space-y-4">
@@ -152,8 +151,6 @@ function ClassScheduleGrid({ schedules }) {
         }
     });
 
-
-
     return (
         <div className="overflow-x-auto">
             <div className="relative min-w-[800px]">
@@ -170,75 +167,78 @@ function ClassScheduleGrid({ schedules }) {
                 {/* Generate time slots dynamically */}
                 {timeSlots.map((timeSlot, timeIndex) => {
                     const timeRangeDisplay = getTimeRangeDisplay(timeSlot);
-                    if(timeRangeDisplay){
-
+                    if (timeRangeDisplay) {
                         return (
                             <div key={timeSlot} className="relative mb-1 grid grid-cols-6 gap-1">
-                            {/* Time column - show time range with consistent styling */}
-                            <div className="rounded bg-gray-100 p-3 text-center text-sm font-semibold">{timeRangeDisplay}</div>
+                                {/* Time column - show time range with consistent styling */}
+                                <div className="rounded bg-gray-100 p-3 text-center text-sm font-semibold">{timeRangeDisplay}</div>
 
-                            {/* Day columns */}
-                            {days.map((day, colIndex) => {
-                                const cellData = gridData[day][timeSlot];
+                                {/* Day columns */}
+                                {days.map((day, colIndex) => {
+                                    const cellData = gridData[day][timeSlot];
 
-                                // If this cell is spanned by a schedule from a previous time slot, render completely empty
-                                if (cellData && cellData.isSpanned && cellData.schedules.length === 0) {
+                                    // If this cell is spanned by a schedule from a previous time slot, render completely empty
+                                    if (cellData && cellData.isSpanned && cellData.schedules.length === 0) {
+                                        return (
+                                            <div key={`${day}-${timeSlot}`} style={{ minHeight: '60px', background: 'transparent' }}>
+                                                {/* Completely empty - no border, no background */}
+                                            </div>
+                                        );
+                                    }
+
+                                    // If this cell has schedules, render them with proper spanning
+                                    if (cellData && cellData.schedules.length > 0) {
+                                        return (
+                                            <div
+                                                key={`${day}-${timeSlot}`}
+                                                className="relative"
+                                                style={{ minHeight: '60px', background: 'transparent' }}
+                                            >
+                                                {cellData.schedules.map((schedule, index) => {
+                                                    const subjectLecturerKey = getSubjectLecturerKey(schedule);
+                                                    const colorClass = colorMap[subjectLecturerKey];
+                                                    const span = schedule.span;
+
+                                                    // Calculate the height to span across multiple time slots
+                                                    const spanHeight = span * 60 + (span - 1) * 4; // 60px per slot + 4px gap between slots
+
+                                                    return (
+                                                        <div
+                                                            key={`${schedule.id}-${index}`}
+                                                            className={`absolute rounded border-l-4 p-2 text-xs ${colorClass} z-20 flex flex-col items-center justify-center text-center`}
+                                                            style={{
+                                                                height: `${spanHeight}px`,
+                                                                top: '0px',
+                                                                left: '-2px',
+                                                                right: '-2px',
+                                                                border: 'none',
+                                                                borderLeft: '4px solid',
+                                                            }}
+                                                        >
+                                                            <div className="text-xs font-semibold">({schedule.program_subject.prog_subj_code})</div>
+                                                            <div className="mb-1 text-sm font-semibold">{schedule.program_subject.subject?.name}</div>
+                                                            <div className="mb-1 text-xs opacity-75">
+                                                                {schedule.lecturer?.title} {schedule.lecturer?.fname} {schedule.lecturer?.lname}
+                                                            </div>
+                                                            <div className="mb-1 text-xs opacity-75">Room: {schedule.room_code}</div>
+                                                            <div className="text-xs opacity-75">
+                                                                {formatTime(schedule.start_time)} - {formatTime(schedule.end_time)}
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        );
+                                    }
+
+                                    // Empty cell with border
                                     return (
-                                        <div key={`${day}-${timeSlot}`} style={{ minHeight: '60px', background: 'transparent' }}>
-                                            {/* Completely empty - no border, no background */}
+                                        <div key={`${day}-${timeSlot}`} className="relative rounded border" style={{ minHeight: '60px' }}>
+                                            {/* Empty cell */}
                                         </div>
                                     );
-                                }
-
-                                // If this cell has schedules, render them with proper spanning
-                                if (cellData && cellData.schedules.length > 0) {
-                                    return (
-                                        <div key={`${day}-${timeSlot}`} className="relative" style={{ minHeight: '60px', background: 'transparent' }}>
-                                            {cellData.schedules.map((schedule, index) => {
-                                                const subjectLecturerKey = getSubjectLecturerKey(schedule);
-                                                const colorClass = colorMap[subjectLecturerKey];
-                                                const span = schedule.span;
-
-                                                // Calculate the height to span across multiple time slots
-                                                const spanHeight = span * 60 + (span - 1) * 4; // 60px per slot + 4px gap between slots
-
-                                                return (
-                                                    <div
-                                                    key={`${schedule.id}-${index}`}
-                                                    className={`absolute rounded border-l-4 p-2 text-xs ${colorClass} z-20 flex flex-col items-center justify-center text-center`}
-                                                    style={{
-                                                        height: `${spanHeight}px`,
-                                                        top: '0px',
-                                                        left: '-2px',
-                                                        right: '-2px',
-                                                        border: 'none',
-                                                        borderLeft: '4px solid',
-                                                    }}
-                                                    >
-                                                        <div className="text-xs font-semibold">({schedule.program_subject.prog_subj_code})</div>
-                                                        <div className="mb-1 text-sm font-semibold">{schedule.program_subject.subject?.name}</div>
-                                                        <div className="mb-1 text-xs opacity-75">
-                                                            {schedule.lecturer?.title} {schedule.lecturer?.fname} {schedule.lecturer?.lname}
-                                                        </div>
-                                                        <div className="mb-1 text-xs opacity-75">Room: {schedule.room_code}</div>
-                                                        <div className="text-xs opacity-75">
-                                                            {formatTime(schedule.start_time)} - {formatTime(schedule.end_time)}
-                                                        </div>
-                                                    </div>
-                                                );
-                                            })}
-                                        </div>
-                                    );
-                                }
-
-                                // Empty cell with border
-                                return (
-                                    <div key={`${day}-${timeSlot}`} className="relative rounded border" style={{ minHeight: '60px' }}>
-                                        {/* Empty cell */}
-                                    </div>
-                                );
-                            })}
-                        </div>
+                                })}
+                            </div>
                         );
                     }
                 })}
@@ -396,7 +396,10 @@ function ReportDialog({ isOpen, onClose, onGenerate, program_type, availableTerm
                         onClick={handleGenerate}
                         disabled={
                             program_type === 'Vocational Foundation Program'
-                                ? !formData.batchNumber || !formData.preparedBy || !formData.selectedTermId || formData.reviewers.some((reviewer) => reviewer.trim() === '')
+                                ? !formData.batchNumber ||
+                                  !formData.preparedBy ||
+                                  !formData.selectedTermId ||
+                                  formData.reviewers.some((reviewer) => reviewer.trim() === '')
                                 : !formData.preparedBy || !formData.selectedTermId || formData.reviewers.some((reviewer) => reviewer.trim() === '')
                         }
                     >
@@ -415,7 +418,6 @@ export default function ClassSchedule() {
         academicCalendars = [],
         groups = [],
         programs = [],
-        existingBatches = [],
         statistics = {
             totalSchedules: 0,
             totalActiveClasses: 0,
@@ -423,7 +425,7 @@ export default function ClassSchedule() {
         },
     } = data;
     const [isLoading, setIsLoading] = useState(false);
-    const [selectedBatch, setSelectedBatch] = useState('');
+    const [selectedTerm, setSelectedTerm] = useState('');
     const [selectedGroup, setSelectedGroup] = useState('');
     const [isReportDialogOpen, setIsReportDialogOpen] = useState(false);
     const [logo, setLogo] = useState('');
@@ -446,12 +448,12 @@ export default function ClassSchedule() {
 
     // Apply filters and fetch schedules
     const applyFilters = React.useCallback(() => {
-        if (!selectedBatch || !selectedGroup) {
+        if (!selectedTerm || !selectedGroup) {
             return;
         }
 
         const params = {
-            batch_filter: selectedBatch,
+            term_filter: selectedTerm,
             class_filter: selectedGroup,
         };
 
@@ -461,19 +463,36 @@ export default function ClassSchedule() {
             preserveScroll: true,
             onFinish: () => setIsLoading(false),
         });
-    }, [selectedBatch, selectedGroup]);
+    }, [selectedTerm, selectedGroup]);
 
-    // Apply filters when batch or group changes
+    // Reset group selection when term changes
     useEffect(() => {
-        if (selectedBatch && selectedGroup) {
+        if (selectedTerm) {
+            setSelectedGroup(''); // Reset group selection when term changes
+            // Fetch groups for the selected term
+            router.get(
+                '/class-schedule',
+                { term_filter: selectedTerm },
+                {
+                    preserveState: true,
+                    preserveScroll: true,
+                    onFinish: () => setIsLoading(false),
+                },
+            );
+        }
+    }, [selectedTerm]);
+
+    // Apply filters when both term and group are selected
+    useEffect(() => {
+        if (selectedTerm && selectedGroup) {
             applyFilters();
         }
-    }, [selectedBatch, selectedGroup, applyFilters]);
+    }, [selectedGroup, applyFilters]);
 
     // Generate report function
     const handleGenerateReport = () => {
-        if (!selectedBatch || !selectedGroup) {
-            alert('Please select both batch and group before generating report.');
+        if (!selectedTerm || !selectedGroup) {
+            alert('Please select both academic term and group before generating report.');
             return;
         }
         setIsReportDialogOpen(true);
@@ -482,15 +501,13 @@ export default function ClassSchedule() {
     // Helper function to get unique academic calendars from current schedules
     const getAvailableTermsFromSchedules = (schedules) => {
         if (!schedules || schedules.length === 0) return [];
-        
+
         // Extract unique academic calendars based on ID
         const uniqueTerms = schedules
-            .map(schedule => schedule.academic_calendar)
-            .filter(calendar => calendar) // Remove null/undefined
-            .filter((calendar, index, self) => 
-                self.findIndex(c => c.id === calendar.id) === index
-            ); // Remove duplicates by ID
-            
+            .map((schedule) => schedule.academic_calendar)
+            .filter((calendar) => calendar) // Remove null/undefined
+            .filter((calendar, index, self) => self.findIndex((c) => c.id === calendar.id) === index); // Remove duplicates by ID
+
         return uniqueTerms;
     };
 
@@ -498,12 +515,13 @@ export default function ClassSchedule() {
     const handleGenerateReportWithParams = (reportData) => {
         try {
             const selectedGroupData = groups.find((g) => g.id.toString() === selectedGroup);
-            
+
             // Get the selected term data based on the user's selection in the report dialog
             const selectedTermId = parseInt(reportData.selectedTermId);
-            const selectedTermData = schedules.find(s => s.academic_calendar?.id === selectedTermId)?.academic_calendar || 
-                                   (schedules.length > 0 ? schedules[0].academic_calendar : null);
-            
+            const selectedTermData =
+                schedules.find((s) => s.academic_calendar?.id === selectedTermId)?.academic_calendar ||
+                (schedules.length > 0 ? schedules[0].academic_calendar : null);
+
             // Use all schedules from the current batch instead of filtering by term
             // This ensures we include all schedules regardless of which academic term they belong to
             const filteredSchedules = schedules; // All schedules are already filtered by batch in the backend
@@ -717,27 +735,26 @@ export default function ClassSchedule() {
             timeSlots.forEach((timeSlot, timeIndex) => {
                 const timeRangeDisplay = getTimeRangeDisplay(timeSlot);
 
-                if(timeRangeDisplay){
-
+                if (timeRangeDisplay) {
                     gridHTML += `<div class="grid-row">`;
                     gridHTML += `<div class="time-cell">${timeRangeDisplay}</div>`;
 
                     days.forEach((day) => {
-                    const cellData = gridData[day][timeSlot];
+                        const cellData = gridData[day][timeSlot];
 
-                    // If this cell is spanned by a schedule from a previous time slot, render empty space
-                    if (cellData && cellData.isSpanned && cellData.schedules.length === 0) {
-                        gridHTML += `<div class="day-cell" style="height: 30px; border: none; background: transparent;"></div>`;
-                        return;
-                    }
+                        // If this cell is spanned by a schedule from a previous time slot, render empty space
+                        if (cellData && cellData.isSpanned && cellData.schedules.length === 0) {
+                            gridHTML += `<div class="day-cell" style="height: 30px; border: none; background: transparent;"></div>`;
+                            return;
+                        }
 
-                    if (cellData && cellData.schedules.length > 0) {
-                        const schedule = cellData.schedules[0];
-                        const colorClass = colorMap[getSubjectLecturerKey(schedule)];
-                        const span = schedule.span;
-                        const spanHeight = span * 32 + (span - 1) * 2;
+                        if (cellData && cellData.schedules.length > 0) {
+                            const schedule = cellData.schedules[0];
+                            const colorClass = colorMap[getSubjectLecturerKey(schedule)];
+                            const span = schedule.span;
+                            const spanHeight = span * 32 + (span - 1) * 2;
 
-                        gridHTML += `
+                            gridHTML += `
                             <div class="day-cell occupied" style="height: 30px; position: relative; background: transparent;">
                             <div class="schedule-card ${colorClass}" style="
                             height: ${spanHeight}px;
@@ -757,9 +774,9 @@ export default function ClassSchedule() {
                             </div>
                             </div>
                             `;
-                    } else {
-                        gridHTML += `<div class="day-cell" style="height: 30px;"></div>`;
-                    }
+                        } else {
+                            gridHTML += `<div class="day-cell" style="height: 30px;"></div>`;
+                        }
                     });
 
                     gridHTML += `</div>`;
@@ -1009,15 +1026,17 @@ export default function ClassSchedule() {
                         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                             <div className="flex flex-col gap-2 md:flex-row md:items-center md:gap-4">
                                 {/* Primary Filters */}
-                                <Select value={selectedBatch} onValueChange={setSelectedBatch}>
+                                <Select value={selectedTerm} onValueChange={setSelectedTerm}>
                                     <SelectTrigger className="w-full md:w-[200px]">
-                                        <SelectValue placeholder="Select Schedule No *" />
+                                        <SelectValue placeholder="Select Academic Term *" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        {/* Show existing batch numbers from backend */}
-                                        {existingBatches.map((batchNo) => (
-                                            <SelectItem key={batchNo} value={batchNo.toString()}>
-                                                Schedule No: {batchNo}
+                                        {academicCalendars.map((calendar) => (
+                                            <SelectItem className="w-full" key={calendar.id} value={calendar.id.toString()}>
+                                                <div className="flex w-full items-center gap-2">
+                                                    <CalendarIcon className="h-4 w-4" />
+                                                    {calendar.term?.name} - {calendar.school_year}
+                                                </div>
                                             </SelectItem>
                                         ))}
                                     </SelectContent>
@@ -1030,9 +1049,11 @@ export default function ClassSchedule() {
                                     <SelectContent>
                                         {groups.map((group) => (
                                             <SelectItem key={group.id} value={group.id.toString()}>
-                                                <div className="flex items-center gap-2">
+                                                <div className="flex w-full items-center gap-2">
                                                     <Users className="h-4 w-4" />
-                                                    <span>{group.name} ({group.prog_code})</span>
+                                                    <span>
+                                                        {group.name} ({group.prog_code})
+                                                    </span>
                                                 </div>
                                             </SelectItem>
                                         ))}
@@ -1040,7 +1061,7 @@ export default function ClassSchedule() {
                                 </Select>
 
                                 {/* Generate Report Button */}
-                                {selectedBatch && selectedGroup && (
+                                {selectedTerm && selectedGroup && (
                                     <Button
                                         onClick={handleGenerateReport}
                                         variant="outline"
@@ -1073,9 +1094,9 @@ export default function ClassSchedule() {
                                 <CalendarIcon className="text-muted-foreground mb-4 h-12 w-12" />
                                 <h3 className="mb-2 text-lg font-semibold">No schedule found</h3>
                                 <p className="text-muted-foreground mb-4">
-                                    {selectedBatch && selectedGroup
-                                        ? 'No classes scheduled for this group and batch.'
-                                        : 'Select a batch and group to view the class schedule.'}
+                                    {selectedTerm && selectedGroup
+                                        ? 'No classes scheduled for this group and academic term.'
+                                        : 'Select an academic term and group to view the class schedule.'}
                                 </p>
                             </div>
                         )}
@@ -1088,7 +1109,7 @@ export default function ClassSchedule() {
                 onClose={() => setIsReportDialogOpen(false)}
                 onGenerate={handleGenerateReportWithParams}
                 program_type={(() => {
-                    const selectedGroupData = groups.find(g => g.id.toString() === selectedGroup);
+                    const selectedGroupData = groups.find((g) => g.id.toString() === selectedGroup);
                     return selectedGroupData?.program?.type || '';
                 })()}
                 availableTerms={getAvailableTermsFromSchedules(schedules)}

@@ -428,15 +428,15 @@ class LecturerScheduleController extends Controller
     }
 
     public function getGroupSchedule(Request $request){
-        $batchFilter = $request->input('batch_filter');
+        $termFilter = $request->input('term_filter');
         $classFilter = $request->input('class_filter');
         $programTypeFilter = $request->input('program_type_filter');
 
         // Initialize empty schedules if required filters are not provided
         $schedules = collect();
 
-        // Only fetch schedules if both class and batch are selected
-        if ($classFilter && $batchFilter) {
+        // Only fetch schedules if both class and academic term are selected
+        if ($classFilter && $termFilter) {
             // Get schedules with relationships
             $schedulesQuery = LecturerSchedule::with([
                 'lecturer',
@@ -446,8 +446,8 @@ class LecturerScheduleController extends Controller
                 'academicCalendar.term'
             ]);
 
-            // Apply required filters using batch_no
-            $schedulesQuery->where('batch_no', $batchFilter)
+            // Apply required filters using sy_term_id (academic term) and class_id
+            $schedulesQuery->where('sy_term_id', $termFilter)
                           ->where('class_id', $classFilter);
 
             if ($programTypeFilter){
@@ -462,23 +462,29 @@ class LecturerScheduleController extends Controller
         }
 
         $academicCalendars = AcademicCalendar::with(['term', 'program'])
-                                ->where('end_date', '>=', now()->toDateString()) // Only show terms that have not ended
                                 ->orderBy('school_year', 'desc')
                                 ->orderBy('id')
                                 ->get();
 
-        // Get existing batch numbers
-        $existingBatches = LecturerSchedule::distinct('batch_no')
-                                          ->whereNotNull('batch_no')
-                                          ->orderBy('batch_no')
-                                          ->pluck('batch_no')
-                                          ->toArray();
-
         // Get all programs for the program filter dropdown
         $programs = \App\Models\Program::orderBy('description')->get();
 
-        // Get all groups/classes
-        $groups = Group::with('program')->orderBy('name')->get();
+        // Filter groups based on selected academic term's program
+        $groups = collect();
+        if ($termFilter) {
+            // Get the selected academic calendar to find its program
+            $selectedAcademicCalendar = AcademicCalendar::find($termFilter);
+            if ($selectedAcademicCalendar && $selectedAcademicCalendar->prog_id) {
+                // Only get groups that belong to the same program as the selected academic term
+                $groups = Group::with('program')
+                               ->where('prog_code', $selectedAcademicCalendar->program->code)
+                               ->orderBy('name')
+                               ->get();
+            }
+        } else {
+            // If no term is selected, show all groups
+            $groups = Group::with('program')->orderBy('name')->get();
+        }
 
         // Calculate overall statistics (independent of current filters)
         $totalSchedules = LecturerSchedule::count();
@@ -491,7 +497,6 @@ class LecturerScheduleController extends Controller
                 'academicCalendars' => $academicCalendars,
                 'groups' => $groups,
                 'programs' => $programs,
-                'existingBatches' => $existingBatches,
                 'statistics' => [
                     'totalSchedules' => $totalSchedules,
                     'totalActiveClasses' => $totalActiveClasses,
