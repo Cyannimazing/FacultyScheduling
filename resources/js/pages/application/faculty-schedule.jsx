@@ -691,7 +691,7 @@ function ScheduleDialog({ isOpen, onClose, schedule = null, onSave, lecturers, a
                                                     <div className="flex items-center gap-2">
                                                         <CalendarIcon className="h-4 w-4" />
                                                         <span>
-                                                            {calendar.term?.name} - {calendar.school_year}
+                                                            {calendar.term?.name} - {calendar.school_year} ({calendar.program.code})
                                                         </span>
                                                     </div>
                                                 </SelectItem>
@@ -705,7 +705,7 @@ function ScheduleDialog({ isOpen, onClose, schedule = null, onSave, lecturers, a
                                 {/* Batch Number Selection - Only show for new schedules */}
                                 {!schedule && (
                                     <div className="space-y-2">
-                                        <Label htmlFor="batch_no">Batch Number *</Label>
+                                        <Label htmlFor="batch_no">Schedule Number *</Label>
                                         <Select value={formData.batch_no} onValueChange={(value) => setFormData({ ...formData, batch_no: value })}>
                                             <SelectTrigger className="w-full">
                                                 <SelectValue placeholder="Select batch number" />
@@ -717,7 +717,7 @@ function ScheduleDialog({ isOpen, onClose, schedule = null, onSave, lecturers, a
                                                     </SelectItem>
                                                 ))}
                                                 <SelectItem value={existingBatches.length > 0 ? (Math.max(...existingBatches) + 1).toString() : '1'}>
-                                                    {existingBatches.length > 0 ? Math.max(...existingBatches) + 1 : 1} (New Batch)
+                                                    {existingBatches.length > 0 ? Math.max(...existingBatches) + 1 : 1} (New Batch Schedule)
                                                 </SelectItem>
                                             </SelectContent>
                                         </Select>
@@ -930,6 +930,7 @@ function ReportDialog({ isOpen, onClose, onGenerate, availableTerms = [] }) {
         selectedTermId: '',
         reviewerCount: 1,
         reviewers: [''],
+        considerLecturerLoad: false,
     });
     React.useEffect(() => {
         if (isOpen) {
@@ -939,6 +940,7 @@ function ReportDialog({ isOpen, onClose, onGenerate, availableTerms = [] }) {
                 selectedTermId: availableTerms.length > 0 ? availableTerms[0].id.toString() : '',
                 reviewerCount: 1,
                 reviewers: [''],
+                considerLecturerLoad: false,
             });
         }
     }, [isOpen, availableTerms]);
@@ -1040,6 +1042,22 @@ function ReportDialog({ isOpen, onClose, onGenerate, availableTerms = [] }) {
                         </Select>
                     </div>
 
+                    <div className="grid grid-cols-4 items-center gap-4">
+                        <label htmlFor="considerLecturerLoad" className="text-right text-sm font-medium">
+                            Consider Lecturer Load
+                        </label>
+                        <div className="col-span-3 flex items-center space-x-2">
+                            <input
+                                id="considerLecturerLoad"
+                                type="checkbox"
+                                checked={formData.considerLecturerLoad}
+                                onChange={(e) => setFormData({ ...formData, considerLecturerLoad: e.target.checked })}
+                                className="h-4 w-4 rounded border-gray-300 text-green-600 focus:ring-green-500 accent-gray-600"
+                            />
+                            <span className="text-sm text-gray-600">Include overload and total load calculations</span>
+                        </div>
+                    </div>
+
                     {formData.reviewers.map((reviewer, index) => (
                         <div key={index} className="grid grid-cols-4 items-center gap-4">
                             <label htmlFor={`reviewer${index}`} className="text-right text-sm font-medium">
@@ -1084,6 +1102,7 @@ export default function FacultySchedule() {
             totalActiveLecturers: 0,
             totalRoomsInUse: 0,
         },
+        max_load = 0,
     } = data;
     const [isLoading, setIsLoading] = useState(false);
     const [selectedCalendar, setSelectedCalendar] = useState('');
@@ -1313,9 +1332,9 @@ export default function FacultySchedule() {
 
             // Get the selected term data based on the user's selection in the report dialog
             const selectedTermId = parseInt(reportData.selectedTermId);
-            const selectedTermData = schedules.find(s => s.academic_calendar?.id === selectedTermId)?.academic_calendar || 
+            const selectedTermData = schedules.find(s => s.academic_calendar?.id === selectedTermId)?.academic_calendar ||
                                    (schedules.length > 0 ? schedules[0].academic_calendar : null);
-            
+
             // Filter schedules to only include those from the selected term
             const filteredSchedules = schedules.filter(s => s.academic_calendar?.id === selectedTermId);
 
@@ -1350,6 +1369,7 @@ export default function FacultySchedule() {
                 programTitle: reportData.programTitle,
                 preparedBy: reportData.preparedBy,
                 reviewers: reportData.reviewers,
+                considerLecturerLoad: reportData.considerLecturerLoad,
             });
 
             if (!printContent) {
@@ -1444,23 +1464,36 @@ export default function FacultySchedule() {
     // Helper function to get unique academic calendars from current schedules
     const getAvailableTermsFromSchedules = (schedules) => {
         if (!schedules || schedules.length === 0) return [];
-        
+
         // Extract unique academic calendars based on ID
         const uniqueTerms = schedules
             .map(schedule => schedule.academic_calendar)
             .filter(calendar => calendar) // Remove null/undefined
-            .filter((calendar, index, self) => 
+            .filter((calendar, index, self) =>
                 self.findIndex(c => c.id === calendar.id) === index
             ); // Remove duplicates by ID
-            
+
         return uniqueTerms;
     };
 
-    const createPrintableReport = ({ lecturer, term, subjects, teachingLoad, schedules, programTitle, preparedBy, reviewers }) => {
+    const createPrintableReport = ({ lecturer, term, subjects, teachingLoad, schedules, programTitle, preparedBy, reviewers, considerLecturerLoad = false }) => {
         const lecturerName = `${lecturer?.title || ''} ${lecturer?.fname || ''} ${lecturer?.lname || ''}`.trim();
         const termInfo = `${term?.term?.name || ''} - ${term?.school_year || ''}`;
         const startDate = formatDate(term.start_date);
         const endDate = formatDate(term.end_date);
+        var max_lecturer_load = 0
+        var overload = ""
+        var totalLoad = ""
+
+
+        if(considerLecturerLoad && max_load[0]){
+            max_lecturer_load =  max_load[0].max_load
+            if(teachingLoad > max_lecturer_load){
+                overload = (teachingLoad - max_lecturer_load) + ""
+                totalLoad = teachingLoad + ""
+                teachingLoad = max_lecturer_load + ""
+            }
+        }
 
         function getOrdinalSuffix(day) {
             if (day % 100 >= 11 && day % 100 <= 13) {
@@ -1844,8 +1877,10 @@ export default function FacultySchedule() {
             </div>
             <div class="info-right">
                 <span>No. of Teaching Load:<span class="load-format">${teachingLoad}</span></span>
-                <span>No. of Overload:<span class="load-format"></span></span>
-                <span>Total No. of Load:<span class="load-format"></span></span>
+                ${considerLecturerLoad ? `
+                <span>No. of Overload:<span class="load-format">${overload}</span></span>
+                <span>Total No. of Load:<span class="load-format">${totalLoad}</span></span>
+                ` : ''}
             </div>
         </div>
 
@@ -1877,7 +1912,7 @@ export default function FacultySchedule() {
             </div>
 
         </div>
-        <div class="footer">NCAT/${preparedBy}/Class Program / ${term.term.name}/ ${term.school_year}</div>
+        <div class="footer">NCAT/${preparedBy}/Faculty Program / ${term.term.name}/ ${term.school_year}</div>
     </body>
     </html>
 `;
@@ -2168,9 +2203,9 @@ export default function FacultySchedule() {
                 </DialogContent>
             </Dialog>
 
-            <ReportDialog 
-                isOpen={isReportDialogOpen} 
-                onClose={() => setIsReportDialogOpen(false)} 
+            <ReportDialog
+                isOpen={isReportDialogOpen}
+                onClose={() => setIsReportDialogOpen(false)}
                 onGenerate={handleGenerateReportWithParams}
                 availableTerms={getAvailableTermsFromSchedules(schedules)}
             />

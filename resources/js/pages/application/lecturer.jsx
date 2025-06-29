@@ -1,6 +1,6 @@
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
@@ -9,7 +9,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import AppLayout from '@/layouts/app-layout';
 import { Head, router, usePage } from '@inertiajs/react';
-import { AlertCircle, Calendar, ChevronLeft, ChevronRight, Clock, Edit, GraduationCap, MoreHorizontal, Plus, Search, Trash2, User, X } from 'lucide-react';
+import { AlertCircle, Calendar, ChevronLeft, ChevronRight, Clock, Edit, GraduationCap, MoreHorizontal, Plus, Search, Trash2, User, X, Settings, BookOpen } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
 
 const breadcrumbs = [
@@ -178,17 +178,249 @@ function LecturerDialog({ isOpen, onClose, lecturer = null, onSave, errors = nul
     );
 }
 
+// LecturerLoad Dialog Component
+function LecturerLoadDialog({ isOpen, onClose, lecturerLoad = null, onSave, errors = null }) {
+    const [formData, setFormData] = useState({
+        max_load: '',
+    });
+
+    React.useEffect(() => {
+        if (isOpen) {
+            if (lecturerLoad) {
+                setFormData({
+                    max_load: lecturerLoad.max_load || '',
+                });
+            } else {
+                setFormData({ max_load: '' });
+            }
+        }
+    }, [lecturerLoad, isOpen]);
+
+    const handleSave = () => {
+        if (formData.max_load && formData.max_load > 0) {
+            onSave(formData);
+        }
+    };
+
+    return (
+        <Dialog open={isOpen} onOpenChange={onClose}>
+            <DialogContent className="sm:max-w-[400px]">
+                <DialogHeader>
+                    <DialogTitle>{lecturerLoad ? 'Edit Lecturer Load' : 'Set Lecturer Load'}</DialogTitle>
+                    <DialogDescription>
+                        {lecturerLoad ? 'Update the maximum load for lecturers.' : 'Set the maximum load that lecturers can handle.'}
+                    </DialogDescription>
+                </DialogHeader>
+                <div className="grid gap-4 py-4">
+                    {errors && (
+                        <div className="rounded-md border border-red-200 bg-red-50 p-3 text-red-600">
+                            <div className="mb-2 font-semibold">⚠️ Please fix the following errors:</div>
+                            <ul className="list-inside list-disc space-y-1">
+                                {Object.entries(errors).map(([field, messages]) => (
+                                    <li key={field}>
+                                        <span className="font-medium capitalize">{field.replace('_', ' ')}:</span>{' '}
+                                        {Array.isArray(messages) ? messages[0] : messages}
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
+                    )}
+                    <div className="grid grid-cols-4 items-center gap-4">
+                        <label htmlFor="max_load" className="text-right text-sm font-medium">
+                            Max Load
+                        </label>
+                        <Input
+                            id="max_load"
+                            type="number"
+                            min="1"
+                            value={formData.max_load}
+                            onChange={(e) => setFormData({ ...formData, max_load: e.target.value })}
+                            className="col-span-3"
+                            placeholder="Enter maximum load"
+                        />
+                    </div>
+                </div>
+                <DialogFooter>
+                    <Button variant="outline" onClick={onClose}>
+                        Cancel
+                    </Button>
+                    <Button onClick={handleSave} disabled={!formData.max_load || formData.max_load <= 0}>
+                        {lecturerLoad ? 'Update' : 'Set'} Load
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    );
+}
+
+// LecturerLoad Management Dialog Component
+function LecturerLoadManagementDialog({ isOpen, onClose, lecturerLoad, onEdit, onDelete, onCreate }) {
+    const [isFormDialogOpen, setIsFormDialogOpen] = useState(false);
+    const [editingLoad, setEditingLoad] = useState(null);
+    const [formErrors, setFormErrors] = useState(null);
+
+    const handleCreate = () => {
+        setEditingLoad(null);
+        setFormErrors(null);
+        setIsFormDialogOpen(true);
+    };
+
+    const handleEdit = () => {
+        setEditingLoad(lecturerLoad);
+        setFormErrors(null);
+        setIsFormDialogOpen(true);
+    };
+
+    const handleSave = (formData) => {
+        setFormErrors(null);
+
+        const successCallback = () => {
+            setIsFormDialogOpen(false);
+            onClose();
+        };
+
+        const errorCallback = (errors) => {
+            setFormErrors(errors);
+        };
+
+        if (editingLoad) {
+            // Edit existing load
+            router.put(`/lecturer-load/${editingLoad.id}`, formData, {
+                onSuccess: successCallback,
+                onError: errorCallback,
+            });
+        } else {
+            // Create new load
+            router.post('/lecturer-load', formData, {
+                onSuccess: successCallback,
+                onError: errorCallback,
+            });
+        }
+    };
+
+    return (
+        <>
+            <Dialog open={isOpen} onOpenChange={onClose}>
+                <DialogContent className="sm:max-w-[400px]">
+                    <DialogHeader>
+                        <DialogTitle>Lecturer Load Management</DialogTitle>
+                        <DialogDescription>
+                            Manage the maximum load configuration for lecturers.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="py-4 space-y-4">
+                        {lecturerLoad ? (
+                            <div className="space-y-4">
+                                <div className="p-4 border rounded-lg bg-muted/50">
+                                    <div className="flex items-center gap-3">
+                                        <BookOpen className="h-5 w-5 text-blue-500" />
+                                        <div>
+                                            <h3 className="font-medium">Current Configuration</h3>
+                                            <p className="text-sm text-muted-foreground">
+                                                Maximum load: <span className="font-semibold">{lecturerLoad.max_load}</span> hours
+                                            </p>
+                                            <p className="text-xs text-muted-foreground mt-1">
+                                                Updated: {new Date(lecturerLoad.updated_at).toLocaleDateString()}
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="flex gap-2">
+                                    <Button variant="outline" onClick={handleEdit} className="flex-1">
+                                        <Edit className="h-4 w-4 mr-2" />
+                                        Edit
+                                    </Button>
+                                    <Button variant="destructive" onClick={() => onDelete(lecturerLoad)} className="flex-1">
+                                        <Trash2 className="h-4 w-4 mr-2" />
+                                        Delete
+                                    </Button>
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="text-center py-8">
+                                <Settings className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                                <h3 className="text-lg font-semibold mb-2">No Configuration Found</h3>
+                                <p className="text-muted-foreground mb-4">
+                                    Set the maximum load that lecturers can handle.
+                                </p>
+                                <Button onClick={handleCreate}>
+                                    <Plus className="h-4 w-4 mr-2" />
+                                    Add Configuration
+                                </Button>
+                            </div>
+                        )}
+                    </div>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={onClose}>
+                            Close
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Form Dialog */}
+            <LecturerLoadDialog
+                isOpen={isFormDialogOpen}
+                onClose={() => {
+                    setIsFormDialogOpen(false);
+                    setEditingLoad(null);
+                    setFormErrors(null);
+                }}
+                lecturerLoad={editingLoad}
+                onSave={handleSave}
+                errors={formErrors}
+            />
+        </>
+    );
+}
+
+// LecturerLoad Management Card Component - Small Card
+function LecturerLoadCard({ lecturerLoad, onEdit, onDelete, onCreate, onManage }) {
+    return (
+        <div className="mb-4 flex items-center gap-2 rounded-lg bg-blue-50 p-3">
+            <Clock className="h-5 w-5 text-blue-600" />
+            <span className="text-sm font-medium text-blue-900 flex-1">
+                {lecturerLoad ? (
+                    <>Lecturer Max Load: <span className="font-bold">{lecturerLoad.max_load} hours</span></>
+                ) : (
+                    <>Lecturer Max Load: <span className="font-bold">Not Configured</span></>
+                )}
+            </span>
+            <Button
+                variant="ghost"
+                size="sm"
+                onClick={onManage}
+                className="h-6 w-6 p-0 hover:bg-blue-100"
+            >
+                <Settings className="h-4 w-4 text-blue-600" />
+            </Button>
+        </div>
+    );
+}
+
 export default function Lecturer() {
     const { data } = usePage().props
     const [isLoading, setIsLoading] = useState(false);
     const [searchLecturer, setSearchLecturer] = useState("");
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [editingLecturer, setEditingLecturer] = useState(null);
-    const [lecturersData, setLecturersData] = useState(data.lecturers.data);
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [lecturerToDelete, setLecturerToDelete] = useState(null);
     const [isDeleting, setIsDeleting] = useState(false);
     const [saveErrors, setSaveErrors] = useState(null);
+
+    // LecturerLoad state management
+    const [lecturerLoad, setLecturerLoad] = useState(data.lecturerLoad || null);
+    const [isLoadDialogOpen, setIsLoadDialogOpen] = useState(false);
+    const [editingLoad, setEditingLoad] = useState(null);
+    const [loadSaveErrors, setLoadSaveErrors] = useState(null);
+    const [loadDeleteDialogOpen, setLoadDeleteDialogOpen] = useState(false);
+    const [isLoadDeleting, setIsLoadDeleting] = useState(false);
+
+    // Sync lecturer load state with props data when it changes
+    useEffect(() => {
+        setLecturerLoad(data.lecturerLoad || null);
+    }, [data.lecturerLoad]);
 
     const itemsPerPage = data.lecturers.per_page;
     const totalPages = data.lecturers.last_page;
@@ -236,6 +468,7 @@ export default function Lecturer() {
 
         if (editingLecturer) {
             router.put(`/lecturer/${editingLecturer.id}`, formData, {
+                preserveState: false, // This ensures fresh data from server
                 onSuccess: () => {
                     setIsDialogOpen(false);
                     setSaveErrors(null);
@@ -247,6 +480,7 @@ export default function Lecturer() {
             });
         } else {
             router.post('/lecturer', formData, {
+                preserveState: false, // This ensures fresh data from server
                 onSuccess: () => {
                     setIsDialogOpen(false);
                     setSaveErrors(null);
@@ -268,6 +502,7 @@ export default function Lecturer() {
         if (lecturerToDelete) {
             setIsDeleting(true);
             router.delete(`/lecturer/${lecturerToDelete.id}`, {
+                preserveState: false, // This ensures fresh data from server
                 onSuccess: () => {
                     setDeleteDialogOpen(false);
                     setIsDeleting(false);
@@ -289,6 +524,73 @@ export default function Lecturer() {
         });
     };
 
+    // LecturerLoad CRUD handlers
+    const handleCreateLoad = () => {
+        setEditingLoad(null);
+        setLoadSaveErrors(null);
+        setIsLoadDialogOpen(true);
+    };
+
+    const handleEditLoad = (load) => {
+        setEditingLoad(load);
+        setLoadSaveErrors(null);
+        setIsLoadDialogOpen(true);
+    };
+
+    const handleSaveLoad = (formData) => {
+        setLoadSaveErrors(null);
+
+        if (editingLoad) {
+            // Update existing load
+            router.put(`/lecturer-load/${editingLoad.id}`, formData, {
+                onSuccess: (response) => {
+                    setIsLoadDialogOpen(false);
+                    setLoadSaveErrors(null);
+                    setLecturerLoad(response.props.data.lecturerLoad || null);
+                },
+                onError: (errors) => {
+                    console.error('Error updating lecturer load:', errors);
+                    setLoadSaveErrors(errors);
+                },
+            });
+        } else {
+            // Create new load
+            router.post('/lecturer-load', formData, {
+                onSuccess: (response) => {
+                    setIsLoadDialogOpen(false);
+                    setLoadSaveErrors(null);
+                    setLecturerLoad(response.props.data.lecturerLoad || null);
+                },
+                onError: (errors) => {
+                    console.error('Error creating lecturer load:', errors);
+                    setLoadSaveErrors(errors);
+                },
+            });
+        }
+    };
+
+    const handleDeleteLoad = (load) => {
+        setEditingLoad(load);
+        setLoadDeleteDialogOpen(true);
+    };
+
+    const confirmDeleteLoad = () => {
+        if (editingLoad) {
+            setIsLoadDeleting(true);
+            router.delete(`/lecturer-load/${editingLoad.id}`, {
+                onSuccess: () => {
+                    setLoadDeleteDialogOpen(false);
+                    setIsLoadDeleting(false);
+                    setLecturerLoad(null);
+                    setEditingLoad(null);
+                },
+                onError: () => {
+                    setIsLoadDeleting(false);
+                },
+            });
+        }
+    };
+
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Lecturers" />
@@ -303,6 +605,15 @@ export default function Lecturer() {
                         Add Lecturer
                     </Button>
                 </div>
+
+                {/* LecturerLoad Management Card */}
+                <LecturerLoadCard
+                    lecturerLoad={lecturerLoad}
+                    onEdit={handleEditLoad}
+                    onDelete={handleDeleteLoad}
+                    onCreate={handleCreateLoad}
+                    onManage={() => setIsLoadDialogOpen(true)}
+                />
 
                 <Card>
                     <CardHeader>
@@ -451,6 +762,40 @@ export default function Lecturer() {
                         </Button>
                         <Button variant="destructive" onClick={confirmDeleteLecturer} disabled={isDeleting}>
                             {isDeleting ? 'Deleting...' : 'Delete Lecturer'}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* LecturerLoad Management Dialog */}
+            <LecturerLoadManagementDialog
+                isOpen={isLoadDialogOpen}
+                onClose={() => {
+                    setIsLoadDialogOpen(false);
+                    setEditingLoad(null);
+                    setLoadSaveErrors(null);
+                }}
+                lecturerLoad={lecturerLoad}
+                onEdit={handleEditLoad}
+                onDelete={handleDeleteLoad}
+                onCreate={handleCreateLoad}
+            />
+
+            {/* LecturerLoad Delete Dialog */}
+            <Dialog open={loadDeleteDialogOpen} onOpenChange={setLoadDeleteDialogOpen}>
+                <DialogContent className="sm:max-w-[400px]">
+                    <DialogHeader>
+                        <DialogTitle>Delete Lecturer Load</DialogTitle>
+                        <DialogDescription>
+                            Are you sure you want to delete the lecturer load configuration? This action cannot be undone.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setLoadDeleteDialogOpen(false)} disabled={isLoadDeleting}>
+                            Cancel
+                        </Button>
+                        <Button variant="destructive" onClick={confirmDeleteLoad} disabled={isLoadDeleting}>
+                            {isLoadDeleting ? 'Deleting...' : 'Delete Load'}
                         </Button>
                     </DialogFooter>
                 </DialogContent>

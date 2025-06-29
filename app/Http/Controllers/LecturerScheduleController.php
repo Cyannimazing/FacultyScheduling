@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\AcademicCalendar;
 use App\Models\Group;
 use App\Models\Lecturer;
+use App\Models\LecturerLoad;
 use App\Models\LecturerSchedule;
 use App\Http\Requests\StoreLecturerScheduleRequest;
 use App\Http\Requests\UpdateLecturerScheduleRequest;
@@ -89,6 +90,7 @@ class LecturerScheduleController extends Controller
         $totalSchedules = LecturerSchedule::count();
         $totalActiveLecturers = LecturerSchedule::distinct('lecturer_id')->count('lecturer_id');
         $totalRoomsInUse = LecturerSchedule::distinct('room_code')->count('room_code');
+        $maxLoad = LecturerLoad::latest()->get('max_load');
 
         // return response()->json($schedules);
         return Inertia::render('application/faculty-schedule', [
@@ -102,7 +104,8 @@ class LecturerScheduleController extends Controller
                     'totalSchedules' => $totalSchedules,
                     'totalActiveLecturers' => $totalActiveLecturers,
                     'totalRoomsInUse' => $totalRoomsInUse,
-                ]
+                ],
+                'max_load' => $maxLoad
             ]
         ]);
     }
@@ -169,7 +172,7 @@ class LecturerScheduleController extends Controller
         $batchNo = $request->input('batch_no');
         $isNewBatch = $request->input('is_new_batch', false);
         $today = now()->startOfDay(); // Use Carbon date for proper comparison
-        
+
         // Debug: Log the date being used for comparison
         \Log::info('Date comparison debug', [
             'today' => $today->toDateString(),
@@ -177,7 +180,7 @@ class LecturerScheduleController extends Controller
             'now_formatted' => now()->format('Y-m-d'),
             'current_timestamp' => now()->timestamp,
         ]);
-        
+
         if ($isNewBatch) {
             // For new batches, check conflicts with active/upcoming schedules from all batches
             $conflictingSchedules = LecturerSchedule::with('academicCalendar')
@@ -201,7 +204,7 @@ class LecturerScheduleController extends Controller
                     return $query->where('id', '!=', $excludeScheduleId);
                 })
                 ->get();
-                
+
             // Debug: Log what schedules are being considered for conflicts
             \Log::info('Time slot availability check for new batch', [
                 'day' => $day,
@@ -325,15 +328,15 @@ class LecturerScheduleController extends Controller
     {
             $validated = $request->validated();
             $batchNo = $validated['batch_no'];
-            
+
             // Check if this is a new batch number
             $existingBatchNumbers = LecturerSchedule::distinct('batch_no')
                                                    ->whereNotNull('batch_no')
                                                    ->pluck('batch_no')
                                                    ->toArray();
-            
+
             $isNewBatch = !in_array($batchNo, $existingBatchNumbers);
-            
+
             if ($isNewBatch) {
                 // Copy all ongoing schedules from other batches to this new batch
                 $this->copyOngoingSchedulesToNewBatch($batchNo);
@@ -552,7 +555,7 @@ class LecturerScheduleController extends Controller
     private function copyOngoingSchedulesToNewBatch($newBatchNo)
     {
         $today = now()->startOfDay(); // Use Carbon date for proper comparison
-        
+
         // Get schedules from active or upcoming terms only
         $ongoingSchedules = LecturerSchedule::with(['academicCalendar'])
             ->whereHas('academicCalendar', function ($query) use ($today) {
@@ -571,7 +574,7 @@ class LecturerScheduleController extends Controller
                 });
             })
             ->get();
-        
+
         // Debug: Log the schedules being considered
         \Log::info('Copying schedules to new batch', [
             'new_batch_no' => $newBatchNo,
@@ -588,10 +591,10 @@ class LecturerScheduleController extends Controller
                 ];
             })
         ]);
-        
+
         // Group schedules by unique combination (excluding id, timestamps, and batch_no)
         $uniqueSchedules = [];
-        
+
         foreach ($ongoingSchedules as $schedule) {
             // Create a unique key based on schedule details (excluding batch_no)
             $key = sprintf(
@@ -605,13 +608,13 @@ class LecturerScheduleController extends Controller
                 $schedule->start_time,
                 $schedule->end_time
             );
-            
+
             // Only store the first occurrence of each unique schedule
             if (!isset($uniqueSchedules[$key])) {
                 $uniqueSchedules[$key] = $schedule;
             }
         }
-        
+
         // Copy unique ongoing schedules to the new batch
         foreach ($uniqueSchedules as $schedule) {
             LecturerSchedule::create([
@@ -626,7 +629,7 @@ class LecturerScheduleController extends Controller
                 'batch_no' => $newBatchNo, // Assign to the new batch
             ]);
         }
-        
+
         return count($uniqueSchedules);
     }
 }

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Lecturer;
+use App\Models\LecturerLoad;
 use App\Http\Requests\StoreLecturerRequest;
 use App\Http\Requests\UpdateLecturerRequest;
 use Illuminate\Http\Request;
@@ -28,9 +29,13 @@ class LecturerController extends Controller
                         ->orderBy('fname')
                         ->paginate($perPage, ['*'], 'page', $page);
 
+        // Get the current lecturer load configuration
+        $lecturerLoad = LecturerLoad::first();
+
         return Inertia::render('application/lecturer', [
             'data' => [
                 'lecturers' => $lecturers,
+                'lecturerLoad' => $lecturerLoad,
             ]
         ]);
     }
