@@ -151,7 +151,7 @@ export default function Index() {
     const [termToDelete, setTermToDelete] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [isProcessing, setIsProcessing] = useState(false);
-
+    console.log(data)
     const handleSearch = (e) => {
         setSearchTerm(e.target.value);
         setIsLoading(true);
@@ -354,14 +354,14 @@ export default function Index() {
                 {!isLoading && data.terms.last_page > 1 && (
                     <div className="flex items-center justify-between">
                         <div className="text-muted-foreground text-sm">
-                            Page {terms.current_page} of {terms.last_page}
+                            Page {data.terms?.current_page} of {data.terms?.last_page}
                         </div>
                         <div className="flex items-center space-x-2">
                             <Button
                                 variant="outline"
                                 size="sm"
-                                onClick={() => handlePageChange(terms.current_page - 1)}
-                                disabled={terms.current_page === 1}
+                                onClick={() => handlePageChange(data.terms.current_page - 1)}
+                                disabled={data.terms.current_page === 1}
                             >
                                 <ChevronLeft className="h-4 w-4" />
                                 Previous
@@ -369,8 +369,8 @@ export default function Index() {
                             <Button
                                 variant="outline"
                                 size="sm"
-                                onClick={() => handlePageChange(terms.current_page + 1)}
-                                disabled={terms.current_page === terms.last_page}
+                                onClick={() => handlePageChange(data.terms.current_page + 1)}
+                                disabled={data.terms.current_page === data.terms.last_page}
                             >
                                 Next
                                 <ChevronRight className="h-4 w-4" />
