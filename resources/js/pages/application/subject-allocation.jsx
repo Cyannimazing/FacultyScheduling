@@ -122,7 +122,7 @@ function SubjectAllocationSheet({ isOpen, onClose, allocation = null, onSave, ex
                                         .then(response => response.json())
                                         .then(filteredCalendars => {
                                             // Filter by program code on the frontend if needed
-                                            const filteredByProgram = filteredCalendars.filter(cal => 
+                                            const filteredByProgram = filteredCalendars.filter(cal =>
                                                 cal.program?.code === programCode
                                             );
                                             setFilteredAcademicCalendars(filteredByProgram.length > 0 ? filteredByProgram : filteredCalendars);
@@ -1035,8 +1035,14 @@ export default function SubjectAllocation() {
                                                             </div>
                                                             <div className="text-sm">{subject.subject?.name || 'Unknown Subject'}</div>
                                                             <div className="flex items-center gap-1">
-                                                                <Badge variant="outline" className="text-xs">
+                                                                {/* <Badge variant="outline" className="text-xs">
                                                                     {subject.subject?.unit || 0} unit{(subject.subject?.unit || 0) !== 1 ? 's' : ''}
+                                                                </Badge> */}
+                                                                <Badge
+                                                                    variant={subject.is_general_education ? 'default' : 'secondary'}
+                                                                    className={subject.is_general_education ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' : ''}
+                                                                >
+                                                                    {subject.is_general_education ? 'GE' : 'Major'}
                                                                 </Badge>
                                                                 {subject?.is_general_education && (
                                                                     <Badge variant="secondary" className="bg-green-100 text-xs text-green-800">

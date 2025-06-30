@@ -1035,7 +1035,7 @@ export default function ClassSchedule() {
                                             <SelectItem className="w-full" key={calendar.id} value={calendar.id.toString()}>
                                                 <div className="flex w-full items-center gap-2">
                                                     <CalendarIcon className="h-4 w-4" />
-                                                    {calendar.term?.name} - {calendar.school_year}
+                                                    {calendar.term?.name} - {calendar.school_year} ({calendar.program.code})
                                                 </div>
                                             </SelectItem>
                                         ))}

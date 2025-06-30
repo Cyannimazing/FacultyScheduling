@@ -106,7 +106,7 @@ function SubjectDialog({ isOpen, onClose, subjectData = null, onSave, errors = n
                             placeholder="e.g., Introduction to Computer Science"
                         />
                     </div>
-                    <div className="grid grid-cols-4 items-center gap-4">
+                    {/* <div className="grid grid-cols-4 items-center gap-4">
                         <Label htmlFor="unit" className="text-right text-sm font-medium">
                             Units
                         </Label>
@@ -123,7 +123,7 @@ function SubjectDialog({ isOpen, onClose, subjectData = null, onSave, errors = n
                                 <SelectItem value="6">6 Units</SelectItem>
                             </SelectContent>
                         </Select>
-                    </div>
+                    </div> */}
                     <div className="grid grid-cols-4 items-center gap-4">
                         <Label htmlFor="is_gen_ed" className="text-right text-sm font-medium">
                             General Education
@@ -344,7 +344,7 @@ export default function Subject() {
                                         <TableRow>
                                             <TableHead>ID</TableHead>
                                             <TableHead>Subject Name</TableHead>
-                                            <TableHead className="text-center">Units</TableHead>
+                                            {/* <TableHead className="text-center">Units</TableHead> */}
                                             <TableHead className="text-center">Type</TableHead>
                                             <TableHead className="text-center">Last Updated</TableHead>
                                             <TableHead className="text-right">Actions</TableHead>
@@ -362,11 +362,11 @@ export default function Subject() {
                                                 <TableCell>
                                                     <span className="font-medium">{subject.name}</span>
                                                 </TableCell>
-                                                <TableCell className="text-center">
+                                                {/* <TableCell className="text-center">
                                                     <Badge variant="outline">
                                                         {subject.unit} unit{subject.unit !== 1 ? 's' : ''}
                                                     </Badge>
-                                                </TableCell>
+                                                </TableCell> */}
                                                 <TableCell className="text-center">
                                                     <Badge
                                                         variant={subject.is_gen_ed ? 'default' : 'secondary'}

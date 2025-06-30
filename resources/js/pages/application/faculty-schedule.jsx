@@ -691,7 +691,7 @@ function ScheduleDialog({ isOpen, onClose, schedule = null, onSave, lecturers, a
                                                     <div className="flex items-center gap-2">
                                                         <CalendarIcon className="h-4 w-4" />
                                                         <span>
-                                                            {calendar.term?.name} - {calendar.school_year} ({calendar.program.code})
+                                                            {calendar.term?.name} - {calendar.school_year} ({calendar.program?.code})
                                                         </span>
                                                     </div>
                                                 </SelectItem>

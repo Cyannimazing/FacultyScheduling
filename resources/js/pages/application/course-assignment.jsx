@@ -44,9 +44,9 @@ function SubjectItem({ subject, onDragStart }) {
                 </div>
                 <div>
                     <div className="text-sm font-medium">{subject.name}</div>
-                    <div className="text-muted-foreground text-xs">
+                    {/* <div className="text-muted-foreground text-xs">
                         {subject.unit} unit{subject.unit !== 1 ? 's' : ''}
-                    </div>
+                    </div> */}
                 </div>
             </div>
             <Badge
@@ -808,7 +808,7 @@ export default function CourseAssignment() {
 
     const handleUpdateAssignment = (formData) => {
         if (!assignmentToEdit) return;
-        
+
         setEditErrors(null);
 
         // Get the selected program and subject to send codes instead of IDs
