@@ -270,7 +270,7 @@ function ScheduleDialog({ isOpen, onClose, schedule = null, onSave, lecturers, a
                     prog_subj_id: '',
                     room_code: '',
                     class_id: '',
-                    batch_no: existingBatches.length > 0 ? (Math.max(...existingBatches) + 1).toString() : '1', // Auto-select next batch
+                    batch_no: existingBatches.length > 0 ? Math.max(...existingBatches).toString() : '1', // Auto-select latest batch
                     day: '',
                     start_time: '',
                     end_time: '',
@@ -660,7 +660,7 @@ function ScheduleDialog({ isOpen, onClose, schedule = null, onSave, lecturers, a
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-2">
                                     <Label htmlFor="lecturer_id">Lecturer *</Label>
-                                    <Select value={formData.lecturer_id} onValueChange={(value) => setFormData({ ...formData, lecturer_id: value })}>
+                                    <Select value={formData.lecturer_id} onValueChange={(value) => setFormData({ ...formData, lecturer_id: value })} disabled={!!schedule}>
                                         <SelectTrigger className="w-full">
                                             <SelectValue placeholder="Select lecturer" />
                                         </SelectTrigger>
@@ -681,7 +681,7 @@ function ScheduleDialog({ isOpen, onClose, schedule = null, onSave, lecturers, a
 
                                 <div className="space-y-2">
                                     <Label htmlFor="sy_term_id">Academic Term *</Label>
-                                    <Select value={formData.sy_term_id} onValueChange={(value) => setFormData({ ...formData, sy_term_id: value })}>
+                                    <Select value={formData.sy_term_id} onValueChange={(value) => setFormData({ ...formData, sy_term_id: value })} disabled={!!schedule}>
                                         <SelectTrigger className="w-full">
                                             <SelectValue placeholder="Select term" />
                                         </SelectTrigger>
@@ -1494,7 +1494,9 @@ export default function FacultySchedule() {
         considerLecturerLoad = false,
     }) => {
         const lecturerName = `${lecturer?.title || ''} ${lecturer?.fname || ''} ${lecturer?.lname || ''}`.trim();
-        const termInfo = `${term?.term?.name || ''} - ${term?.school_year || ''}`;
+        // Remove level information from term name (e.g., "1st Term (LVL1)" becomes "1st Term")
+        const termNameWithoutLevel = term?.term?.name ? term.term.name.replace(/\s*\([^)]*\)\s*$/, '') : '';
+        const termInfo = `${termNameWithoutLevel} - ${term?.school_year || ''}`;
         const startDate = formatDate(term.start_date);
         const endDate = formatDate(term.end_date);
         var max_lecturer_load = 0;
@@ -1884,7 +1886,7 @@ export default function FacultySchedule() {
             <img class="logo" src="${logo}" alt="logo"/>
         </div>
         <div class="program-title">${programTitle} <br/> LECTURER'S LOAD</div>
-        <div class="program-subtitle">${term.term.name} ${term.school_year}</div>
+        <div class="program-subtitle">${termNameWithoutLevel} ${term.school_year}</div>
         <div class="info-section">
             <div class="info-left">
                 <strong>Lecturer Name:</strong> <u>${lecturerName}</u><br>
@@ -1931,7 +1933,7 @@ export default function FacultySchedule() {
             </div>
 
         </div>
-        <div class="footer">NCAT/${preparedBy}/Faculty Program / ${term.term.name}/ ${term.school_year}</div>
+        <div class="footer">NCAT/${preparedBy}/Faculty Program / ${termNameWithoutLevel}/ ${term.school_year}</div>
     </body>
     </html>
 `;
@@ -2015,7 +2017,13 @@ export default function FacultySchedule() {
                                 </div>
 
                                 {/* Primary Filters: Lecturer and Term are required first */}
-                                <Select value={selectedLecturer} onValueChange={setSelectedLecturer}>
+                                <Select value={selectedLecturer} onValueChange={(value) => {
+                                    setSelectedLecturer(value);
+                                    // Auto-select latest batch when lecturer is selected
+                                    if (existingBatches.length > 0) {
+                                        setSelectedCalendar(Math.max(...existingBatches).toString());
+                                    }
+                                }}>
                                     <SelectTrigger className="w-full md:w-[200px]">
                                         <SelectValue placeholder="Select Lecturer *" />
                                     </SelectTrigger>

@@ -69,7 +69,7 @@ function SubjectAllocationSheet({ isOpen, onClose, allocation = null, onSave, ex
 
     React.useEffect(() => {
         if (allocation) {
-            const programCode = allocation.program_subject?.prog_code || '';
+            const programCode = allocation.program_subject?.program?.code || '';
             setFormData({
                 lecturer_id: allocation.lecturer_id?.toString() || '',
                 prog_subj_id: allocation.prog_subj_id?.toString() || '',
@@ -144,6 +144,7 @@ function SubjectAllocationSheet({ isOpen, onClose, allocation = null, onSave, ex
                     .finally(() => setIsLoadingSubjects(false));
             }
         } else {
+            // Reset form when not editing (adding new allocation)
             setFormData({ lecturer_id: '', prog_subj_id: '', sy_term_id: '', program_code: '', year_level: '', term_id: '' });
             setAvailableSubjects([]);
             setFilteredAcademicCalendars(academicCalendars);
@@ -797,14 +798,33 @@ export default function SubjectAllocation() {
         }
 
         // Backend request to store/update subject allocation
+        // Preserve current filter state
+        const currentFilters = {
+            search: searchTerm || undefined,
+            syFilter: schoolYearFilter || undefined,
+            termFilter: termFilter && termFilter !== 'all' ? termFilter : undefined,
+            progCodeFilter: programFilter && programFilter !== 'all' ? programFilter : undefined,
+            lecturerFilter: lecturerFilter && lecturerFilter !== 'all' ? lecturerFilter : undefined,
+            page: currentPage.toString()
+        };
+        
+        // Remove undefined values
+        Object.keys(currentFilters).forEach(key => {
+            if (currentFilters[key] === undefined) {
+                delete currentFilters[key];
+            }
+        });
+
         if (editingAllocation) {
             // UPDATE: Edit existing allocation
             router.put(`/subject-allocation/${editingAllocation.id}`, {
                 lecturer_id: formData.lecturer_id,
                 prog_subj_id: formData.prog_subj_id,
-                sy_term_id: formData.sy_term_id
+                sy_term_id: formData.sy_term_id,
+                ...currentFilters
             }, {
                 preserveScroll: true,
+                preserveState: true,
                 onSuccess: () => {
                     console.log('Allocation updated successfully');
                     setIsDialogOpen(false);
@@ -818,9 +838,11 @@ export default function SubjectAllocation() {
             router.post('/subject-allocation', {
                 lecturer_id: formData.lecturer_id,
                 prog_subj_id: formData.prog_subj_id,
-                sy_term_id: formData.sy_term_id
+                sy_term_id: formData.sy_term_id,
+                ...currentFilters
             }, {
                 preserveScroll: true,
+                preserveState: true,
                 onSuccess: () => {
                     console.log('Allocation created successfully');
                     setCurrentPage(1);

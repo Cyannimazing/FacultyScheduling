@@ -580,6 +580,8 @@ export default function ClassSchedule() {
 
     const createPrintableReport = ({ group, term, subjects, lecturers, totalClasses, schedules, batchNumber, preparedBy, reviewers }) => {
         const groupName = group?.name || '';
+        // Remove level information from term name (e.g., "1st Term (LVL1)" becomes "1st Term")
+        const termNameWithoutLevel = term?.term?.name ? term.term.name.replace(/\s*\([^)]*\)\s*$/, '') : '';
         const startDate = formatDate(term.start_date);
         const endDate = formatDate(term.end_date);
 
@@ -1002,7 +1004,7 @@ export default function ClassSchedule() {
                 </div>
 
             </div>
-            <div class="footer">NCAT/${preparedBy}/Class Program / ${term.term.name}/ ${term.school_year}</div>
+            <div class="footer">NCAT/${preparedBy}/Class Program / ${termNameWithoutLevel}/ ${term.school_year}</div>
         </body>
         </html>
     `;

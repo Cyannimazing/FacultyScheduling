@@ -469,21 +469,28 @@ class LecturerScheduleController extends Controller
         // Get all programs for the program filter dropdown
         $programs = \App\Models\Program::orderBy('description')->get();
 
-        // Filter groups based on selected academic term's program
+        // Filter groups based on selected academic term's program and only show groups that have schedules
         $groups = collect();
         if ($termFilter) {
             // Get the selected academic calendar to find its program
             $selectedAcademicCalendar = AcademicCalendar::find($termFilter);
             if ($selectedAcademicCalendar && $selectedAcademicCalendar->prog_id) {
                 // Only get groups that belong to the same program as the selected academic term
+                // AND have at least one schedule for this academic term
                 $groups = Group::with('program')
                                ->where('prog_code', $selectedAcademicCalendar->program->code)
+                               ->whereHas('lecturerSchedules', function($query) use ($termFilter) {
+                                   $query->where('sy_term_id', $termFilter);
+                               })
                                ->orderBy('name')
                                ->get();
             }
         } else {
-            // If no term is selected, show all groups
-            $groups = Group::with('program')->orderBy('name')->get();
+            // If no term is selected, show only groups that have any schedules
+            $groups = Group::with('program')
+                           ->whereHas('lecturerSchedules')
+                           ->orderBy('name')
+                           ->get();
         }
 
         // Calculate overall statistics (independent of current filters)
